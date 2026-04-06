@@ -1,5 +1,7 @@
-import { X, LogOut } from 'lucide-react';
+import { X, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DrawerMenuProps {
   open: boolean;
@@ -13,13 +15,30 @@ const roleLabels: Record<AppRole, string> = {
   accounting: 'Accounting',
 };
 
+const navItems = [
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'My Profile', icon: User, path: '/profile' },
+];
+
 const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
+  const navigate = useNavigate();
   const { user, activeRole, setActiveRole, logout } = useAuthStore();
   const roles = user?.roles ?? [];
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    logout();
+    onClose();
+    navigate('/login', { replace: true });
+  };
+
+  const handleNav = (path: string) => {
+    navigate(path);
+    onClose();
+  };
+
   return (
     <>
-      {/* Backdrop */}
       {open && (
         <div
           className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40"
@@ -27,14 +46,12 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
         />
       )}
 
-      {/* Drawer */}
       <div
         className={`fixed top-0 right-0 h-full w-72 bg-background border-l border-border z-50 transform transition-transform duration-300 ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <span className="text-sm font-bold text-primary uppercase tracking-widest">Menu</span>
             <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
@@ -66,19 +83,27 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
             </div>
           )}
 
-          {/* Navigation placeholder */}
+          {/* Navigation */}
           <div className="flex-1 p-4">
-            <p className="text-xs text-muted-foreground">Navigation links will appear here based on active role.</p>
+            <div className="flex flex-col gap-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => handleNav(item.path)}
+                  className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors"
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Logout */}
           <div className="p-4 border-t border-border">
             <button
-              onClick={() => {
-                logout();
-                onClose();
-              }}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-danger hover:bg-secondary rounded-md transition-colors"
+              onClick={handleLogout}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-secondary rounded-md transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Logout
