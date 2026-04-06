@@ -40,6 +40,7 @@ import AccountingDetail from "./pages/accounting/AccountingDetail";
 import CalendarPage from "./pages/calendar/CalendarPage";
 import ReportList from "./pages/reports/ReportList";
 import ReportDetail from "./pages/reports/ReportDetail";
+import ChatPage from "./pages/chat/ChatPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
