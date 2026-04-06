@@ -93,8 +93,24 @@ serve(async (req) => {
       metadata: { sent_for: user.id },
     });
 
+    const { data: existingToken } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", userData.email)
+      .is("used_at", null)
+      .maybeSingle();
+
+    const unsubscribeToken = existingToken?.token ?? crypto.randomUUID();
+
+    if (!existingToken?.token) {
+      await supabase.from("email_unsubscribe_tokens").insert({
+        email: userData.email,
+        token: unsubscribeToken,
+      });
+    }
+
     await supabase.rpc("enqueue_email", {
-      queue_name: "auth_emails",
+      queue_name: "transactional_emails",
       payload: {
         message_id: messageId,
         to: userData.email,
@@ -103,9 +119,10 @@ serve(async (req) => {
         subject: `${code} is your FiveServ verification code`,
         html,
         text: `Your FiveServ verification code is: ${code}. Valid for 10 minutes.`,
-        purpose: "auth",
+        purpose: "transactional",
         label: "2fa_verification",
         idempotency_key: idempotencyKey,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     });
