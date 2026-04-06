@@ -59,12 +59,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <span className="text-5xl font-extrabold text-primary">FS</span>
-          <p className="text-xs text-muted-foreground mt-2 tracking-widest uppercase">
-            One Team. One Call. Done.
-          </p>
+        <FiveServLogo />
         </div>
 
         {/* Card */}
