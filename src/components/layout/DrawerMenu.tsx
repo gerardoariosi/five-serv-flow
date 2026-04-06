@@ -1,4 +1,4 @@
-import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users, DollarSign, CalendarDays, BarChart3 } from 'lucide-react';
+import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users, DollarSign, CalendarDays, BarChart3, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +27,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
     { label: 'Accounting', icon: DollarSign, path: '/accounting' },
     { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { label: 'Reports', icon: BarChart3, path: '/reports' },
+    { label: 'Chat', icon: MessageCircle, path: '/chat' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   supervisor: [
@@ -39,16 +40,19 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
     { label: 'Team', icon: Users, path: '/team/technicians' },
     { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { label: 'Reports', icon: BarChart3, path: '/reports' },
+    { label: 'Chat', icon: MessageCircle, path: '/chat' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   technician: [
     { label: 'My Work', icon: Wrench, path: '/my-work' },
+    { label: 'Chat', icon: MessageCircle, path: '/chat' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   accounting: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { label: 'Accounting', icon: DollarSign, path: '/accounting' },
     { label: 'Reports', icon: BarChart3, path: '/reports' },
+    { label: 'Chat', icon: MessageCircle, path: '/chat' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
 };
