@@ -1116,6 +1116,10 @@ export type Database = {
       }
       generate_fs_number: { Args: never; Returns: string }
       generate_ins_number: { Args: never; Returns: string }
+      get_inspection_master_pin: {
+        Args: { inspection_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
