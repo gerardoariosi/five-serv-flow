@@ -13,7 +13,7 @@ import Spinner from '@/components/ui/Spinner';
 const Login = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('fiveserv-last-email') ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
