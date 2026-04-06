@@ -68,7 +68,7 @@ const ReportDetail = () => {
   const { data: users = [] } = useQuery({
     queryKey: ['report-users'],
     queryFn: async () => {
-      const { data } = await supabase.from('users').select('id, full_name');
+      const { data } = await supabase.rpc('get_user_directory');
       return data || [];
     },
   });

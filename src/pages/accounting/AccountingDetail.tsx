@@ -56,7 +56,9 @@ const AccountingDetail = () => {
     queryKey: ['approver', ticket?.approved_by],
     queryFn: async () => {
       if (!ticket?.approved_by) return null;
-      const { data } = await supabase.from('users').select('full_name').eq('id', ticket.approved_by).single();
+      const { data: allUsers } = await supabase.rpc('get_user_directory');
+      const match = (allUsers ?? []).find((u: any) => u.id === ticket.approved_by);
+      return match ? { full_name: match.full_name } : null;
       return data;
     },
     enabled: !!ticket?.approved_by,
@@ -66,7 +68,9 @@ const AccountingDetail = () => {
     queryKey: ['technician-name', ticket?.technician_id],
     queryFn: async () => {
       if (!ticket?.technician_id) return null;
-      const { data } = await supabase.from('users').select('full_name').eq('id', ticket.technician_id).single();
+      const { data: allUsers } = await supabase.rpc('get_user_directory');
+      const match = (allUsers ?? []).find((u: any) => u.id === ticket.technician_id);
+      return match ? { full_name: match.full_name } : null;
       return data;
     },
     enabled: !!ticket?.technician_id,

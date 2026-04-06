@@ -34,7 +34,7 @@ const TicketReview = () => {
     const [tRes, phRes, uRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('id', id).single(),
       supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: true }),
-      supabase.from('users').select('id, full_name'),
+      supabase.rpc('get_user_directory'),
     ]);
     setTicket(tRes.data);
     setPhotos(phRes.data ?? []);
