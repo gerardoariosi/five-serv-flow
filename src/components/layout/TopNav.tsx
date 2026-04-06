@@ -9,6 +9,15 @@ interface TopNavProps {
 
 const TopNav = ({ onMenuClick }: TopNavProps) => {
   const activeRole = useAuthStore((s) => s.activeRole);
+  const user = useAuthStore((s) => s.user);
+  const { isDark, toggle } = useThemeStore();
+
+  const handleThemeToggle = async () => {
+    toggle();
+    if (user?.id) {
+      await supabase.from('users').update({ dark_mode: !isDark }).eq('id', user.id);
+    }
+  };
 
   return (
     <header className="h-14 bg-background border-b border-border flex items-center justify-between px-4 shrink-0">
