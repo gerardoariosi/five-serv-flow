@@ -35,6 +35,8 @@ import PMPortal from "./pages/inspections/PMPortal";
 import TechnicianList from "./pages/team/TechnicianList";
 import TechnicianDetail from "./pages/team/TechnicianDetail";
 import VendorDetail from "./pages/team/VendorDetail";
+import AccountingList from "./pages/accounting/AccountingList";
+import AccountingDetail from "./pages/accounting/AccountingDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

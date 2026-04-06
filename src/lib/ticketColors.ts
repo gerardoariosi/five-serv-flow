@@ -21,6 +21,16 @@ export const workTypeColors: Record<string, { bg: string; border: string; badge:
   },
 };
 
+export const getTicketColor = (workType: string | null): string => {
+  switch (workType) {
+    case 'make_ready': case 'make-ready': return 'hsl(45, 100%, 51%)';
+    case 'emergency': return 'hsl(0, 72%, 59%)';
+    case 'repair': return 'hsl(217, 91%, 60%)';
+    case 'capex': return 'hsl(142, 71%, 45%)';
+    default: return 'hsl(0, 0%, 40%)';
+  }
+};
+
 export const statusLabels: Record<string, string> = {
   draft: 'Draft',
   open: 'Open',
