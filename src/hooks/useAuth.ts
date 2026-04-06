@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 
 export const useAuth = () => {
   const navigate = useNavigate();
@@ -10,11 +11,16 @@ export const useAuth = () => {
   const fetchUserProfile = useCallback(async (authUserId: string) => {
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name, email, roles')
+      .select('id, full_name, email, roles, dark_mode')
       .eq('email', (await supabase.auth.getUser()).data.user?.email ?? '')
       .maybeSingle();
 
     if (error || !data) return null;
+
+    // Sync theme from DB
+    if (data.dark_mode !== null && data.dark_mode !== undefined) {
+      useThemeStore.getState().setDark(data.dark_mode);
+    }
 
     return {
       id: data.id,
