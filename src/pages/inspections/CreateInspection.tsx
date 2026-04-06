@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { ArrowLeft, Plus, Minus } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
-import { SetupProgress } from '@/components/setup/SetupProgress';
+import Spinner from '@/components/ui/Spinner';
 
 const CreateInspection = () => {
   const navigate = useNavigate();
