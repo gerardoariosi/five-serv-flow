@@ -26,6 +26,12 @@ import TicketForm from "./pages/tickets/TicketForm";
 import TicketWork from "./pages/tickets/TicketWork";
 import TicketReview from "./pages/tickets/TicketReview";
 import TechnicianDashboard from "./pages/tickets/TechnicianDashboard";
+import InspectionList from "./pages/inspections/InspectionList";
+import CreateInspection from "./pages/inspections/CreateInspection";
+import AreaInspection from "./pages/inspections/AreaInspection";
+import PricingReview from "./pages/inspections/PricingReview";
+import InspectionDetail from "./pages/inspections/InspectionDetail";
+import PMPortal from "./pages/inspections/PMPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,7 +74,15 @@ const App = () => (
             <Route path="/tickets/:id/work" element={<TicketWork />} />
             <Route path="/tickets/:id/review" element={<TicketReview />} />
             <Route path="/my-work" element={<TechnicianDashboard />} />
+            <Route path="/inspections" element={<InspectionList />} />
+            <Route path="/inspections/new" element={<CreateInspection />} />
+            <Route path="/inspections/:id" element={<InspectionDetail />} />
+            <Route path="/inspections/:id/inspect" element={<AreaInspection />} />
+            <Route path="/inspections/:id/pricing" element={<PricingReview />} />
           </Route>
+
+          {/* Public PM portal */}
+          <Route path="/portal/:token" element={<PMPortal />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

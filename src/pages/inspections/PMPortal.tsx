@@ -1,0 +1,355 @@
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { Shield, Lock, Mail, Check, AlertTriangle } from 'lucide-react';
+import SignaturePad from '@/components/inspections/SignaturePad';
+import Spinner from '@/components/ui/Spinner';
+
+const PMPortal = () => {
+  const { token } = useParams();
+  const [inspection, setInspection] = useState<any>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expired, setExpired] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+
+  // Auth
+  const [pinEntered, setPinEntered] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  // Selections
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
+  const [generalNote, setGeneralNote] = useState('');
+  const [signatureData, setSignatureData] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!token) return;
+    const { data: ins } = await supabase.from('inspections').select('*').eq('pm_link_token', token).single();
+    if (!ins) { setLoading(false); return; }
+
+    // Track link open
+    await supabase.from('inspections').update({
+      link_opened_count: (ins.link_opened_count ?? 0) + 1,
+    }).eq('id', ins.id);
+
+    // Check expiry
+    if (ins.link_expires_at && new Date(ins.link_expires_at) < new Date()) {
+      setExpired(true);
+      setLoading(false);
+      return;
+    }
+
+    // Check if already submitted
+    if (ins.pm_submitted_at) {
+      setSubmitted(true);
+      setReadOnly(true);
+    }
+
+    setInspection(ins);
+
+    const { data: itemsData } = await supabase.from('inspection_items')
+      .select('*')
+      .eq('inspection_id', ins.id)
+      .in('status', ['needs_repair', 'urgent'])
+      .order('status', { ascending: true });
+    setItems(itemsData ?? []);
+
+    // Pre-select items that PM had selected
+    if (ins.pm_submitted_at) {
+      const selected = new Set<string>();
+      const notes: Record<string, string> = {};
+      (itemsData ?? []).forEach((item: any) => {
+        if (item.pm_selected) selected.add(item.id);
+        if (item.pm_note) notes[item.id] = item.pm_note;
+      });
+      setSelectedItems(selected);
+      setItemNotes(notes);
+    }
+
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Force light mode
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.style.setProperty('color-scheme', 'light');
+    return () => {
+      document.documentElement.style.removeProperty('color-scheme');
+    };
+  }, []);
+
+  const handlePin = async () => {
+    // For now, accept "1234" as master PIN. In production this comes from company settings.
+    if (pinInput === '1234') {
+      setPinEntered(true);
+    } else {
+      setPinError('Incorrect PIN. Please contact FiveServ.');
+    }
+  };
+
+  const toggleItem = (id: string) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const total = useMemo(() =>
+    items.filter(i => selectedItems.has(i.id))
+      .reduce((sum, i) => sum + ((i.quantity ?? 1) * (i.unit_price ?? 0)), 0)
+  , [items, selectedItems]);
+
+  const handleSubmit = async () => {
+    if (!signatureData) { toast.error('Signature is required'); return; }
+    setSubmitting(true);
+
+    // Update each item with PM selections
+    for (const item of items) {
+      await supabase.from('inspection_items').update({
+        pm_selected: selectedItems.has(item.id),
+        pm_note: itemNotes[item.id] || null,
+      }).eq('id', item.id);
+    }
+
+    // Update inspection
+    await supabase.from('inspections').update({
+      pm_submitted_at: new Date().toISOString(),
+      pm_signature_data: signatureData,
+      pm_total_selected: total,
+      status: 'pm_responded',
+    }).eq('id', inspection.id);
+
+    setShowConfirm(false);
+    setSubmitted(true);
+    setReadOnly(true);
+    toast.success('Response submitted successfully');
+    setSubmitting(false);
+  };
+
+  // Expired page
+  if (expired) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="max-w-md text-center space-y-4">
+          <Lock className="w-16 h-16 text-gray-400 mx-auto" />
+          <h1 className="text-xl font-bold text-gray-900">Link Expired</h1>
+          <p className="text-gray-600">This inspection link has expired. Please contact FiveServ for assistance.</p>
+          <a href="mailto:info@fiveserv.net" className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 transition-colors">
+            <Mail className="w-5 h-5" /> Contact FiveServ
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Spinner size="lg" className="border-gray-300 border-t-yellow-500" />
+      </div>
+    );
+  }
+
+  if (!inspection) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="max-w-md text-center space-y-4">
+          <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto" />
+          <h1 className="text-xl font-bold text-gray-900">Inspection Not Found</h1>
+          <p className="text-gray-600">This link may be invalid. Please contact FiveServ for assistance.</p>
+          <a href="mailto:info@fiveserv.net" className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 transition-colors">
+            <Mail className="w-5 h-5" /> Contact FiveServ
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // PIN entry
+  if (!pinEntered) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="max-w-sm w-full space-y-6">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900">FiveServ Inspection</h1>
+            <p className="text-sm text-gray-500 mt-1">Enter your access PIN to view the inspection report.</p>
+          </div>
+          <div className="space-y-3">
+            <Input
+              type="password"
+              placeholder="Enter PIN"
+              value={pinInput}
+              onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+              className="text-center text-lg tracking-widest bg-white border-gray-300 text-gray-900"
+              maxLength={10}
+            />
+            {pinError && <p className="text-sm text-red-500 text-center">{pinError}</p>}
+            <Button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handlePin}>
+              Access Report
+            </Button>
+          </div>
+          <p className="text-[10px] text-gray-400 text-center">
+            By accessing this report, you agree to FiveServ's privacy policy. This data is confidential.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Main portal
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Confirm dialog */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="bg-white">
+          <DialogHeader><DialogTitle className="text-gray-900">Confirm Submission</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-600">Once submitted, your response cannot be modified. Please review your selections carefully.</p>
+          <p className="text-sm font-bold text-gray-900">Total: ${total.toFixed(2)}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirm(false)}>Review Again</Button>
+            <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? <Spinner size="sm" /> : 'Submit Response'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div>
+            <span className="text-lg font-bold text-yellow-600">FS</span>
+            <span className="text-sm text-gray-500 ml-2">Inspection Report</span>
+          </div>
+          {readOnly && (
+            <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {submitted && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+            <Check className="w-6 h-6 text-green-600 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-green-800">Response submitted</p>
+              <p className="text-xs text-green-600">
+                Submitted on {inspection.pm_submitted_at ? new Date(inspection.pm_submitted_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : ''}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Items */}
+        {items.map((item: any) => (
+          <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                checked={selectedItems.has(item.id)}
+                onCheckedChange={() => !readOnly && toggleItem(item.id)}
+                disabled={readOnly}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-900">{item.item_name}</span>
+                  <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                    {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">{(item.area ?? '').replace(/_/g, ' ')}</p>
+                <div className="flex items-center gap-4 mt-1 text-sm text-gray-700">
+                  <span>Qty: {item.quantity}</span>
+                  <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
+                  <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            <Textarea
+              placeholder="Add a note (optional)..."
+              value={itemNotes[item.id] ?? ''}
+              onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+              rows={1}
+              className="bg-gray-50 border-gray-200 text-gray-900 text-sm"
+              disabled={readOnly}
+            />
+          </div>
+        ))}
+
+        {/* Total */}
+        <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 flex items-center justify-between">
+          <span className="text-sm font-bold text-gray-900">Selected Total</span>
+          <span className="text-xl font-bold text-yellow-600">${total.toFixed(2)}</span>
+        </div>
+
+        {/* General note */}
+        {!readOnly && (
+          <div>
+            <Label className="text-gray-700">General Note (optional)</Label>
+            <Textarea
+              value={generalNote}
+              onChange={e => setGeneralNote(e.target.value)}
+              rows={3}
+              placeholder="Any additional comments..."
+              className="bg-white border-gray-200 text-gray-900"
+            />
+          </div>
+        )}
+
+        {/* Signature */}
+        {!readOnly && (
+          <div>
+            <Label className="text-gray-700 mb-2 block">Digital Signature</Label>
+            <SignaturePad onSave={setSignatureData} disabled={readOnly} />
+            {signatureData && (
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <Check className="w-3 h-3" /> Signature captured
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Read-only signature display */}
+        {readOnly && inspection.pm_signature_data && (
+          <div>
+            <Label className="text-gray-700 mb-2 block">Signature</Label>
+            <div className="border border-gray-200 rounded-lg p-2 bg-white" dangerouslySetInnerHTML={{ __html: inspection.pm_signature_data }} />
+          </div>
+        )}
+
+        {/* Submit */}
+        {!readOnly && (
+          <Button
+            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
+            size="lg"
+            onClick={() => setShowConfirm(true)}
+            disabled={!signatureData || selectedItems.size === 0}
+          >
+            Submit Response
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default PMPortal;
