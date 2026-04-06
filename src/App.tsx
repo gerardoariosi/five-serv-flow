@@ -97,6 +97,7 @@ const App = () => (
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/reports" element={<ReportList />} />
             <Route path="/reports/:slug" element={<ReportDetail />} />
+            <Route path="/chat" element={<ChatPage />} />
           </Route>
 
           {/* Public PM portal */}
