@@ -40,6 +40,7 @@ import AccountingDetail from "./pages/accounting/AccountingDetail";
 import CalendarPage from "./pages/calendar/CalendarPage";
 import ReportList from "./pages/reports/ReportList";
 import ReportDetail from "./pages/reports/ReportDetail";
+import ChatPage from "./pages/chat/ChatPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -96,6 +97,7 @@ const App = () => (
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/reports" element={<ReportList />} />
             <Route path="/reports/:slug" element={<ReportDetail />} />
+            <Route path="/chat" element={<ChatPage />} />
           </Route>
 
           {/* Public PM portal */}
