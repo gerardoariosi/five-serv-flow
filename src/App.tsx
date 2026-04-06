@@ -93,6 +93,9 @@ const App = () => (
             <Route path="/team/vendors/:id" element={<VendorDetail />} />
             <Route path="/accounting" element={<AccountingList />} />
             <Route path="/accounting/:id" element={<AccountingDetail />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/reports" element={<ReportList />} />
+            <Route path="/reports/:slug" element={<ReportDetail />} />
           </Route>
 
           {/* Public PM portal */}
