@@ -128,7 +128,6 @@ const VerifyTwoFactor = () => {
       <div className="w-full max-w-sm">
         <FiveServLogo />
         <div className="bg-card border border-border rounded-lg p-6 text-center">
-          </div>
 
           <h2 className="text-lg font-bold text-foreground mb-2">Two-Factor Authentication</h2>
           <p className="text-sm text-muted-foreground mb-6">
