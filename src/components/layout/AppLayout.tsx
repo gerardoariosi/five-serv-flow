@@ -8,7 +8,7 @@ import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Spinner } from '@/components/ui/Spinner';
+import Spinner from '@/components/ui/Spinner';
 
 const AppLayout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
