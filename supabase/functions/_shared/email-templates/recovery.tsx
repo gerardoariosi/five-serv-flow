@@ -8,6 +8,7 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Preview,
   Text,
@@ -27,6 +28,8 @@ export const RecoveryEmail = ({
     <Preview>Reset your password for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Text style={logo}>⚡ FiveServ</Text>
+        <Hr style={hr} />
         <Heading style={h1}>Reset your password</Heading>
         <Text style={text}>
           We received a request to reset your password for {siteName}. Click
@@ -39,6 +42,7 @@ export const RecoveryEmail = ({
           If you didn't request a password reset, you can safely ignore this
           email. Your password will not be changed.
         </Text>
+        <Text style={tagline}>One Team. One Call. Done.</Text>
       </Container>
     </Body>
   </Html>
@@ -46,26 +50,20 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif" }
 const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
+const logo = { fontSize: '18px', fontWeight: 'bold' as const, color: '#1A1A1A', margin: '0 0 10px' }
+const hr = { borderColor: '#FFD700', margin: '10px 0 20px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#1A1A1A', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#555555', lineHeight: '1.5', margin: '0 0 25px' }
 const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
+  backgroundColor: '#FFD700',
+  color: '#1A1A1A',
   fontSize: '14px',
+  fontWeight: 'bold' as const,
   borderRadius: '8px',
-  padding: '12px 20px',
+  padding: '12px 24px',
   textDecoration: 'none',
 }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const tagline = { fontSize: '11px', color: '#B8960C', fontStyle: 'italic' as const, margin: '10px 0 0' }
