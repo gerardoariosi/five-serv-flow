@@ -37,6 +37,13 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
 
       {/* Right: Notifications + Menu */}
       <div className="flex items-center gap-3">
+        <button
+          onClick={handleThemeToggle}
+          className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
         <button className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
           <Bell className="w-5 h-5" />
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger text-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
