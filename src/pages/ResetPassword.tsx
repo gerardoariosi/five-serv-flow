@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -61,7 +62,7 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center">
-          <span className="text-5xl font-extrabold text-primary mb-4 block">FS</span>
+          <FiveServLogo />
           <h2 className="text-lg font-bold text-foreground mb-2">Link Expired</h2>
           <p className="text-sm text-muted-foreground mb-4">This reset link has expired.</p>
           <Link to="/forgot-password">
@@ -77,9 +78,7 @@ const ResetPassword = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <span className="text-5xl font-extrabold text-primary">FS</span>
-        </div>
+        <FiveServLogo />
 
         <div className="bg-card border border-border rounded-lg p-6">
           <h2 className="text-lg font-bold text-foreground mb-6">Reset Password</h2>
