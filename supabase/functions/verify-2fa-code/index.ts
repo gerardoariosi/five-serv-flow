@@ -20,7 +20,6 @@ serve(async (req) => {
       });
     }
 
-    // Get auth user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
 
@@ -31,6 +30,20 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
+
+    // Check if account is locked
+    const { data: userData } = await supabase
+      .from("users")
+      .select("is_locked")
+      .eq("email", user.email)
+      .single();
+
+    if (userData?.is_locked) {
+      return new Response(JSON.stringify({ success: false, error: "Account is locked. Contact your administrator." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Find valid code
     const { data: codeRecord, error: codeError } = await supabase
@@ -58,10 +71,28 @@ serve(async (req) => {
         .maybeSingle();
 
       if (latestCode) {
+        const newAttempts = (latestCode.attempts ?? 0) + 1;
         await supabase
           .from("two_factor_codes")
-          .update({ attempts: (latestCode.attempts ?? 0) + 1 })
+          .update({ attempts: newAttempts })
           .eq("id", latestCode.id);
+
+        // Lock account after 3 failed attempts
+        if (newAttempts >= 3) {
+          await supabase
+            .from("users")
+            .update({ is_locked: true })
+            .eq("email", user.email);
+
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Too many failed attempts. Account has been locked.",
+            locked: true 
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
 
       return new Response(JSON.stringify({ success: false, error: "Invalid or expired code" }), {
@@ -70,9 +101,19 @@ serve(async (req) => {
       });
     }
 
-    // Check attempts
+    // Check attempts on the matched code
     if ((codeRecord.attempts ?? 0) >= 3) {
-      return new Response(JSON.stringify({ success: false, error: "Too many attempts" }), {
+      // Lock account
+      await supabase
+        .from("users")
+        .update({ is_locked: true })
+        .eq("email", user.email);
+
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Too many attempts. Account has been locked.",
+        locked: true 
+      }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

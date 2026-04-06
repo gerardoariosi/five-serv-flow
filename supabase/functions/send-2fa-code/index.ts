@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+const SITE_NAME = "FiveServ Operations Hub";
+const SENDER_DOMAIN = "notify.fiveserv.net";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,16 +15,6 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
-    if (!TWILIO_API_KEY) throw new Error("TWILIO_API_KEY is not configured");
-
-    const TWILIO_PHONE = Deno.env.get("TWILIO_PHONE_NUMBER");
-    if (!TWILIO_PHONE) throw new Error("TWILIO_PHONE_NUMBER is not configured");
-
-    // Get auth user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
 
@@ -35,14 +26,21 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
 
-    // Get user's phone number
+    // Get user profile
     const { data: userData, error: userError } = await supabase
       .from("users")
-      .select("phone, roles")
+      .select("email, roles, is_locked")
       .eq("email", user.email)
       .single();
 
     if (userError || !userData) throw new Error("User not found");
+
+    if (userData.is_locked) {
+      return new Response(JSON.stringify({ success: false, error: "Account is locked. Contact your administrator." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Check admin role
     const roles = userData.roles as string[];
@@ -50,7 +48,7 @@ serve(async (req) => {
       throw new Error("2FA is only required for admin users");
     }
 
-    if (!userData.phone) throw new Error("No phone number configured for this user");
+    if (!userData.email) throw new Error("No email configured for this user");
 
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -63,27 +61,56 @@ serve(async (req) => {
       expires_at: expiresAt,
     });
 
-    // Send SMS via Twilio gateway
-    const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": TWILIO_API_KEY,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        To: userData.phone,
-        From: TWILIO_PHONE,
-        Body: `Your FiveServ verification code is: ${code}. Valid for 10 minutes.`,
-      }),
+    // Send verification email via the email queue
+    const messageId = crypto.randomUUID();
+    const idempotencyKey = `2fa-${user.id}-${Date.now()}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #ffffff;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 24px; font-weight: bold;">
+            <span style="color: #FFD700;">F</span><span style="color: #1A1A1A;">iveServ</span>
+          </span>
+        </div>
+        <h2 style="color: #1A1A1A; text-align: center; margin-bottom: 8px;">Verification Code</h2>
+        <p style="color: #666666; text-align: center; margin-bottom: 24px;">
+          Use this code to complete your login. It expires in 10 minutes.
+        </p>
+        <div style="background: #F5F5F5; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1A1A1A;">${code}</span>
+        </div>
+        <p style="color: #999999; font-size: 12px; text-align: center;">
+          If you didn't request this code, please ignore this email and secure your account.
+        </p>
+      </div>
+    `;
+
+    await supabase.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "2fa_verification",
+      recipient_email: userData.email,
+      status: "pending",
+      metadata: { sent_for: user.id },
     });
 
-    const smsData = await response.json();
-    if (!response.ok) {
-      throw new Error(`Twilio API error [${response.status}]: ${JSON.stringify(smsData)}`);
-    }
+    await supabase.rpc("enqueue_email", {
+      queue_name: "auth_emails",
+      payload: {
+        message_id: messageId,
+        to: userData.email,
+        from: `${SITE_NAME} <noreply@${SENDER_DOMAIN}>`,
+        sender_domain: SENDER_DOMAIN,
+        subject: `${code} is your FiveServ verification code`,
+        html,
+        text: `Your FiveServ verification code is: ${code}. Valid for 10 minutes.`,
+        purpose: "transactional",
+        label: "2fa_verification",
+        idempotency_key: idempotencyKey,
+        queued_at: new Date().toISOString(),
+      },
+    });
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, email: userData.email }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

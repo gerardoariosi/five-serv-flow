@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock } from 'lucide-react';
 import FiveServLogo from '@/components/auth/FiveServLogo';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import Spinner from '@/components/ui/Spinner';
+
+const maskEmail = (email: string): string => {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  const visible = local.slice(0, 2);
+  return `${visible}***@${domain}`;
+};
 
 const VerifyTwoFactor = () => {
   const navigate = useNavigate();
@@ -14,6 +20,7 @@ const VerifyTwoFactor = () => {
   const [attempts, setAttempts] = useState(0);
   const [cooldown, setCooldown] = useState(60);
   const [sending, setSending] = useState(true);
+  const [maskedEmail, setMaskedEmail] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Send code on mount
@@ -37,14 +44,17 @@ const VerifyTwoFactor = () => {
         return;
       }
 
-      const { error } = await supabase.functions.invoke('send-2fa-code', {
+      const { data, error } = await supabase.functions.invoke('send-2fa-code', {
         body: {},
       });
 
       if (error) {
         toast.error('Failed to send verification code. Please try again.');
       } else {
-        toast.success('Verification code sent via SMS.');
+        if (data?.email) {
+          setMaskedEmail(maskEmail(data.email));
+        }
+        toast.success('Verification code sent to your email.');
       }
     } catch {
       toast.error('Connection error. Please try again.');
@@ -90,7 +100,7 @@ const VerifyTwoFactor = () => {
 
   const verifyCode = async (code: string) => {
     if (attempts >= 3) {
-      toast.error('Too many attempts. Please log in again.');
+      toast.error('Account locked. Contact your administrator.');
       navigate('/login', { replace: true });
       return;
     }
@@ -107,8 +117,8 @@ const VerifyTwoFactor = () => {
         setDigits(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
 
-        if (newAttempts >= 3) {
-          toast.error('Too many failed attempts. Redirecting to login.');
+        if (data?.locked || newAttempts >= 3) {
+          toast.error('Account locked due to too many failed attempts. Contact your administrator.');
           setTimeout(() => navigate('/login', { replace: true }), 1500);
         } else {
           toast.error(`Invalid code. ${3 - newAttempts} attempt(s) remaining.`);
@@ -131,7 +141,12 @@ const VerifyTwoFactor = () => {
 
           <h2 className="text-lg font-bold text-foreground mb-2">Two-Factor Authentication</h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Enter the 6-digit code sent to your phone.
+            Enter the 6-digit code sent to{' '}
+            {maskedEmail ? (
+              <span className="text-foreground font-medium">{maskedEmail}</span>
+            ) : (
+              'your email'
+            )}
           </p>
 
           {/* Digit inputs */}
