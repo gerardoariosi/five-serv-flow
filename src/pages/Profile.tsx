@@ -42,7 +42,7 @@ const Profile = () => {
         full_name: fullName,
         phone,
         language,
-        dark_mode: darkMode,
+        dark_mode: isDark,
       })
       .eq('id', user.id);
 
@@ -207,7 +207,12 @@ const Profile = () => {
           {/* Dark Mode */}
           <div className="flex items-center justify-between">
             <Label className="text-sm text-muted-foreground">Dark Mode</Label>
-            <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+            <Switch checked={isDark} onCheckedChange={(checked) => {
+              setDark(checked);
+              if (user?.id) {
+                supabase.from('users').update({ dark_mode: checked }).eq('id', user.id);
+              }
+            }} />
           </div>
 
           <Button
