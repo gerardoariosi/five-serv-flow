@@ -672,6 +672,44 @@ export type Database = {
           },
         ]
       }
+      two_factor_codes: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          used: boolean | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          used?: boolean | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          used?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "two_factor_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -727,6 +765,7 @@ export type Database = {
           created_at: string | null
           dark_mode: boolean | null
           email: string | null
+          failed_login_attempts: number | null
           full_name: string | null
           id: string
           is_locked: boolean | null
@@ -741,6 +780,7 @@ export type Database = {
           created_at?: string | null
           dark_mode?: boolean | null
           email?: string | null
+          failed_login_attempts?: number | null
           full_name?: string | null
           id?: string
           is_locked?: boolean | null
@@ -755,6 +795,7 @@ export type Database = {
           created_at?: string | null
           dark_mode?: boolean | null
           email?: string | null
+          failed_login_attempts?: number | null
           full_name?: string | null
           id?: string
           is_locked?: boolean | null
