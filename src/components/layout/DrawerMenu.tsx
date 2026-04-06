@@ -24,6 +24,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
     { label: 'Zones', icon: Map, path: '/zones' },
     { label: 'Properties', icon: MapPin, path: '/properties' },
     { label: 'Team', icon: Users, path: '/team/technicians' },
+    { label: 'Accounting', icon: DollarSign, path: '/accounting' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   supervisor: [
@@ -42,7 +43,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
   ],
   accounting: [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Tickets', icon: Ticket, path: '/tickets' },
+    { label: 'Accounting', icon: DollarSign, path: '/accounting' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
 };
