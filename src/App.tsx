@@ -59,6 +59,8 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-2fa" element={<VerifyTwoFactor />} />
+          <Route path="/signup" element={<Navigate to="/login" replace />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
 
           {/* Setup wizard (no nav bar) */}
           <Route path="/setup/step-1" element={<SetupStep1 />} />
