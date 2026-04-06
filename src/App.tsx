@@ -41,6 +41,8 @@ import CalendarPage from "./pages/calendar/CalendarPage";
 import ReportList from "./pages/reports/ReportList";
 import ReportDetail from "./pages/reports/ReportDetail";
 import ChatPage from "./pages/chat/ChatPage";
+import SettingsPage from "./pages/settings/SettingsPage";
+import UserManagement from "./pages/settings/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -98,6 +100,8 @@ const App = () => (
             <Route path="/reports" element={<ReportList />} />
             <Route path="/reports/:slug" element={<ReportDetail />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/users" element={<UserManagement />} />
           </Route>
 
           {/* Public PM portal */}
