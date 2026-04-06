@@ -44,9 +44,18 @@ const AppLayout = () => {
     );
   }
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/login', { replace: true });
+    }
+  }, [isLoading, user, navigate]);
+
   if (!user) {
-    navigate('/login', { replace: true });
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
   }
 
   const handleSignIn = async () => {
