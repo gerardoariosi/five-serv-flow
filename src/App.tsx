@@ -88,6 +88,8 @@ const App = () => (
             <Route path="/team/technicians/:id" element={<TechnicianDetail />} />
             <Route path="/team/vendors/new" element={<VendorDetail />} />
             <Route path="/team/vendors/:id" element={<VendorDetail />} />
+            <Route path="/accounting" element={<AccountingList />} />
+            <Route path="/accounting/:id" element={<AccountingDetail />} />
           </Route>
 
           {/* Public PM portal */}
