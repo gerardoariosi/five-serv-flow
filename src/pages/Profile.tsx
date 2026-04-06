@@ -16,8 +16,7 @@ const Profile = () => {
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [phone, setPhone] = useState('');
   const [language, setLanguage] = useState<'en' | 'es'>('en');
-  const [darkMode, setDarkMode] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { isDark, setDark } = useThemeStore();
 
   // Password section
   const [showPasswordSection, setShowPasswordSection] = useState(false);
