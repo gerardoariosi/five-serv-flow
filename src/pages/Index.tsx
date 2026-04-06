@@ -7,7 +7,7 @@ const Index = () => {
           FiveServ Operations
         </h1>
         <p className="text-sm text-muted-foreground tracking-widest uppercase">
-          Five Days. One Call. Done.
+          One Team. One Call. Done.
         </p>
       </div>
       <div className="mt-8 px-6 py-3 border border-primary/30 rounded-lg">
