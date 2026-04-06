@@ -62,7 +62,7 @@ const Login = () => {
         <div className="text-center mb-8">
           <span className="text-5xl font-extrabold text-primary">FS</span>
           <p className="text-xs text-muted-foreground mt-2 tracking-widest uppercase">
-            Five Days. One Call. Done.
+            One Team. One Call. Done.
           </p>
         </div>
 
