@@ -1,4 +1,4 @@
-import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck } from 'lucide-react';
+import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +23,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
     { label: 'Clients', icon: Building2, path: '/clients' },
     { label: 'Zones', icon: Map, path: '/zones' },
     { label: 'Properties', icon: MapPin, path: '/properties' },
+    { label: 'Team', icon: Users, path: '/team/technicians' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   supervisor: [
@@ -32,6 +33,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
     { label: 'Clients', icon: Building2, path: '/clients' },
     { label: 'Zones', icon: Map, path: '/zones' },
     { label: 'Properties', icon: MapPin, path: '/properties' },
+    { label: 'Team', icon: Users, path: '/team/technicians' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   technician: [
