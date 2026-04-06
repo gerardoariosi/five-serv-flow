@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
 import SetupProgress from '@/components/setup/SetupProgress';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import PasswordStrength, { passwordIsValid } from '@/components/auth/PasswordStrength';
 import { useSetupStore } from '@/stores/setupStore';
 
@@ -35,9 +36,9 @@ const SetupStep1 = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <FiveServLogo />
         <div className="text-center mb-6">
-          <span className="text-5xl font-extrabold text-primary">FS</span>
-          <h1 className="text-lg font-bold text-foreground mt-2">Initial Setup</h1>
+          <h1 className="text-lg font-bold text-foreground">Initial Setup</h1>
         </div>
 
         <SetupProgress currentStep={1} />

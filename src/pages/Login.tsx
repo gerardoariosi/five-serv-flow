@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 
@@ -58,13 +59,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <span className="text-5xl font-extrabold text-primary">FS</span>
-          <p className="text-xs text-muted-foreground mt-2 tracking-widest uppercase">
-            One Team. One Call. Done.
-          </p>
-        </div>
+        <FiveServLogo />
 
         {/* Card */}
         <div className="bg-card border border-border rounded-lg p-6">

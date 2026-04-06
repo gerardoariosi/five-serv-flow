@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,11 +126,8 @@ const VerifyTwoFactor = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
+        <FiveServLogo />
         <div className="bg-card border border-border rounded-lg p-6 text-center">
-          {/* Icon */}
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-primary" />
-          </div>
 
           <h2 className="text-lg font-bold text-foreground mb-2">Two-Factor Authentication</h2>
           <p className="text-sm text-muted-foreground mb-6">
