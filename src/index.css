@@ -5,14 +5,16 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* Dark mode (default) */
+  :root,
+  .dark {
     --background: 0 0% 10%;
     --foreground: 0 0% 100%;
 
-    --card: 0 0% 13%;
+    --card: 0 0% 16%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 13%;
+    --popover: 0 0% 16%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 51 100% 50%;
@@ -22,7 +24,7 @@
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 64%;
+    --muted-foreground: 0 0% 67%;
 
     --accent: 51 100% 50%;
     --accent-foreground: 0 0% 10%;
@@ -30,8 +32,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
     --ring: 51 100% 50%;
 
     --radius: 0.5rem;
@@ -48,8 +50,60 @@
     --gold: 51 100% 50%;
     --gold-foreground: 0 0% 10%;
     --gold-muted: 51 80% 40%;
-    --surface: 0 0% 13%;
-    --surface-hover: 0 0% 16%;
+    --surface: 0 0% 16%;
+    --surface-hover: 0 0% 19%;
+    --danger: 0 84% 60%;
+    --emergency: 0 72% 59%;
+    --make-ready: 51 100% 50%;
+    --repair: 217 91% 60%;
+    --capex: 142 71% 45%;
+    --nav-height: 56px;
+  }
+
+  /* Light mode */
+  .light {
+    --background: 0 0% 96%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 51 100% 50%;
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 33%;
+
+    --accent: 51 100% 50%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 51 100% 50%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 51 100% 50%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 95%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 51 100% 50%;
+
+    --gold: 51 100% 50%;
+    --gold-foreground: 0 0% 10%;
+    --gold-muted: 51 80% 40%;
+    --surface: 0 0% 100%;
+    --surface-hover: 0 0% 96%;
     --danger: 0 84% 60%;
     --emergency: 0 72% 59%;
     --make-ready: 51 100% 50%;

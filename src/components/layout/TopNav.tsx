@@ -1,5 +1,7 @@
-import { Bell, Menu } from 'lucide-react';
+import { Bell, Menu, Sun, Moon } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TopNavProps {
   onMenuClick: () => void;
