@@ -42,7 +42,7 @@ const InspectionDetail = () => {
       supabase.from('inspection_tickets').select('*, tickets(*)').eq('inspection_id', id),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name'),
-      supabase.from('users').select('id, full_name'),
+      supabase.rpc('get_user_directory'),
     ]);
     setInspection(insRes.data);
     setItems(itemsRes.data ?? []);

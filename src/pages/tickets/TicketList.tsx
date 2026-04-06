@@ -33,7 +33,7 @@ const TicketList = () => {
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
-      supabase.from('users').select('id, full_name'),
+      supabase.rpc('get_user_directory'),
     ]);
     setTickets(ticketRes.data ?? []);
     const cMap: Record<string, string> = {};

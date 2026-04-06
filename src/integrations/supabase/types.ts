@@ -1120,6 +1120,13 @@ export type Database = {
         Args: { inspection_id: string }
         Returns: string
       }
+      get_user_directory: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
