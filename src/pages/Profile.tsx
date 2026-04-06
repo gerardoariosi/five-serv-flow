@@ -17,6 +17,7 @@ const Profile = () => {
   const [phone, setPhone] = useState('');
   const [language, setLanguage] = useState<'en' | 'es'>('en');
   const { isDark, setDark } = useThemeStore();
+  const [saving, setSaving] = useState(false);
 
   // Password section
   const [showPasswordSection, setShowPasswordSection] = useState(false);
