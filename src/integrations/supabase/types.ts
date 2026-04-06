@@ -20,18 +20,21 @@ export type Database = {
           id: string
           is_fixed: boolean | null
           name: string | null
+          role_access: string[] | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           is_fixed?: boolean | null
           name?: string | null
+          role_access?: string[] | null
         }
         Update: {
           created_at?: string | null
           id?: string
           is_fixed?: boolean | null
           name?: string | null
+          role_access?: string[] | null
         }
         Relationships: []
       }
@@ -76,6 +79,35 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_read_status: {
+        Row: {
+          group_id: string
+          id: string
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_read_status_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
             referencedColumns: ["id"]
           },
         ]
