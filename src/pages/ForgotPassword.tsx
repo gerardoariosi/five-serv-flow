@@ -40,10 +40,7 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <span className="text-5xl font-extrabold text-primary">FS</span>
-        </div>
+        <FiveServLogo />
 
         <div className="bg-card border border-border rounded-lg p-6">
           <h2 className="text-lg font-bold text-foreground mb-2">Forgot Password</h2>
