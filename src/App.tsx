@@ -35,6 +35,8 @@ import PMPortal from "./pages/inspections/PMPortal";
 import TechnicianList from "./pages/team/TechnicianList";
 import TechnicianDetail from "./pages/team/TechnicianDetail";
 import VendorDetail from "./pages/team/VendorDetail";
+import AccountingList from "./pages/accounting/AccountingList";
+import AccountingDetail from "./pages/accounting/AccountingDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +88,8 @@ const App = () => (
             <Route path="/team/technicians/:id" element={<TechnicianDetail />} />
             <Route path="/team/vendors/new" element={<VendorDetail />} />
             <Route path="/team/vendors/:id" element={<VendorDetail />} />
+            <Route path="/accounting" element={<AccountingList />} />
+            <Route path="/accounting/:id" element={<AccountingDetail />} />
           </Route>
 
           {/* Public PM portal */}
