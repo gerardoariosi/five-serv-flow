@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSetupStore } from '@/stores/setupStore';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import SetupProgress from '@/components/setup/SetupProgress';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import Spinner from '@/components/ui/Spinner';
 
 const SetupStep3 = () => {
@@ -121,9 +122,9 @@ const SetupStep3 = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        <FiveServLogo />
         <div className="text-center mb-6">
-          <span className="text-5xl font-extrabold text-primary">FS</span>
-          <h1 className="text-lg font-bold text-foreground mt-2">Review & Launch</h1>
+          <h1 className="text-lg font-bold text-foreground">Review & Launch</h1>
         </div>
 
         <SetupProgress currentStep={3} />
