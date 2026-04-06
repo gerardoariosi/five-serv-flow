@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useThemeStore } from "@/stores/themeStore";
 import AppLayout from "@/components/layout/AppLayout";
 import Splash from "./pages/Splash";
 import Login from "./pages/Login";
@@ -47,10 +48,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const isDark = useThemeStore((s) => s.isDark);
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Sonner position="bottom-center" theme="dark" />
+      <Sonner position="bottom-center" theme={isDark ? "dark" : "light"} />
       <BrowserRouter>
         <Routes>
           {/* Public routes */}
@@ -114,6 +117,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

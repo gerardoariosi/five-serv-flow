@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Eye, EyeOff, Camera, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 import PasswordStrength, { passwordIsValid } from '@/components/auth/PasswordStrength';
 import Spinner from '@/components/ui/Spinner';
 
@@ -15,7 +16,7 @@ const Profile = () => {
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [phone, setPhone] = useState('');
   const [language, setLanguage] = useState<'en' | 'es'>('en');
-  const [darkMode, setDarkMode] = useState(false);
+  const { isDark, setDark } = useThemeStore();
   const [saving, setSaving] = useState(false);
 
   // Password section
@@ -41,7 +42,7 @@ const Profile = () => {
         full_name: fullName,
         phone,
         language,
-        dark_mode: darkMode,
+        dark_mode: isDark,
       })
       .eq('id', user.id);
 
@@ -206,7 +207,12 @@ const Profile = () => {
           {/* Dark Mode */}
           <div className="flex items-center justify-between">
             <Label className="text-sm text-muted-foreground">Dark Mode</Label>
-            <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+            <Switch checked={isDark} onCheckedChange={(checked) => {
+              setDark(checked);
+              if (user?.id) {
+                supabase.from('users').update({ dark_mode: checked }).eq('id', user.id);
+              }
+            }} />
           </div>
 
           <Button
