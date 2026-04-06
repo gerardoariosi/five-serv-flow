@@ -1,4 +1,4 @@
-import { X, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,10 +15,30 @@ const roleLabels: Record<AppRole, string> = {
   accounting: 'Accounting',
 };
 
-const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'My Profile', icon: User, path: '/profile' },
-];
+const navItemsByRole: Record<string, { label: string; icon: any; path: string }[]> = {
+  admin: [
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { label: 'Clients', icon: Building2, path: '/clients' },
+    { label: 'Zones', icon: Map, path: '/zones' },
+    { label: 'Properties', icon: MapPin, path: '/properties' },
+    { label: 'My Profile', icon: User, path: '/profile' },
+  ],
+  supervisor: [
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { label: 'Clients', icon: Building2, path: '/clients' },
+    { label: 'Zones', icon: Map, path: '/zones' },
+    { label: 'Properties', icon: MapPin, path: '/properties' },
+    { label: 'My Profile', icon: User, path: '/profile' },
+  ],
+  technician: [
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { label: 'My Profile', icon: User, path: '/profile' },
+  ],
+  accounting: [
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { label: 'My Profile', icon: User, path: '/profile' },
+  ],
+};
 
 const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
   const navigate = useNavigate();
