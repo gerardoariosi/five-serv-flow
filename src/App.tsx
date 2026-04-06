@@ -37,6 +37,9 @@ import TechnicianDetail from "./pages/team/TechnicianDetail";
 import VendorDetail from "./pages/team/VendorDetail";
 import AccountingList from "./pages/accounting/AccountingList";
 import AccountingDetail from "./pages/accounting/AccountingDetail";
+import CalendarPage from "./pages/calendar/CalendarPage";
+import ReportList from "./pages/reports/ReportList";
+import ReportDetail from "./pages/reports/ReportDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
