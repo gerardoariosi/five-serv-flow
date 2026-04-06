@@ -16,6 +16,26 @@ function substituteVariables(template: string, variables: Record<string, string>
   })
 }
 
+async function getOrCreateUnsubscribeToken(
+  supabase: ReturnType<typeof createClient>,
+  email: string
+): Promise<string> {
+  // Check for existing token
+  const { data: existing } = await supabase
+    .from('email_unsubscribe_tokens')
+    .select('token')
+    .eq('email', email)
+    .is('used_at', null)
+    .maybeSingle()
+
+  if (existing?.token) return existing.token
+
+  // Create new token
+  const token = crypto.randomUUID()
+  await supabase.from('email_unsubscribe_tokens').insert({ email, token })
+  return token
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -86,6 +106,9 @@ Deno.serve(async (req) => {
   const messageId = crypto.randomUUID()
   const idempotencyKey = `${template_name}-${to_email}-${Date.now()}`
 
+  // Get or create unsubscribe token for recipient
+  const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, to_email)
+
   // Log pending
   await supabase.from('email_send_log').insert({
     message_id: messageId,
@@ -109,6 +132,7 @@ Deno.serve(async (req) => {
       purpose: 'transactional',
       label: template_name,
       idempotency_key: idempotencyKey,
+      unsubscribe_token: unsubscribeToken,
       queued_at: new Date().toISOString(),
     },
   })
