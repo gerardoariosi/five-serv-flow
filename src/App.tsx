@@ -13,6 +13,13 @@ import SetupStep2 from "./pages/setup/SetupStep2";
 import SetupStep3 from "./pages/setup/SetupStep3";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import ClientList from "./pages/clients/ClientList";
+import ClientDetail from "./pages/clients/ClientDetail";
+import ClientForm from "./pages/clients/ClientForm";
+import ZoneList from "./pages/zones/ZoneList";
+import PropertyList from "./pages/properties/PropertyList";
+import PropertyDetail from "./pages/properties/PropertyDetail";
+import PropertyForm from "./pages/properties/PropertyForm";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +46,15 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/clients" element={<ClientList />} />
+            <Route path="/clients/new" element={<ClientForm />} />
+            <Route path="/clients/:id" element={<ClientDetail />} />
+            <Route path="/clients/:id/edit" element={<ClientForm />} />
+            <Route path="/zones" element={<ZoneList />} />
+            <Route path="/properties" element={<PropertyList />} />
+            <Route path="/properties/new" element={<PropertyForm />} />
+            <Route path="/properties/:id" element={<PropertyDetail />} />
+            <Route path="/properties/:id/edit" element={<PropertyForm />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
