@@ -103,7 +103,7 @@ serve(async (req) => {
         subject: `${code} is your FiveServ verification code`,
         html,
         text: `Your FiveServ verification code is: ${code}. Valid for 10 minutes.`,
-        purpose: "transactional",
+        purpose: "auth",
         label: "2fa_verification",
         idempotency_key: idempotencyKey,
         queued_at: new Date().toISOString(),
