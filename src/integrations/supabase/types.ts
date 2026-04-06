@@ -78,6 +78,13 @@ export type Database = {
             foreignKeyName: "chat_messages_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -670,6 +677,13 @@ export type Database = {
             foreignKeyName: "technicians_vendors_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technicians_vendors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -704,6 +718,13 @@ export type Database = {
           url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ticket_photos_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ticket_photos_technician_id_fkey"
             columns: ["technician_id"]
@@ -773,6 +794,13 @@ export type Database = {
           to_status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ticket_timeline_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ticket_timeline_changed_by_fkey"
             columns: ["changed_by"]
@@ -876,6 +904,13 @@ export type Database = {
             foreignKeyName: "tickets_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -898,6 +933,13 @@ export type Database = {
             columns: ["related_inspection_id"]
             isOneToOne: false
             referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "user_directory"
             referencedColumns: ["id"]
           },
           {
@@ -956,6 +998,13 @@ export type Database = {
             foreignKeyName: "two_factor_codes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "two_factor_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1002,6 +1051,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_saved_filters_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_directory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_saved_filters_user_id_fkey"
             columns: ["user_id"]
@@ -1103,7 +1159,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_directory: {
+        Row: {
+          full_name: string | null
+          id: string | null
+        }
+        Insert: {
+          full_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          full_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       delete_email: {
