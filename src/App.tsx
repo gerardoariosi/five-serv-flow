@@ -20,6 +20,10 @@ import ZoneList from "./pages/zones/ZoneList";
 import PropertyList from "./pages/properties/PropertyList";
 import PropertyDetail from "./pages/properties/PropertyDetail";
 import PropertyForm from "./pages/properties/PropertyForm";
+import TicketList from "./pages/tickets/TicketList";
+import TicketDetail from "./pages/tickets/TicketDetail";
+import TicketForm from "./pages/tickets/TicketForm";
+import TechnicianDashboard from "./pages/tickets/TechnicianDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +59,11 @@ const App = () => (
             <Route path="/properties/new" element={<PropertyForm />} />
             <Route path="/properties/:id" element={<PropertyDetail />} />
             <Route path="/properties/:id/edit" element={<PropertyForm />} />
+            <Route path="/tickets" element={<TicketList />} />
+            <Route path="/tickets/new" element={<TicketForm />} />
+            <Route path="/tickets/:id" element={<TicketDetail />} />
+            <Route path="/tickets/:id/edit" element={<TicketForm />} />
+            <Route path="/my-work" element={<TechnicianDashboard />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

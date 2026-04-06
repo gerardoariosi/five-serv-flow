@@ -834,6 +834,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_fs_number: { Args: never; Returns: string }
+      generate_ins_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

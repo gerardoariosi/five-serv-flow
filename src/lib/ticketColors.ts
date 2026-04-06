@@ -1,0 +1,44 @@
+export const workTypeColors: Record<string, { bg: string; border: string; badge: string }> = {
+  'make-ready': {
+    bg: 'bg-primary/10',
+    border: 'border-primary/40',
+    badge: 'bg-primary text-primary-foreground',
+  },
+  emergency: {
+    bg: 'bg-destructive/10',
+    border: 'border-destructive/40',
+    badge: 'bg-destructive text-destructive-foreground',
+  },
+  repair: {
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/40',
+    badge: 'bg-blue-500 text-white',
+  },
+  capex: {
+    bg: 'bg-green-500/10',
+    border: 'border-green-500/40',
+    badge: 'bg-green-500 text-white',
+  },
+};
+
+export const statusLabels: Record<string, string> = {
+  draft: 'Draft',
+  open: 'Open',
+  in_progress: 'In Progress',
+  paused: 'Paused',
+  ready_for_review: 'Ready for Review',
+  closed: 'Closed',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+};
+
+export const statusColors: Record<string, string> = {
+  draft: 'bg-muted text-muted-foreground',
+  open: 'bg-primary/20 text-primary',
+  in_progress: 'bg-blue-500/20 text-blue-400',
+  paused: 'bg-orange-500/20 text-orange-400',
+  ready_for_review: 'bg-purple-500/20 text-purple-400',
+  closed: 'bg-green-500/20 text-green-400',
+  rejected: 'bg-destructive/20 text-destructive',
+  cancelled: 'bg-muted text-muted-foreground',
+};
