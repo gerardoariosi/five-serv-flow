@@ -34,19 +34,20 @@ const AppLayout = () => {
     setSessionExpired(true);
   }, [user?.email]);
 
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/login', { replace: true });
+    }
+  }, [isLoading, user, navigate]);
+
   useSessionTimeout(handleExpire);
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Spinner className="h-8 w-8" />
       </div>
     );
-  }
-
-  if (!user) {
-    navigate('/login', { replace: true });
-    return null;
   }
 
   const handleSignIn = async () => {
