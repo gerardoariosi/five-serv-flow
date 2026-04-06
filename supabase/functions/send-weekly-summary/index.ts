@@ -19,6 +19,24 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
   } catch { return null }
 }
 
+async function getOrCreateUnsubscribeToken(
+  supabase: ReturnType<typeof createClient>,
+  email: string
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from('email_unsubscribe_tokens')
+    .select('token')
+    .eq('email', email)
+    .is('used_at', null)
+    .maybeSingle()
+
+  if (existing?.token) return existing.token
+
+  const token = crypto.randomUUID()
+  await supabase.from('email_unsubscribe_tokens').insert({ email, token })
+  return token
+}
+
 Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -172,6 +190,9 @@ Deno.serve(async (req) => {
     const html = substituteVariables(template.body || '', vars)
     const messageId = crypto.randomUUID()
 
+    // Get or create unsubscribe token for recipient
+    const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, admin.email)
+
     await supabase.from('email_send_log').insert({
       message_id: messageId,
       template_name: 'weekly_summary',
@@ -192,6 +213,7 @@ Deno.serve(async (req) => {
         purpose: 'transactional',
         label: 'weekly_summary',
         idempotency_key: `weekly-summary-${admin.id}-${weekStart}`,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     })
