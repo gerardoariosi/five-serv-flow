@@ -59,7 +59,6 @@ const AccountingDetail = () => {
       const { data: allUsers } = await supabase.rpc('get_user_directory');
       const match = (allUsers ?? []).find((u: any) => u.id === ticket.approved_by);
       return match ? { full_name: match.full_name } : null;
-      return data;
     },
     enabled: !!ticket?.approved_by,
   });
@@ -71,7 +70,6 @@ const AccountingDetail = () => {
       const { data: allUsers } = await supabase.rpc('get_user_directory');
       const match = (allUsers ?? []).find((u: any) => u.id === ticket.technician_id);
       return match ? { full_name: match.full_name } : null;
-      return data;
     },
     enabled: !!ticket?.technician_id,
   });
