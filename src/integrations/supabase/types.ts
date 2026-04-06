@@ -178,6 +178,30 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          body: string | null
+          id: string
+          subject: string | null
+          template_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          body?: string | null
+          id?: string
+          subject?: string | null
+          template_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string | null
+          id?: string
+          subject?: string | null
+          template_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       holidays: {
         Row: {
           created_at: string | null
@@ -199,6 +223,30 @@ export type Database = {
           id?: string
           is_federal?: boolean | null
           name?: string | null
+        }
+        Relationships: []
+      }
+      inspection_item_defaults: {
+        Row: {
+          area: string
+          created_at: string | null
+          default_price: number | null
+          id: string
+          item_name: string
+        }
+        Insert: {
+          area: string
+          created_at?: string | null
+          default_price?: number | null
+          id?: string
+          item_name: string
+        }
+        Update: {
+          area?: string
+          created_at?: string | null
+          default_price?: number | null
+          id?: string
+          item_name?: string
         }
         Relationships: []
       }
@@ -372,6 +420,24 @@ export type Database = {
           },
         ]
       }
+      master_pin: {
+        Row: {
+          id: string
+          pin: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          pin?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          pin?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       properties: {
         Row: {
           address: string | null
@@ -426,6 +492,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      specialties: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       technicians_vendors: {
         Row: {
@@ -524,6 +608,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ticket_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          work_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          work_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          work_type?: string | null
+        }
+        Relationships: []
       }
       ticket_timeline: {
         Row: {
@@ -837,6 +945,27 @@ export type Database = {
           phone?: string | null
           require_password_change?: boolean | null
           roles?: string[] | null
+        }
+        Relationships: []
+      }
+      work_types: {
+        Row: {
+          created_at: string | null
+          id: string
+          key: string
+          label: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key: string
+          label: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key?: string
+          label?: string
         }
         Relationships: []
       }

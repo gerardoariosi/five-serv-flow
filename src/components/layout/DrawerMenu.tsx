@@ -1,4 +1,4 @@
-import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users, DollarSign, CalendarDays, BarChart3, MessageCircle } from 'lucide-react';
+import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users, DollarSign, CalendarDays, BarChart3, MessageCircle, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +28,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
     { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
     { label: 'Reports', icon: BarChart3, path: '/reports' },
     { label: 'Chat', icon: MessageCircle, path: '/chat' },
+    { label: 'Settings', icon: Settings, path: '/settings' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],
   supervisor: [
