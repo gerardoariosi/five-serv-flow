@@ -5,3 +5,7 @@ project_id = "tvaouclllewfmxjuhfbq"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.send-business-email]
+    verify_jwt = false
+  [functions.send-weekly-summary]
+    verify_jwt = true
