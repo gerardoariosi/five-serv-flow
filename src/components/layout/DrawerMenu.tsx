@@ -106,7 +106,7 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
           {/* Navigation */}
           <div className="flex-1 p-4">
             <div className="flex flex-col gap-1">
-              {navItems.map((item) => (
+              {(navItemsByRole[activeRole ?? 'technician'] ?? navItemsByRole.technician).map((item) => (
                 <button
                   key={item.path}
                   onClick={() => handleNav(item.path)}
