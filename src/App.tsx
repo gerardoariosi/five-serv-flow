@@ -23,6 +23,8 @@ import PropertyForm from "./pages/properties/PropertyForm";
 import TicketList from "./pages/tickets/TicketList";
 import TicketDetail from "./pages/tickets/TicketDetail";
 import TicketForm from "./pages/tickets/TicketForm";
+import TicketWork from "./pages/tickets/TicketWork";
+import TicketReview from "./pages/tickets/TicketReview";
 import TechnicianDashboard from "./pages/tickets/TechnicianDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -63,6 +65,8 @@ const App = () => (
             <Route path="/tickets/new" element={<TicketForm />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />
             <Route path="/tickets/:id/edit" element={<TicketForm />} />
+            <Route path="/tickets/:id/work" element={<TicketWork />} />
+            <Route path="/tickets/:id/review" element={<TicketReview />} />
             <Route path="/my-work" element={<TechnicianDashboard />} />
           </Route>
 
