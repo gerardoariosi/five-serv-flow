@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Search } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 
 const CreateInspection = () => {
@@ -16,6 +17,10 @@ const CreateInspection = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [activeInspectionPropertyIds, setActiveInspectionPropertyIds] = useState<string[]>([]);
+  const [propertySearch, setPropertySearch] = useState('');
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+  const [newAddressDialog, setNewAddressDialog] = useState<{ open: boolean; address: string; pmName: string }>({ open: false, address: '', pmName: '' });
+  const [newPropertyName, setNewPropertyName] = useState('');
 
   const [form, setForm] = useState({
     client_id: '',
@@ -33,7 +38,7 @@ const CreateInspection = () => {
     const fetchOptions = async () => {
       const [cRes, pRes, iRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
-        supabase.from('properties').select('id, name, current_pm_id').eq('status', 'active'),
+        supabase.from('properties').select('id, name, address, current_pm_id').eq('status', 'active'),
         supabase.from('inspections').select('property_id').not('status', 'in', '("closed_internally","complete","converted")'),
       ]);
       setClients(cRes.data ?? []);
@@ -43,14 +48,64 @@ const CreateInspection = () => {
     fetchOptions();
   }, []);
 
-  const filteredProperties = form.client_id
-    ? properties.filter((p: any) => p.current_pm_id === form.client_id)
-    : properties;
+  const filteredProperties = useMemo(() => {
+    let result = form.client_id
+      ? properties.filter((p: any) => p.current_pm_id === form.client_id)
+      : properties;
 
+    if (propertySearch.trim()) {
+      const q = propertySearch.toLowerCase();
+      result = result.filter((p: any) =>
+        p.name?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [properties, form.client_id, propertySearch]);
+
+  const selectedProperty = properties.find((p: any) => p.id === form.property_id);
   const propertyHasActiveInspection = form.property_id && activeInspectionPropertyIds.includes(form.property_id);
+  const selectedPmName = clients.find((c: any) => c.id === form.client_id)?.company_name ?? '';
 
   const handleCounter = (field: 'bedrooms' | 'bathrooms' | 'living_rooms', delta: number) => {
     setForm(prev => ({ ...prev, [field]: Math.max(0, prev[field] + delta) }));
+  };
+
+  const handleSelectProperty = (propId: string) => {
+    setForm(p => ({ ...p, property_id: propId }));
+    const prop = properties.find((p: any) => p.id === propId);
+    setPropertySearch(prop ? `${prop.name} — ${prop.address}` : '');
+    setShowPropertyDropdown(false);
+  };
+
+  const handleAddNewAddress = () => {
+    if (!form.client_id) {
+      toast.error('Select a PM first');
+      return;
+    }
+    setNewAddressDialog({ open: true, address: propertySearch, pmName: selectedPmName });
+    setNewPropertyName(propertySearch);
+  };
+
+  const handleConfirmNewProperty = async () => {
+    if (!newPropertyName.trim()) return;
+    try {
+      const { data, error } = await supabase.from('properties').insert({
+        name: newPropertyName,
+        address: newPropertyName,
+        current_pm_id: form.client_id,
+        status: 'active',
+      }).select('id, name, address, current_pm_id').single();
+
+      if (error) throw error;
+
+      setProperties(prev => [...prev, data]);
+      setForm(p => ({ ...p, property_id: data.id }));
+      setPropertySearch(`${data.name} — ${data.address}`);
+      setNewAddressDialog({ open: false, address: '', pmName: '' });
+      toast.success('Property created and linked.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create property');
+    }
   };
 
   const handleSubmit = async () => {
@@ -94,7 +149,7 @@ const CreateInspection = () => {
       </div>
 
       {/* Progress */}
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex items-center justify-center gap-2 flex-wrap">
         {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
           <div key={step} className="flex items-center gap-1">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -103,7 +158,7 @@ const CreateInspection = () => {
               {i + 1}
             </div>
             <span className={`text-xs ${i === 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{step}</span>
-            {i < 3 && <div className="w-8 h-px bg-border" />}
+            {i < 3 && <div className="w-4 sm:w-8 h-px bg-border" />}
           </div>
         ))}
       </div>
@@ -112,7 +167,10 @@ const CreateInspection = () => {
         {/* Client */}
         <div>
           <Label>Client (PM)</Label>
-          <Select value={form.client_id} onValueChange={v => setForm(p => ({ ...p, client_id: v, property_id: '' }))}>
+          <Select value={form.client_id} onValueChange={v => {
+            setForm(p => ({ ...p, client_id: v, property_id: '' }));
+            setPropertySearch('');
+          }}>
             <SelectTrigger><SelectValue placeholder="Select PM" /></SelectTrigger>
             <SelectContent>
               {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
@@ -120,21 +178,58 @@ const CreateInspection = () => {
           </Select>
         </div>
 
-        {/* Property */}
-        <div>
-          <Label>Property</Label>
-          <Select value={form.property_id} onValueChange={v => setForm(p => ({ ...p, property_id: v }))}>
-            <SelectTrigger className={propertyHasActiveInspection ? 'border-destructive' : ''}>
-              <SelectValue placeholder="Select property" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredProperties.map((p: any) => (
-                <SelectItem key={p.id} value={p.id} disabled={activeInspectionPropertyIds.includes(p.id)}>
-                  {p.name} {activeInspectionPropertyIds.includes(p.id) ? '(active inspection)' : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Property — searchable dropdown */}
+        <div className="relative">
+          <Label>Property / Address</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={propertySearch}
+              onChange={e => {
+                setPropertySearch(e.target.value);
+                setShowPropertyDropdown(true);
+                setForm(p => ({ ...p, property_id: '' }));
+              }}
+              onFocus={() => setShowPropertyDropdown(true)}
+              placeholder="Search property or address..."
+              className={`pl-10 ${propertyHasActiveInspection ? 'border-destructive' : ''}`}
+            />
+          </div>
+          {showPropertyDropdown && (
+            <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+              {filteredProperties.length > 0 ? (
+                filteredProperties.map((p: any) => {
+                  const hasActive = activeInspectionPropertyIds.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => !hasActive && handleSelectProperty(p.id)}
+                      disabled={hasActive}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${hasActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className="font-medium text-foreground">{p.name}</span>
+                      <span className="text-muted-foreground ml-2">{p.address}</span>
+                      {hasActive && <span className="text-destructive ml-2 text-xs">(active inspection)</span>}
+                    </button>
+                  );
+                })
+              ) : null}
+              {propertySearch.trim() && (
+                <button
+                  onClick={handleAddNewAddress}
+                  className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors border-t border-border flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add new address: "{propertySearch}"
+                </button>
+              )}
+              {!propertySearch.trim() && filteredProperties.length === 0 && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  {form.client_id ? 'No properties for this PM. Type to add.' : 'Select a PM first or type to search.'}
+                </div>
+              )}
+            </div>
+          )}
           {propertyHasActiveInspection && (
             <p className="text-xs text-destructive mt-1">This property already has an active inspection.</p>
           )}
@@ -165,7 +260,6 @@ const CreateInspection = () => {
             </div>
           ))}
 
-          {/* Toggles */}
           <div className="space-y-3 pt-2 border-t border-border">
             {([
               { key: 'has_garage', label: 'Garage' },
@@ -179,7 +273,6 @@ const CreateInspection = () => {
             ))}
           </div>
 
-          {/* HVAC always present */}
           <p className="text-xs text-muted-foreground italic">HVAC / A-C is always included.</p>
         </div>
 
@@ -187,6 +280,32 @@ const CreateInspection = () => {
           {saving ? <Spinner size="sm" /> : 'Start Inspection →'}
         </Button>
       </div>
+
+      {/* Add New Property Confirmation Dialog */}
+      <Dialog open={newAddressDialog.open} onOpenChange={o => setNewAddressDialog(p => ({ ...p, open: o }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Property</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Add <span className="font-medium text-foreground">"{newPropertyName}"</span> to{' '}
+            <span className="font-medium text-foreground">{newAddressDialog.pmName}</span>?
+            This will create a new property.
+          </p>
+          <Input
+            value={newPropertyName}
+            onChange={e => setNewPropertyName(e.target.value)}
+            placeholder="Property name / address"
+            className="bg-secondary border-border"
+          />
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setNewAddressDialog({ open: false, address: '', pmName: '' })}>Cancel</Button>
+            <Button onClick={handleConfirmNewProperty} disabled={!newPropertyName.trim()} className="bg-primary text-primary-foreground">
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
