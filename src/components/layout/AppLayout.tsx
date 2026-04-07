@@ -26,8 +26,25 @@ const AppLayout = () => {
     };
   }, [initialize]);
 
+  // Remember Me enforcement: if no "remember me" flag AND no session-tab flag,
+  // the user opened a new tab/window without "Remember Me" — sign them out.
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) return;
+
+    const rememberMe = localStorage.getItem('fiveserv-remember-me');
+    const sessionActive = sessionStorage.getItem('fiveserv-session-active');
+
+    if (!rememberMe && !sessionActive) {
+      // Session from a previous tab where Remember Me was unchecked
+      supabase.auth.signOut().then(() => {
+        logout();
+        navigate('/login', { replace: true });
+      });
+    }
+  }, [isLoading, user, logout, navigate]);
+
   const handleExpire = useCallback(() => {
-    // Save email for pre-fill
     if (user?.email) {
       localStorage.setItem('fiveserv-last-email', user.email);
     }
@@ -61,7 +78,7 @@ const AppLayout = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <TopNav onMenuClick={() => setDrawerOpen(true)} />
       <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-hidden">
         <Outlet />
       </main>
       <SessionExpiredModal open={sessionExpired} onSignIn={handleSignIn} />

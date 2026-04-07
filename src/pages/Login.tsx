@@ -18,7 +18,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [isFirstAccess] = useState(true); // TODO: track first access per user
+  const [isFirstAccess] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -48,6 +48,15 @@ const Login = () => {
       return;
     }
 
+    // Persist remember-me preference
+    if (rememberMe) {
+      localStorage.setItem('fiveserv-remember-me', '1');
+    } else {
+      localStorage.removeItem('fiveserv-remember-me');
+      // Mark this tab as having an active session (lost on tab close)
+      sessionStorage.setItem('fiveserv-session-active', '1');
+    }
+
     // Admin goes to 2FA
     if (user.roles.includes('admin')) {
       navigate('/verify-2fa', { replace: true });
@@ -61,12 +70,10 @@ const Login = () => {
       <div className="w-full max-w-sm">
         <FiveServLogo />
 
-        {/* Card */}
         <div className="bg-card border border-border rounded-lg p-6">
           <h2 className="text-lg font-bold text-foreground mb-6">Sign In</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
               <Input
@@ -80,7 +87,6 @@ const Login = () => {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
               <div className="relative">
@@ -103,7 +109,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Remember Me */}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="remember"
@@ -115,7 +120,6 @@ const Login = () => {
               </Label>
             </div>
 
-            {/* Terms (first access) */}
             {isFirstAccess && (
               <div className="flex items-start gap-2">
                 <Checkbox
@@ -131,12 +135,10 @@ const Login = () => {
               </div>
             )}
 
-            {/* Error */}
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
 
-            {/* Submit */}
             <Button
               type="submit"
               disabled={loading}
@@ -146,7 +148,6 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Forgot Password */}
           <div className="mt-4 text-center">
             <Link to="/forgot-password" className="text-sm text-primary hover:underline">
               Forgot Password?
