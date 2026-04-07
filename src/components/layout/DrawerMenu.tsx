@@ -64,6 +64,8 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
   const roles = user?.roles ?? [];
 
   const handleLogout = async () => {
+    localStorage.removeItem('fiveserv-remember-me');
+    sessionStorage.removeItem('fiveserv-session-active');
     await supabase.auth.signOut();
     logout();
     onClose();
