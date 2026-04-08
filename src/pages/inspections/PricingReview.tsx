@@ -66,15 +66,76 @@ const PricingReview = () => {
   const handleSendToPM = async () => {
     if (!allPriced) { toast.error('All items need quantity and price'); return; }
     setSending(true);
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from('inspections').update({
-      status: 'sent',
-      pm_link_token: token,
-      link_expires_at: expiresAt,
-    }).eq('id', id);
-    toast.success('Sent to PM!');
-    navigate(`/inspections/${id}`);
+
+    try {
+      // Fetch inspection details for email
+      const { data: inspection } = await supabase
+        .from('inspections')
+        .select('ins_number, client_id, property_id, visit_date')
+        .eq('id', id)
+        .single();
+
+      if (!inspection) { toast.error('Inspection not found'); setSending(false); return; }
+
+      // Fetch client email
+      const { data: client } = await supabase
+        .from('clients')
+        .select('email, company_name')
+        .eq('id', inspection.client_id)
+        .single();
+
+      // Fetch property name
+      const { data: property } = await supabase
+        .from('properties')
+        .select('name')
+        .eq('id', inspection.property_id)
+        .single();
+
+      // Generate token and save
+      const token = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+      const portalUrl = `${window.location.origin}/portal/${token}`;
+
+      await supabase.from('inspections').update({
+        status: 'sent',
+        pm_link_token: token,
+        link_expires_at: expiresAt.toISOString(),
+      }).eq('id', id);
+
+      // Send email to PM
+      if (client?.email) {
+        const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'pm-inspection-link',
+            recipientEmail: client.email,
+            idempotencyKey: `pm-inspection-${id}-${token}`,
+            templateData: {
+              ins_number: inspection.ins_number ?? '',
+              property_name: property?.name ?? '',
+              visit_date: inspection.visit_date ?? '',
+              items_count: items.length,
+              total_estimate: total.toFixed(2),
+              portal_url: portalUrl,
+              link_expires_at: expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            },
+          },
+        });
+
+        if (emailError) {
+          console.error('Email send error:', emailError);
+          toast.warning('Inspection sent but email notification failed. Share the link manually.');
+        } else {
+          toast.success('Sent to PM! Email notification delivered.');
+        }
+      } else {
+        toast.warning('Inspection sent but no PM email found. Share the link manually.');
+      }
+
+      navigate(`/inspections/${id}`);
+    } catch (err) {
+      console.error('Send to PM error:', err);
+      toast.error('Failed to send to PM');
+    }
     setSending(false);
   };
 
@@ -88,7 +149,6 @@ const PricingReview = () => {
   // Group by area
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
-    // Urgent first
     const sorted = [...items].sort((a, b) => (a.status === 'urgent' ? -1 : 1) - (b.status === 'urgent' ? -1 : 1));
     sorted.forEach(i => {
       const area = i.area ?? 'Other';

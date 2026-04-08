@@ -45,6 +45,7 @@ import ReportDetail from "./pages/reports/ReportDetail";
 import ChatPage from "./pages/chat/ChatPage";
 import SettingsPage from "./pages/settings/SettingsPage";
 import UserManagement from "./pages/settings/UserManagement";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -114,6 +115,7 @@ const App = () => {
 
           {/* Public PM portal */}
           <Route path="/portal/:token" element={<PMPortal />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
