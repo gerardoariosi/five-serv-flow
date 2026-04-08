@@ -11,3 +11,5 @@ project_id = "tvaouclllewfmxjuhfbq"
     verify_jwt = true
   [functions.invite-user]
     verify_jwt = false
+  [functions.send-2fa-code]
+    verify_jwt = false

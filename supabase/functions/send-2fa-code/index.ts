@@ -1,4 +1,3 @@
-import { sendLovableEmail } from "npm:@lovable.dev/email-js";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -20,8 +19,6 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -85,12 +82,12 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const messageId = crypto.randomUUID();
     const idempotencyKey = `2fa-${user.id}-${Date.now()}`;
 
-    // Send email directly via Lovable Email (no queue delay for 2FA)
-    await sendLovableEmail(
-      {
+    // Enqueue email via pgmq transactional queue
+    const { error: enqueueError } = await supabase.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
         to: userData.email,
         from: `${SITE_NAME} <noreply@${SENDER_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
@@ -100,19 +97,16 @@ Deno.serve(async (req) => {
         purpose: "transactional",
         label: "2fa_verification",
         idempotency_key: idempotencyKey,
-        message_id: messageId,
+        message_id: crypto.randomUUID(),
       },
-      { apiKey, sendUrl: Deno.env.get("LOVABLE_SEND_URL") }
-    );
-
-    // Log the send
-    await supabase.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: "2fa_verification",
-      recipient_email: userData.email,
-      status: "sent",
-      metadata: { sent_for: user.id },
     });
+
+    if (enqueueError) {
+      console.error("Failed to enqueue 2FA email:", enqueueError);
+      throw new Error("Failed to enqueue verification email");
+    }
+
+    console.log("2FA email enqueued successfully for", userData.email);
 
     return new Response(JSON.stringify({ success: true, email: userData.email }), {
       status: 200,
