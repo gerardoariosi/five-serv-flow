@@ -76,7 +76,7 @@ const ClientForm = () => {
       toast.success(isEdit ? 'Client updated.' : 'Client created.');
       navigate('/clients');
     },
-    onError: () => toast.error('Failed to save client.'),
+    onError: (error: Error) => toast.error(error.message || 'Failed to save client.'),
   });
 
   const canSubmit = form.company_name && form.email && !emailError && !mutation.isPending;
