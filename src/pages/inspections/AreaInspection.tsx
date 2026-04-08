@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot, X } from 'lucide-react';
 import { buildAreas } from '@/lib/inspectionAreas';
 import Spinner from '@/components/ui/Spinner';
 
