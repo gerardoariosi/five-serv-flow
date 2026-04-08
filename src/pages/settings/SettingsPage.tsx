@@ -383,7 +383,9 @@ const MasterPinSection = () => {
       if (err.message === 'wrong_pin') toast.error('Current PIN is incorrect.');
       else if (err.message === 'mismatch') toast.error('PINs do not match.');
       else if (err.message === 'too_short') toast.error('PIN must be at least 4 digits.');
-      else toast.error('Failed to update PIN.');
+      else if (err.message?.includes('row-level security') || err.message?.includes('policy'))
+        toast.error('Your account does not have permission to update the Master PIN.');
+      else toast.error('Failed to update PIN. Check your permissions.');
     },
   });
 
