@@ -336,7 +336,7 @@ const InspectionDetail = () => {
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {photosByArea[area].map((p: any) => (
                     <div key={p.id} className="rounded-lg overflow-hidden border border-border">
-                      <img src={p.url} alt="" className="w-full h-28 object-cover" />
+                      <img src={p.displayUrl || p.url} alt="" className="w-full h-28 object-cover" />
                       <div className="p-1">
                         <p className="text-[9px] text-muted-foreground">
                           {new Date(p.uploaded_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
