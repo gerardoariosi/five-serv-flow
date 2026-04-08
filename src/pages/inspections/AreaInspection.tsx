@@ -267,13 +267,13 @@ const AreaInspection = () => {
         <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
           <Camera className="w-5 h-5 text-primary" />
           <span className="text-sm text-primary font-medium">{uploading ? 'Uploading...' : 'Add Photo'}</span>
-          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+          <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
         </label>
         {currentPhotos.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {currentPhotos.map((p: any, i: number) => (
               <div key={p.id ?? i} className="rounded-lg overflow-hidden border border-border">
-                <img src={p.url} alt="" className="w-full h-20 object-cover" />
+                <img src={p.displayUrl || p.url} alt="" className="w-full h-20 object-cover" />
               </div>
             ))}
           </div>
