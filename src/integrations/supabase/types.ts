@@ -384,6 +384,33 @@ export type Database = {
           },
         ]
       }
+      inspection_photos: {
+        Row: {
+          area: string
+          id: string
+          inspection_id: string
+          uploaded_at: string
+          uploaded_by: string
+          url: string
+        }
+        Insert: {
+          area: string
+          id?: string
+          inspection_id: string
+          uploaded_at?: string
+          uploaded_by: string
+          url: string
+        }
+        Update: {
+          area?: string
+          id?: string
+          inspection_id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+          url?: string
+        }
+        Relationships: []
+      }
       inspection_tickets: {
         Row: {
           created_at: string | null
