@@ -72,18 +72,15 @@ const AreaInspection = () => {
     setItems(itemsMap);
     setNotes(notesMap);
 
-    // Load photos grouped by area
-    const { data: allPhotos } = await supabase.from('ticket_photos')
+    // Load photos grouped by area from dedicated inspection_photos table
+    const { data: allPhotos } = await supabase.from('inspection_photos')
       .select('*')
-      .eq('ticket_id', id)
+      .eq('inspection_id', id)
       .order('uploaded_at', { ascending: true });
     const photosMap: Record<string, any[]> = {};
     for (const p of (allPhotos ?? [])) {
-      // Extract area from storage path: inspections/{id}/{area}/{filename}
-      const pathParts = (p.url ?? '').split('/');
-      const area = pathParts.length >= 3 ? pathParts[2] : 'other';
+      const area = p.area ?? 'other';
       if (!photosMap[area]) photosMap[area] = [];
-      // Generate signed URL for private bucket
       if (p.url) {
         const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
         photosMap[area].push({ ...p, displayUrl: signedData?.signedUrl || p.url });
@@ -152,25 +149,29 @@ const AreaInspection = () => {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !currentArea || !id) return;
     setUploading(true);
+    if (!user?.id) { toast.error('Not authenticated'); setUploading(false); return; }
     const file = e.target.files[0];
-    // Sanitize filename: remove spaces and special chars to avoid storage key errors
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const path = `inspections/${id}/${currentArea.key}/${Date.now()}-${safeName}`;
     const { error } = await supabase.storage.from('inspection-photos').upload(path, file, { contentType: file.type || 'image/jpeg' });
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
-    // Store the path; use 'process' as stage to satisfy check constraint (start/process/close)
-    const { error: insertError } = await supabase.from('ticket_photos').insert({
-      ticket_id: id,
+    const { error: insertError } = await supabase.from('inspection_photos').insert({
+      inspection_id: id,
+      area: currentArea.key,
       url: path,
-      stage: 'process',
-      technician_id: user?.id ?? null,
+      uploaded_by: user.id,
     });
-    if (insertError) { toast.error('Failed to save photo record: ' + insertError.message); setUploading(false); return; }
-    // Get signed URL for display
+    if (insertError) {
+      // Cleanup orphaned file
+      await supabase.storage.from('inspection-photos').remove([path]);
+      toast.error('Failed to save photo record: ' + insertError.message);
+      setUploading(false);
+      return;
+    }
     const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(path, 3600);
     setPhotos(prev => ({
       ...prev,
-      [currentArea.key]: [...(prev[currentArea.key] ?? []), { url: path, displayUrl: signedData?.signedUrl || '', stage: currentArea.key, id: Date.now().toString() }],
+      [currentArea.key]: [...(prev[currentArea.key] ?? []), { url: path, displayUrl: signedData?.signedUrl || '', area: currentArea.key, id: Date.now().toString() }],
     }));
     toast.success('Photo uploaded');
     setUploading(false);

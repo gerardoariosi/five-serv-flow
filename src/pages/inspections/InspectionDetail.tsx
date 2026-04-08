@@ -38,7 +38,7 @@ const InspectionDetail = () => {
     const [insRes, itemsRes, photosRes, ticketLinksRes, cRes, pRes, uRes] = await Promise.all([
       supabase.from('inspections').select('*').eq('id', id).single(),
       supabase.from('inspection_items').select('*').eq('inspection_id', id).order('area'),
-      supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: true }).then(async (res) => {
+      supabase.from('inspection_photos').select('*').eq('inspection_id', id).order('uploaded_at', { ascending: true }).then(async (res) => {
         const photosWithUrls = [];
         for (const p of (res.data ?? [])) {
           if (p.url && !p.url.startsWith('http')) {
@@ -132,7 +132,7 @@ const InspectionDetail = () => {
   // Group photos by area
   const photosByArea: Record<string, any[]> = {};
   photos.forEach((p: any) => {
-    const area = p.stage ?? 'other';
+    const area = p.area ?? 'other';
     if (!photosByArea[area]) photosByArea[area] = [];
     photosByArea[area].push(p);
   });
