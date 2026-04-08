@@ -94,32 +94,21 @@ const TeamUserForm = () => {
     setSaving(true);
     try {
       if (isNew) {
-        // Create user record
-        const { data: newUser, error } = await supabase.from('users').insert({
-          full_name: form.full_name,
-          email: form.email.toLowerCase(),
-          phone: form.phone,
-          roles: form.roles,
-        }).select().single();
-        if (error) throw error;
-
-        // Insert roles into user_roles
-        const roleInserts = form.roles.map(role => ({ user_id: newUser.id, role: role as any }));
-        await supabase.from('user_roles').insert(roleInserts);
-
-        // If technician, create technicians_vendors record
-        if (isTechnician) {
-          await supabase.from('technicians_vendors').insert({
-            contact_name: form.full_name,
+        // Use invite-user edge function to create auth user + send invite email
+        const { data, error } = await supabase.functions.invoke('invite-user', {
+          body: {
             email: form.email.toLowerCase(),
+            full_name: form.full_name,
             phone: form.phone,
-            specialties: form.specialties,
-            type: 'technician',
-            user_id: newUser.id,
-          });
-        }
+            roles: form.roles,
+            specialties: isTechnician ? form.specialties : [],
+          },
+        });
 
-        toast.success('User created');
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        toast.success('User created. Invite email sent — they can set their password from the link.');
       } else {
         // Update user
         const { error } = await supabase.from('users').update({
