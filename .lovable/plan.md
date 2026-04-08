@@ -1,60 +1,105 @@
 
+Diagnóstico exacto:
 
-# 2FA Email Delivery — Root Cause Analysis
+- El 2FA sí está generando el código correctamente.
+- El 2FA sí lo está guardando en la base de datos correctamente.
+- Lo que está fallando es el envío del email después de generar el código.
 
-## What I Found
+Qué está pasando en tu flujo:
+1. Login de admin entra bien.
+2. La pantalla `/verify-2fa` llama a `send-2fa-code`.
+3. `send-2fa-code` genera el OTP de 6 dígitos y lo inserta en `two_factor_codes`.
+4. Después lo manda a la cola de correos `transactional_emails`.
+5. El procesador de correos intenta enviarlo 5 veces.
+6. El proveedor de email lo rechaza las 5 veces.
+7. Finalmente ese correo cae en DLQ y nunca llega al inbox.
 
-### The Flow
-1. User logs in → Login.tsx detects admin role → redirects to `/verify-2fa`
-2. `VerifyTwoFactor.tsx` calls `supabase.functions.invoke('send-2fa-code')`
-3. Edge function generates a 6-digit code, stores it in `two_factor_codes`, then sends email via `sendLovableEmail()` from `@lovable.dev/email-js`
-4. Email is sent directly (not through the queue) to the user's email
+La causa exacta del fallo:
+- El correo 2FA se está encolando como `purpose: "transactional"`.
+- Pero ese payload NO incluye `unsubscribe_token`.
+- El procesador devuelve este error exacto en los logs:
 
-### Problem 1: The function uses an outdated email sending pattern
-
-The `send-2fa-code` edge function imports `sendLovableEmail` from `@lovable.dev/email-js` — the **old direct-send pattern**. This bypasses the email queue (`pgmq`) entirely. The rest of the project's email infrastructure has been upgraded to use the queue-based pattern (`enqueue_email` RPC).
-
-The old direct-send API has started rejecting requests. Historical logs in `email_send_log` from Apr 6 show this error:
-
+```text
+Email API error: 400
+missing_unsubscribe
+Transactional emails must include an unsubscribe_token
 ```
-Email API error: 400 {"type":"missing_parameter","message":"Missing run_id or idempotency_key",
-"details":"Auth emails require run_id. App emails can omit run_id by providing idempotency_key 
-with purpose=transactional."}
+
+Por eso no llega:
+- No es que no se genere el OTP.
+- No es que falle el login.
+- No es que falle la tabla `two_factor_codes`.
+- Falla porque el email es rechazado por la infraestructura de envío antes de salir.
+
+Por qué los demás correos sí llegan:
+- Los otros correos de la app sí siguen el formato correcto para correos transaccionales.
+- Por ejemplo, otros flujos agregan `unsubscribe_token` antes de encolar.
+- Los correos del sistema de autenticación usan otro patrón distinto.
+- El 2FA quedó en un punto intermedio: usa la cola nueva, pero no arma el payload completo que esa cola exige.
+
+Sobre el registro que viste en `two_factor_codes`:
+- Ese registro solo prueba que el código fue creado.
+- No prueba que el email fue entregado.
+- En tu caso:
+  - `used = false` significa que nadie logró verificarlo.
+  - `expires_at` es la hora límite del código.
+  - El código que mostraste (`101419`) ya estaba expirado.
+- Además encontré un código más reciente para ese mismo usuario:
+  - `633732`
+  - creado a las `22:20:26 UTC`
+  - expiraba a las `22:30:26 UTC`
+- Ese también fue generado, pero su email igualmente falló.
+
+Evidencia real en logs:
+- Para `gerardoariosi@gmail.com`, el mensaje 2FA más reciente terminó así:
+  - 5 intentos fallidos por `missing_unsubscribe`
+  - luego estado final `dlq`
+- O sea: sí salió de la app, sí entró a la cola, pero el sistema de correo lo rechazó cada vez.
+
+Servicio que realmente lo está manejando:
+- No lo está mandando el flujo nativo de autenticación.
+- Lo está mandando la infraestructura de correos de la app a través de:
+  - `send-2fa-code` -> cola `transactional_emails` -> `process-email-queue`
+- El problema está en cómo se construye ese payload de 2FA para esa infraestructura.
+
+Qué está roto en código:
+- `supabase/functions/send-2fa-code/index.ts`
+  - encola el 2FA como transaccional
+  - no adjunta `unsubscribe_token`
+- `supabase/functions/process-email-queue/index.ts`
+  - intenta enviarlo correctamente
+  - pero recibe 400 del proveedor y lo reintenta hasta moverlo a DLQ
+
+Plan de arreglo correcto:
+1. Corregir `send-2fa-code` para que el payload del correo 2FA cumpla con lo que exige la cola de correos.
+2. Alinear este flujo con el mismo patrón que usan los correos que sí llegan.
+3. Verificar después en logs que el estado pase de `pending` a `sent`, en lugar de `failed`/`dlq`.
+
+## Technical details
+```text
+Current failing path:
+
+Login.tsx
+  -> admin redirected to /verify-2fa
+
+VerifyTwoFactor.tsx
+  -> invoke send-2fa-code
+
+send-2fa-code
+  -> generate 6-digit code
+  -> insert into two_factor_codes
+  -> enqueue into transactional_emails
+     purpose: "transactional"
+     NO unsubscribe_token
+
+process-email-queue
+  -> tries to send
+  -> email API rejects:
+     "Transactional emails must include an unsubscribe_token"
+  -> retries 5 times
+  -> moves message to DLQ
+
+Result:
+  two_factor_codes row exists
+  email never delivered
 ```
-
-This means the `@lovable.dev/email-js` SDK call is failing because it's not passing the required parameters in the format the current API expects. After 5 retries, the email goes to DLQ (dead-letter queue) and is never delivered.
-
-Some later attempts on Apr 6 show `status: sent` — but the edge function **logs "sent" optimistically** right after calling `sendLovableEmail()`, before confirming actual delivery. The function doesn't check the response from `sendLovableEmail()` for errors.
-
-### Problem 2: Most recent attempt has no email log at all
-
-The latest `two_factor_codes` entry (Apr 8, user `20824fa8...`) has **no matching record in `email_send_log`**. This means the edge function either:
-- Was never invoked (frontend error), or
-- Crashed before reaching the email send/log step (e.g., the user lookup or role check failed)
-
-Since there are no edge function execution logs visible, I can't confirm which — but the code does have a `throw` before the email step if the user isn't found or isn't admin.
-
-### Problem 3: The function is not in `config.toml`
-
-The `send-2fa-code` function is **missing from `supabase/config.toml`**. Only `auth-email-hook`, `process-email-queue`, `send-business-email`, `send-weekly-summary`, and `invite-user` are listed. Without a config entry, the function may not have `verify_jwt = false` set, which could cause JWT verification failures when the frontend calls it.
-
-### Problem 4: Optimistic logging
-
-The function inserts `status: "sent"` into `email_send_log` immediately after calling `sendLovableEmail()`, regardless of whether the email was actually accepted by the API. This masks failures — the log shows "sent" even when the email was rejected.
-
-## Summary of Root Causes
-
-| Issue | Impact |
-|-------|--------|
-| Uses old `@lovable.dev/email-js` direct-send pattern | Email API rejects requests or silently fails |
-| Missing from `config.toml` | Possible JWT verification failures blocking invocation |
-| Optimistic "sent" logging | Masks delivery failures in logs |
-| No error handling on `sendLovableEmail()` response | Function doesn't know when email fails |
-
-## Recommended Fix
-
-1. **Rewrite `send-2fa-code`** to use the queue-based pattern: call `supabase.rpc('enqueue_email', ...)` to enqueue to the `transactional_emails` pgmq queue instead of calling `sendLovableEmail()` directly
-2. **Add `send-2fa-code` to `config.toml`** with `verify_jwt = false`
-3. **Remove the optimistic log insert** — let `process-email-queue` handle logging when it processes the queued email
-4. **Deploy the updated function** so the changes take effect
-
