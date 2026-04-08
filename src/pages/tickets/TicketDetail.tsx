@@ -297,7 +297,7 @@ const TicketDetail = () => {
 
       {/* Info Card */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           {isAdminOrSupervisor && (
             <div>
               <span className="text-muted-foreground">Client / PM</span>
@@ -381,7 +381,7 @@ const TicketDetail = () => {
             <DollarSign className="w-4 h-4 text-primary" />
             <span className="text-sm font-semibold text-foreground">Billing</span>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-muted-foreground">Billing Status</span>
               <p className="text-foreground font-medium capitalize">{ticket.billing_status ?? 'Pending'}</p>
@@ -401,7 +401,7 @@ const TicketDetail = () => {
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap [&>button]:w-full [&>button]:sm:w-auto">
         {/* Assign Technician */}
         {isAdminOrSupervisor && !ticket.technician_id && (
           <Button size="sm" onClick={() => setShowAssignModal(true)}>

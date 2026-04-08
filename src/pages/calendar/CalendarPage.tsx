@@ -171,15 +171,21 @@ const CalendarPage = () => {
     setReschedule(null);
   };
 
-  const CustomEvent = ({ event }: { event: any }) => (
-    <div
-      className="flex items-center gap-1 text-[11px] leading-tight cursor-pointer"
-      onContextMenu={(e) => { e.preventDefault(); handleRescheduleClick(event, e); }}
-    >
-      <span className="truncate flex-1">{event.title}</span>
-      {event.isUnassigned && <span className="text-red-200 font-bold text-[9px]">!</span>}
-    </div>
-  );
+  const CustomEvent = ({ event }: { event: any }) => {
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    return (
+      <div
+        className="flex items-center gap-1 text-[11px] leading-tight cursor-pointer"
+        onContextMenu={(e) => { e.preventDefault(); handleRescheduleClick(event, e); }}
+        onTouchStart={() => { longPressTimer = setTimeout(() => handleRescheduleClick(event), 600); }}
+        onTouchEnd={() => { if (longPressTimer) clearTimeout(longPressTimer); }}
+        onTouchMove={() => { if (longPressTimer) clearTimeout(longPressTimer); }}
+      >
+        <span className="truncate flex-1">{event.title}</span>
+        {event.isUnassigned && <span className="text-red-200 font-bold text-[9px]">!</span>}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 max-w-6xl mx-auto space-y-4">
@@ -236,12 +242,13 @@ const CalendarPage = () => {
           eventPropGetter={eventStyleGetter}
           onSelectEvent={handleSelectEvent}
           components={{ event: CustomEvent }}
-          style={{ height: 650 }}
+          style={{ height: 'min(650px, calc(100vh - 200px))' }}
           popup
         />
       </div>
 
-      <p className="text-[10px] text-muted-foreground">Right-click an event to reschedule</p>
+      <p className="text-[10px] text-muted-foreground hidden sm:block">Right-click an event to reschedule</p>
+      <p className="text-[10px] text-muted-foreground sm:hidden">Long-press an event to reschedule</p>
 
       {/* Reschedule Dialog */}
       <Dialog open={!!reschedule} onOpenChange={() => setReschedule(null)}>
