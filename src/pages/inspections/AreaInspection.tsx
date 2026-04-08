@@ -78,11 +78,17 @@ const AreaInspection = () => {
       .eq('ticket_id', id)
       .order('uploaded_at', { ascending: true });
     const photosMap: Record<string, any[]> = {};
-    (allPhotos ?? []).forEach((p: any) => {
+    for (const p of (allPhotos ?? [])) {
       const area = p.stage ?? 'other';
       if (!photosMap[area]) photosMap[area] = [];
-      photosMap[area].push(p);
-    });
+      // Generate signed URL for private bucket
+      if (p.url) {
+        const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
+        photosMap[area].push({ ...p, displayUrl: signedData?.signedUrl || p.url });
+      } else {
+        photosMap[area].push({ ...p, displayUrl: '' });
+      }
+    }
     setPhotos(photosMap);
 
     setLoading(false);
