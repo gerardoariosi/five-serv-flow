@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot, X } from 'lucide-react';
 import { buildAreas } from '@/lib/inspectionAreas';
 import Spinner from '@/components/ui/Spinner';
 
@@ -178,7 +178,24 @@ const AreaInspection = () => {
     e.target.value = '';
   };
 
-  const goNext = async () => {
+  const handleDeletePhoto = async (photo: any) => {
+    if (!currentArea) return;
+    // Delete from storage
+    if (photo.url) {
+      await supabase.storage.from('inspection-photos').remove([photo.url]);
+    }
+    // Delete from DB
+    if (photo.id) {
+      await supabase.from('inspection_photos').delete().eq('id', photo.id);
+    }
+    // Update local state
+    setPhotos(prev => ({
+      ...prev,
+      [currentArea.key]: (prev[currentArea.key] ?? []).filter((p: any) => p.id !== photo.id),
+    }));
+    toast.success('Photo deleted');
+  };
+
     await autoSave();
     if (currentAreaIndex < areas.length - 1) {
       setCurrentAreaIndex(prev => prev + 1);
@@ -277,8 +294,15 @@ const AreaInspection = () => {
         {currentPhotos.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {currentPhotos.map((p: any, i: number) => (
-              <div key={p.id ?? i} className="rounded-lg overflow-hidden border border-border">
+              <div key={p.id ?? i} className="relative rounded-lg overflow-hidden border border-border group">
                 <img src={p.displayUrl || p.url} alt="" className="w-full h-20 object-cover" />
+                <button
+                  onClick={() => handleDeletePhoto(p)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete photo"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             ))}
           </div>
