@@ -38,7 +38,18 @@ const InspectionDetail = () => {
     const [insRes, itemsRes, photosRes, ticketLinksRes, cRes, pRes, uRes] = await Promise.all([
       supabase.from('inspections').select('*').eq('id', id).single(),
       supabase.from('inspection_items').select('*').eq('inspection_id', id).order('area'),
-      supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: true }),
+      supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: true }).then(async (res) => {
+        const photosWithUrls = [];
+        for (const p of (res.data ?? [])) {
+          if (p.url && !p.url.startsWith('http')) {
+            const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
+            photosWithUrls.push({ ...p, displayUrl: signedData?.signedUrl || p.url });
+          } else {
+            photosWithUrls.push({ ...p, displayUrl: p.url });
+          }
+        }
+        return { data: photosWithUrls };
+      }),
       supabase.from('inspection_tickets').select('*, tickets(*)').eq('inspection_id', id),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name'),
