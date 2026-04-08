@@ -196,6 +196,7 @@ const AreaInspection = () => {
     toast.success('Photo deleted');
   };
 
+  const goNext = async () => {
     await autoSave();
     if (currentAreaIndex < areas.length - 1) {
       setCurrentAreaIndex(prev => prev + 1);
