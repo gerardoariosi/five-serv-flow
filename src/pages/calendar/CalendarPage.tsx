@@ -144,8 +144,8 @@ const CalendarPage = () => {
     }
   };
 
-  const handleRescheduleClick = (event: any, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleRescheduleClick = (event: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (event.type !== 'ticket') return;
     const ticket = tickets.find((t: any) => t.id === event.ticketId);
     if (!ticket) return;
