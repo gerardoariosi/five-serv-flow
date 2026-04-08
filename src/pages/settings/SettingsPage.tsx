@@ -348,15 +348,17 @@ const MasterPinSection = () => {
     queryFn: async () => { const { data, error } = await supabase.from('master_pin').select('*').limit(1).single(); if (error) throw error; return data; },
   });
 
+  const isDefault = pinData?.pin === '0000';
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (currentPin !== pinData?.pin) throw new Error('wrong_pin');
+      if (!isDefault && currentPin !== pinData?.pin) throw new Error('wrong_pin');
       if (newPin !== confirmPin) throw new Error('mismatch');
       if (newPin.length < 4) throw new Error('too_short');
       const { error } = await supabase.from('master_pin').update({ pin: newPin, updated_at: new Date().toISOString() }).eq('id', pinData!.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['master_pin'] }); toast.success('PIN updated.'); setCurrentPin(''); setNewPin(''); setConfirmPin(''); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['master_pin'] }); toast.success(isDefault ? 'PIN set successfully.' : 'PIN updated.'); setCurrentPin(''); setNewPin(''); setConfirmPin(''); },
     onError: (err: Error) => {
       if (err.message === 'wrong_pin') toast.error('Current PIN is incorrect.');
       else if (err.message === 'mismatch') toast.error('PINs do not match.');
@@ -369,11 +371,12 @@ const MasterPinSection = () => {
     <div>
       <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">Master PIN</h3>
       <p className="text-xs text-muted-foreground mb-4">This PIN is used to access all PM portals.</p>
+      {isDefault && <p className="text-xs text-yellow-500 mb-3">No PIN configured yet. Set your first PIN below.</p>}
       <div className="space-y-3 max-w-xs">
-        <Input type="password" value={currentPin} onChange={e => setCurrentPin(e.target.value)} placeholder="Current PIN" className="bg-secondary border-border" />
+        {!isDefault && <Input type="password" value={currentPin} onChange={e => setCurrentPin(e.target.value)} placeholder="Current PIN" className="bg-secondary border-border" />}
         <Input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} placeholder="New PIN" className="bg-secondary border-border" />
         <Input type="password" value={confirmPin} onChange={e => setConfirmPin(e.target.value)} placeholder="Confirm New PIN" className="bg-secondary border-border" />
-        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="bg-primary text-primary-foreground">{saveMutation.isPending ? <Spinner size="sm" /> : 'Update PIN'}</Button>
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="bg-primary text-primary-foreground">{saveMutation.isPending ? <Spinner size="sm" /> : isDefault ? 'Set PIN' : 'Update PIN'}</Button>
       </div>
     </div>
   );
