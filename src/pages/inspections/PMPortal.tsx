@@ -26,6 +26,7 @@ const PMPortal = () => {
   const [pinEntered, setPinEntered] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
 
   // Selections
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -94,12 +95,23 @@ const PMPortal = () => {
   }, []);
 
   const handlePin = async () => {
-    // For now, accept "1234" as master PIN. In production this comes from company settings.
-    if (pinInput === '1234') {
-      setPinEntered(true);
-    } else {
-      setPinError('Incorrect PIN. Please contact FiveServ.');
+    if (!token || !pinInput) return;
+    setPinLoading(true);
+    setPinError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-portal-pin', {
+        body: { token, pin: pinInput },
+      });
+      if (error) throw error;
+      if (data?.valid) {
+        setPinEntered(true);
+      } else {
+        setPinError('Incorrect PIN. Please contact FiveServ.');
+      }
+    } catch {
+      setPinError('Unable to verify PIN. Please try again.');
     }
+    setPinLoading(false);
   };
 
   const toggleItem = (id: string) => {
@@ -127,13 +139,14 @@ const PMPortal = () => {
       }).eq('id', item.id);
     }
 
-    // Update inspection
+    // Update inspection with general note
     await supabase.from('inspections').update({
       pm_submitted_at: new Date().toISOString(),
       pm_signature_data: signatureData,
       pm_total_selected: total,
+      pm_general_note: generalNote || null,
       status: 'pm_responded',
-    }).eq('id', inspection.id);
+    } as any).eq('id', inspection.id);
 
     setShowConfirm(false);
     setSubmitted(true);
@@ -199,12 +212,13 @@ const PMPortal = () => {
               placeholder="Enter PIN"
               value={pinInput}
               onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handlePin()}
               className="text-center text-lg tracking-widest bg-white border-gray-300 text-gray-900"
               maxLength={10}
             />
             {pinError && <p className="text-sm text-red-500 text-center">{pinError}</p>}
-            <Button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handlePin}>
-              Access Report
+            <Button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handlePin} disabled={pinLoading}>
+              {pinLoading ? <Spinner size="sm" /> : 'Access Report'}
             </Button>
           </div>
           <p className="text-[10px] text-gray-400 text-center">
