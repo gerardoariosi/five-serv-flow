@@ -463,6 +463,7 @@ export type Database = {
           link_opened_count: number | null
           living_rooms: number | null
           master_pin_used: string | null
+          pm_general_note: string | null
           pm_link_token: string | null
           pm_signature_data: string | null
           pm_submitted_at: string | null
@@ -486,6 +487,7 @@ export type Database = {
           link_opened_count?: number | null
           living_rooms?: number | null
           master_pin_used?: string | null
+          pm_general_note?: string | null
           pm_link_token?: string | null
           pm_signature_data?: string | null
           pm_submitted_at?: string | null
@@ -509,6 +511,7 @@ export type Database = {
           link_opened_count?: number | null
           living_rooms?: number | null
           master_pin_used?: string | null
+          pm_general_note?: string | null
           pm_link_token?: string | null
           pm_signature_data?: string | null
           pm_submitted_at?: string | null
