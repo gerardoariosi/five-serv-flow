@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ interface AreaItemState {
 }
 
 const AreaInspection = () => {
+  const { user } = useAuthStore();
   const { id } = useParams();
   const navigate = useNavigate();
   const [inspection, setInspection] = useState<any>(null);
@@ -76,11 +78,17 @@ const AreaInspection = () => {
       .eq('ticket_id', id)
       .order('uploaded_at', { ascending: true });
     const photosMap: Record<string, any[]> = {};
-    (allPhotos ?? []).forEach((p: any) => {
+    for (const p of (allPhotos ?? [])) {
       const area = p.stage ?? 'other';
       if (!photosMap[area]) photosMap[area] = [];
-      photosMap[area].push(p);
-    });
+      // Generate signed URL for private bucket
+      if (p.url) {
+        const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
+        photosMap[area].push({ ...p, displayUrl: signedData?.signedUrl || p.url });
+      } else {
+        photosMap[area].push({ ...p, displayUrl: '' });
+      }
+    }
     setPhotos(photosMap);
 
     setLoading(false);
@@ -144,18 +152,21 @@ const AreaInspection = () => {
     setUploading(true);
     const file = e.target.files[0];
     const path = `inspections/${id}/${currentArea.key}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from('inspection-photos').upload(path, file);
-    if (error) { toast.error('Upload failed'); setUploading(false); return; }
-    const { data: { publicUrl } } = supabase.storage.from('inspection-photos').getPublicUrl(path);
-    // Store as ticket_photo with ticket_id = inspection_id and stage = area key
-    await supabase.from('ticket_photos').insert({
+    const { error } = await supabase.storage.from('inspection-photos').upload(path, file, { contentType: file.type || 'image/jpeg' });
+    if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
+    // Store the path (not a public URL) since bucket is private
+    const { error: insertError } = await supabase.from('ticket_photos').insert({
       ticket_id: id,
-      url: publicUrl,
+      url: path,
       stage: currentArea.key,
+      technician_id: user?.id ?? null,
     });
+    if (insertError) { toast.error('Failed to save photo record: ' + insertError.message); setUploading(false); return; }
+    // Get signed URL for display
+    const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(path, 3600);
     setPhotos(prev => ({
       ...prev,
-      [currentArea.key]: [...(prev[currentArea.key] ?? []), { url: publicUrl, stage: currentArea.key, id: Date.now().toString() }],
+      [currentArea.key]: [...(prev[currentArea.key] ?? []), { url: path, displayUrl: signedData?.signedUrl || '', stage: currentArea.key, id: Date.now().toString() }],
     }));
     toast.success('Photo uploaded');
     setUploading(false);
@@ -256,13 +267,13 @@ const AreaInspection = () => {
         <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
           <Camera className="w-5 h-5 text-primary" />
           <span className="text-sm text-primary font-medium">{uploading ? 'Uploading...' : 'Add Photo'}</span>
-          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+          <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
         </label>
         {currentPhotos.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {currentPhotos.map((p: any, i: number) => (
               <div key={p.id ?? i} className="rounded-lg overflow-hidden border border-border">
-                <img src={p.url} alt="" className="w-full h-20 object-cover" />
+                <img src={p.displayUrl || p.url} alt="" className="w-full h-20 object-cover" />
               </div>
             ))}
           </div>
