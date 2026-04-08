@@ -24,7 +24,7 @@ const TeamUserForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isNew = id === 'new';
+  const isNew = !id;
 
   const [form, setForm] = useState({
     full_name: '',
