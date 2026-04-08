@@ -1,105 +1,83 @@
 
-Diagnóstico exacto:
 
-- El 2FA sí está generando el código correctamente.
-- El 2FA sí lo está guardando en la base de datos correctamente.
-- Lo que está fallando es el envío del email después de generar el código.
+# Mobile Responsiveness Analysis — All Screens
 
-Qué está pasando en tu flujo:
-1. Login de admin entra bien.
-2. La pantalla `/verify-2fa` llama a `send-2fa-code`.
-3. `send-2fa-code` genera el OTP de 6 dígitos y lo inserta en `two_factor_codes`.
-4. Después lo manda a la cola de correos `transactional_emails`.
-5. El procesador de correos intenta enviarlo 5 veces.
-6. El proveedor de email lo rechaza las 5 veces.
-7. Finalmente ese correo cae en DLQ y nunca llega al inbox.
+## Summary
+After reviewing every page in the app, I found **11 specific mobile responsiveness issues** across multiple screens. The app uses `p-4` padding and `max-w-*` containers which work reasonably well, but several patterns break on screens under 375px wide.
 
-La causa exacta del fallo:
-- El correo 2FA se está encolando como `purpose: "transactional"`.
-- Pero ese payload NO incluye `unsubscribe_token`.
-- El procesador devuelve este error exacto en los logs:
+---
 
-```text
-Email API error: 400
-missing_unsubscribe
-Transactional emails must include an unsubscribe_token
-```
+## Issues Found
 
-Por eso no llega:
-- No es que no se genere el OTP.
-- No es que falle el login.
-- No es que falle la tabla `two_factor_codes`.
-- Falla porque el email es rechazado por la infraestructura de envío antes de salir.
+### 1. TopNav — Center wordmark overlaps right-side elements
+**File:** `TopNav.tsx` line 42
+The "FiveServ" wordmark uses `absolute left-1/2 -translate-x-1/2` which overlaps the role badge, theme toggle, and bell icon on narrow screens (<375px). The right section has 3 items (role badge + 2 buttons) with `gap-3`, and the role badge uses `tracking-widest` which makes it wide.
 
-Por qué los demás correos sí llegan:
-- Los otros correos de la app sí siguen el formato correcto para correos transaccionales.
-- Por ejemplo, otros flujos agregan `unsubscribe_token` antes de encolar.
-- Los correos del sistema de autenticación usan otro patrón distinto.
-- El 2FA quedó en un punto intermedio: usa la cola nueva, pero no arma el payload completo que esa cola exige.
+### 2. TopNav — Role badge doesn't hide on small screens
+**File:** `TopNav.tsx` line 49-54
+The role badge with `tracking-widest` and uppercase text takes ~80px. On a 320px screen, the right section competes with the centered wordmark.
 
-Sobre el registro que viste en `two_factor_codes`:
-- Ese registro solo prueba que el código fue creado.
-- No prueba que el email fue entregado.
-- En tu caso:
-  - `used = false` significa que nadie logró verificarlo.
-  - `expires_at` es la hora límite del código.
-  - El código que mostraste (`101419`) ya estaba expirado.
-- Además encontré un código más reciente para ese mismo usuario:
-  - `633732`
-  - creado a las `22:20:26 UTC`
-  - expiraba a las `22:30:26 UTC`
-- Ese también fue generado, pero su email igualmente falló.
+### 3. Dashboard — Metric cards grid `grid-cols-2` still tight on 320px
+**File:** `Dashboard.tsx` line 147
+`grid-cols-2 md:grid-cols-3 lg:grid-cols-6` — each card has `p-3` with icon + label + large number. At 320px with `p-4` page padding, each card gets ~140px which is workable but the `text-2xl` value and label text can overflow if labels are long ("PM Not Responding" = 17 chars).
 
-Evidencia real en logs:
-- Para `gerardoariosi@gmail.com`, el mensaje 2FA más reciente terminó así:
-  - 5 intentos fallidos por `missing_unsubscribe`
-  - luego estado final `dlq`
-- O sea: sí salió de la app, sí entró a la cola, pero el sistema de correo lo rechazó cada vez.
+### 4. TicketDetail — Info grid `grid-cols-2` causes text truncation
+**File:** `TicketDetail.tsx` line 300
+`grid grid-cols-2 gap-3` is hardcoded with no responsive breakpoint. On a 320px screen, each column gets ~130px. Long property names, client names, and full datetime strings overflow.
 
-Servicio que realmente lo está manejando:
-- No lo está mandando el flujo nativo de autenticación.
-- Lo está mandando la infraestructura de correos de la app a través de:
-  - `send-2fa-code` -> cola `transactional_emails` -> `process-email-queue`
-- El problema está en cómo se construye ese payload de 2FA para esa infraestructura.
+### 5. TicketDetail — Action buttons overflow horizontally
+**File:** `TicketDetail.tsx` line 404
+`flex gap-2 flex-wrap` should wrap, but many buttons with icons + text ("Assign Technician", "Send Report to PM", "Log Delay Note") create 3+ rows of wrapping that push content down. The buttons don't have consistent sizing.
 
-Qué está roto en código:
-- `supabase/functions/send-2fa-code/index.ts`
-  - encola el 2FA como transaccional
-  - no adjunta `unsubscribe_token`
-- `supabase/functions/process-email-queue/index.ts`
-  - intenta enviarlo correctamente
-  - pero recibe 400 del proveedor y lo reintenta hasta moverlo a DLQ
+### 6. TicketForm — Two-column grids on every row
+**File:** `TicketForm.tsx` lines 359, 387, 420
+Three separate `grid grid-cols-2 gap-4` blocks with no responsive breakpoint. Select dropdowns at ~145px wide on a 320px screen are barely usable — the text inside truncates and touch targets are small.
 
-Plan de arreglo correcto:
-1. Corregir `send-2fa-code` para que el payload del correo 2FA cumpla con lo que exige la cola de correos.
-2. Alinear este flujo con el mismo patrón que usan los correos que sí llegan.
-3. Verificar después en logs que el estado pase de `pending` a `sent`, en lugar de `failed`/`dlq`.
+### 7. TicketList — Filter row `grid-cols-2 md:grid-cols-3` is okay but filter dropdowns overlap search
+**File:** `TicketList.tsx` line 116
+Minor: the filter section appears inline and on 320px the 2-column grid makes each Select ~145px which truncates "All Statuses" label.
 
-## Technical details
-```text
-Current failing path:
+### 8. CalendarPage — Calendar fixed height of 650px
+**File:** `CalendarPage.tsx` line 239
+`style={{ height: 650 }}` — on mobile the calendar is 650px tall in a scrollable container. The month view cells become extremely narrow (~45px per day), making event text unreadable. The legend row at the top also wraps poorly.
 
-Login.tsx
-  -> admin redirected to /verify-2fa
+### 9. CalendarPage — Right-click reschedule doesn't work on mobile
+**File:** `CalendarPage.tsx` line 177
+`onContextMenu` for rescheduling — mobile browsers don't support right-click. There's no alternative touch gesture.
 
-VerifyTwoFactor.tsx
-  -> invoke send-2fa-code
+### 10. TechnicianList — User rows have too many inline elements
+**File:** `TechnicianList.tsx` line 124
+Each user row is a single `flex` row with avatar (40px) + name/email/roles + status badge + job count + dropdown — all on one line. On 320px this causes horizontal compression where badges and text overlap or get pushed off-screen.
 
-send-2fa-code
-  -> generate 6-digit code
-  -> insert into two_factor_codes
-  -> enqueue into transactional_emails
-     purpose: "transactional"
-     NO unsubscribe_token
+### 11. AccountingList — Filter controls layout
+**File:** `AccountingList.tsx` — Multiple Select components and checkboxes in a row without responsive wrapping.
 
-process-email-queue
-  -> tries to send
-  -> email API rejects:
-     "Transactional emails must include an unsubscribe_token"
-  -> retries 5 times
-  -> moves message to DLQ
+---
 
-Result:
-  two_factor_codes row exists
-  email never delivered
-```
+## Screens That Are Fine
+- **Login / ForgotPassword / ResetPassword** — single-column centered layouts
+- **Profile** — uses `max-w-lg mx-auto`, single column, works well
+- **PropertyList / ClientList** — card-based single-column layouts that stack naturally
+- **InspectionList** — card-based, wraps fine
+- **AreaInspection** — `max-w-2xl mx-auto`, single-column flow, works on mobile
+- **DrawerMenu** — slide-out drawer, mobile-native
+
+---
+
+## Proposed Fixes
+
+| Screen | Fix |
+|--------|-----|
+| TopNav | Hide role badge on `sm:`, shrink gap. Or make wordmark relative instead of absolute |
+| Dashboard metrics | Change "PM Not Responding" to "PM Pending". Add `text-xs` on small screens |
+| TicketDetail info grid | `grid-cols-1 sm:grid-cols-2` |
+| TicketDetail action buttons | Make full-width stacked on mobile |
+| TicketForm grids | `grid-cols-1 sm:grid-cols-2` on all three grid blocks |
+| CalendarPage | Reduce height to `min(650px, calc(100vh - 200px))`. Default to Day view on mobile |
+| CalendarPage reschedule | Add long-press or tap-and-hold handler for mobile |
+| TechnicianList rows | Stack info vertically on mobile, move badges below name |
+| AccountingList filters | Responsive wrap |
+
+## Technical Details
+All fixes are CSS/Tailwind responsive prefix changes (`sm:`, `md:`) and minor layout restructuring. No backend or data changes needed.
+
