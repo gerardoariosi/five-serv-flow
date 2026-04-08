@@ -19,12 +19,10 @@ const ResetPassword = () => {
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check for recovery token in URL hash
     const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
+    if (hash.includes('type=recovery') || hash.includes('type=invite')) {
       setTokenValid(true);
     } else {
-      // Also check if we have a session from the recovery flow
       supabase.auth.getSession().then(({ data: { session } }) => {
         setTokenValid(!!session);
       });
@@ -81,7 +79,7 @@ const ResetPassword = () => {
         <FiveServLogo />
 
         <div className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-lg font-bold text-foreground mb-6">Reset Password</h2>
+          <h2 className="text-lg font-bold text-foreground mb-6">Set Your Password</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

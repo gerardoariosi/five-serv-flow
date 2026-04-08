@@ -9,3 +9,5 @@ project_id = "tvaouclllewfmxjuhfbq"
     verify_jwt = false
   [functions.send-weekly-summary]
     verify_jwt = true
+  [functions.invite-user]
+    verify_jwt = false
