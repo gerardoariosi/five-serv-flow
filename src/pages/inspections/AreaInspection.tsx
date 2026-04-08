@@ -20,6 +20,7 @@ interface AreaItemState {
 }
 
 const AreaInspection = () => {
+  const { user } = useAuthStore();
   const { id } = useParams();
   const navigate = useNavigate();
   const [inspection, setInspection] = useState<any>(null);
