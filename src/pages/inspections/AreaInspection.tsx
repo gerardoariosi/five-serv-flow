@@ -294,8 +294,15 @@ const AreaInspection = () => {
         {currentPhotos.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {currentPhotos.map((p: any, i: number) => (
-              <div key={p.id ?? i} className="rounded-lg overflow-hidden border border-border">
+              <div key={p.id ?? i} className="relative rounded-lg overflow-hidden border border-border group">
                 <img src={p.displayUrl || p.url} alt="" className="w-full h-20 object-cover" />
+                <button
+                  onClick={() => handleDeletePhoto(p)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete photo"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             ))}
           </div>
