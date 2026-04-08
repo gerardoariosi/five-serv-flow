@@ -50,6 +50,22 @@ Deno.serve(async (req) => {
 
     if (!userData.email) throw new Error("No email configured for this user");
 
+    // Get or create unsubscribe token for this email
+    const { data: existingToken } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", userData.email)
+      .maybeSingle();
+
+    let unsubscribeToken = existingToken?.token;
+    if (!unsubscribeToken) {
+      unsubscribeToken = crypto.randomUUID();
+      await supabase.from("email_unsubscribe_tokens").insert({
+        email: userData.email,
+        token: unsubscribeToken,
+      });
+    }
+
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -82,7 +98,16 @@ Deno.serve(async (req) => {
       </div>
     `;
 
+    const messageId = crypto.randomUUID();
     const idempotencyKey = `2fa-${user.id}-${Date.now()}`;
+
+    // Log pending status
+    await supabase.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "2fa_verification",
+      recipient_email: userData.email,
+      status: "pending",
+    });
 
     // Enqueue email via pgmq transactional queue
     const { error: enqueueError } = await supabase.rpc("enqueue_email", {
@@ -97,7 +122,9 @@ Deno.serve(async (req) => {
         purpose: "transactional",
         label: "2fa_verification",
         idempotency_key: idempotencyKey,
-        message_id: crypto.randomUUID(),
+        unsubscribe_token: unsubscribeToken,
+        message_id: messageId,
+        queued_at: new Date().toISOString(),
       },
     });
 
