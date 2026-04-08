@@ -79,7 +79,9 @@ const AreaInspection = () => {
       .order('uploaded_at', { ascending: true });
     const photosMap: Record<string, any[]> = {};
     for (const p of (allPhotos ?? [])) {
-      const area = p.stage ?? 'other';
+      // Extract area from storage path: inspections/{id}/{area}/{filename}
+      const pathParts = (p.url ?? '').split('/');
+      const area = pathParts.length >= 3 ? pathParts[2] : 'other';
       if (!photosMap[area]) photosMap[area] = [];
       // Generate signed URL for private bucket
       if (p.url) {
