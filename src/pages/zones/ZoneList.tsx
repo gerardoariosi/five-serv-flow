@@ -43,7 +43,7 @@ const ZoneList = () => {
       toast.success(dialog.mode === 'create' ? 'Zone created.' : 'Zone renamed.');
       setDialog({ open: false, mode: 'create', name: '' });
     },
-    onError: () => toast.error('Failed to save zone.'),
+    onError: (error: Error) => toast.error(error.message || 'Failed to save zone.'),
   });
 
   const toggleMutation = useMutation({

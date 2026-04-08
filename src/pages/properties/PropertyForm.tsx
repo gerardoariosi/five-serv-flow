@@ -97,7 +97,7 @@ const PropertyForm = () => {
       toast.success(isEdit ? 'Property updated.' : 'Property created.');
       navigate('/properties');
     },
-    onError: () => toast.error('Failed to save property.'),
+    onError: (error: Error) => toast.error(error.message || 'Failed to save property.'),
   });
 
   const createZoneMutation = useMutation({
@@ -113,7 +113,7 @@ const PropertyForm = () => {
       setNewZoneName('');
       toast.success('Zone created.');
     },
-    onError: () => toast.error('Failed to create zone.'),
+    onError: (error: Error) => toast.error(error.message || 'Failed to create zone.'),
   });
 
   const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {

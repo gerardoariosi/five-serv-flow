@@ -94,7 +94,7 @@ export const useAuth = () => {
       // Increment failed attempts
       if (userData) {
         const newAttempts = (userData.failed_login_attempts ?? 0) + 1;
-        const updates: Record<string, unknown> = { failed_login_attempts: newAttempts };
+        const updates: { failed_login_attempts: number; is_locked?: boolean } = { failed_login_attempts: newAttempts };
         if (newAttempts >= 5) {
           updates.is_locked = true;
         }
