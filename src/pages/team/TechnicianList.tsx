@@ -121,27 +121,18 @@ const TechnicianList = () => {
         <TabsContent value="users" className="space-y-2 mt-4">
           {filteredUsers.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No users found</p>}
           {filteredUsers.map((user) => (
-            <div key={user.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate(`/team/users/${user.id}`)}>
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                <User className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">{user.full_name || 'Unnamed'}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {user.userRoles?.map((r: string) => (
-                    <Badge key={r} variant="outline" className="text-[10px] capitalize border-primary/30 text-primary">{r}</Badge>
-                  ))}
+            <div key={user.id} className="p-3 rounded-lg border border-border bg-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate(`/team/users/${user.id}`)}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                  <User className="w-5 h-5 text-muted-foreground" />
                 </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Badge variant={user.is_locked ? 'outline' : 'default'} className="text-[10px]">
-                  {user.is_locked ? 'Archived' : 'Active'}
-                </Badge>
-                <span className="text-xs text-muted-foreground">{activeTicketCounts[user.id] || 0} jobs</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{user.full_name || 'Unnamed'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-7 w-7"><MoreVertical className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenuItem onClick={() => navigate(`/team/users/${user.id}`)}>View / Edit</DropdownMenuItem>
@@ -150,6 +141,17 @@ const TechnicianList = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+              <div className="flex items-center gap-2 mt-2 ml-[52px]">
+                <div className="flex flex-wrap gap-1">
+                  {user.userRoles?.map((r: string) => (
+                    <Badge key={r} variant="outline" className="text-[10px] capitalize border-primary/30 text-primary">{r}</Badge>
+                  ))}
+                </div>
+                <Badge variant={user.is_locked ? 'outline' : 'default'} className="text-[10px]">
+                  {user.is_locked ? 'Archived' : 'Active'}
+                </Badge>
+                <span className="text-xs text-muted-foreground">{activeTicketCounts[user.id] || 0} jobs</span>
               </div>
             </div>
           ))}

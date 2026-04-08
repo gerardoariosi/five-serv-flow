@@ -102,15 +102,15 @@ const AccountingList = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="grid grid-cols-2 sm:flex gap-2">
         <Select value={billingFilter} onValueChange={setBillingFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Billing Status" /></SelectTrigger>
+          <SelectTrigger className="sm:w-36"><SelectValue placeholder="Billing Status" /></SelectTrigger>
           <SelectContent>
             {BILLING_STATUSES.map((s) => <SelectItem key={s} value={s}>{s === 'all' ? 'All Billing' : s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Work Type" /></SelectTrigger>
+          <SelectTrigger className="sm:w-36"><SelectValue placeholder="Work Type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="make_ready">Make Ready</SelectItem>

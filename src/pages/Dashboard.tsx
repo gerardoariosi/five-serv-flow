@@ -144,14 +144,14 @@ const Dashboard = () => {
   return (
     <div className="p-4 space-y-4">
       {/* Metric cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {metricCards.map((m) => (
-          <div key={m.label} className="bg-card border border-border rounded-lg p-3 flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <m.icon className={`w-4 h-4 ${m.color}`} />
-              <span className="text-xs text-muted-foreground">{m.label}</span>
+          <div key={m.label} className="bg-card border border-border rounded-lg p-2 sm:p-3 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <m.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${m.color} shrink-0`} />
+              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{m.label}</span>
             </div>
-            <span className={`text-2xl font-bold ${m.color}`}>{m.value}</span>
+            <span className={`text-xl sm:text-2xl font-bold ${m.color}`}>{m.value}</span>
           </div>
         ))}
       </div>

@@ -356,7 +356,7 @@ const TicketForm = () => {
 
       <div className="space-y-4">
         {/* Work Type + Priority */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label>Work Type</Label>
             <Select value={form.work_type} onValueChange={v => setForm(p => ({ ...p, work_type: v }))}>
@@ -384,7 +384,7 @@ const TicketForm = () => {
         </div>
 
         {/* Client + Zone */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label>Client / PM</Label>
             <Select value={form.client_id} onValueChange={v => setForm(p => ({ ...p, client_id: v }))}>
@@ -417,7 +417,7 @@ const TicketForm = () => {
         </div>
 
         {/* Unit + Technician */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label>Unit</Label>
             <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="e.g. Apt 201" />
