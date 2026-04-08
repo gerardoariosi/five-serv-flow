@@ -36,6 +36,7 @@ import PMPortal from "./pages/inspections/PMPortal";
 import TechnicianList from "./pages/team/TechnicianList";
 import TechnicianDetail from "./pages/team/TechnicianDetail";
 import VendorDetail from "./pages/team/VendorDetail";
+import TeamUserForm from "./pages/team/TeamUserForm";
 import AccountingList from "./pages/accounting/AccountingList";
 import AccountingDetail from "./pages/accounting/AccountingDetail";
 import CalendarPage from "./pages/calendar/CalendarPage";
@@ -97,6 +98,8 @@ const App = () => {
             <Route path="/inspections/:id/pricing" element={<PricingReview />} />
             <Route path="/team/technicians" element={<TechnicianList />} />
             <Route path="/team/technicians/:id" element={<TechnicianDetail />} />
+            <Route path="/team/users/new" element={<TeamUserForm />} />
+            <Route path="/team/users/:id" element={<TeamUserForm />} />
             <Route path="/team/vendors/new" element={<VendorDetail />} />
             <Route path="/team/vendors/:id" element={<VendorDetail />} />
             <Route path="/accounting" element={<AccountingList />} />
