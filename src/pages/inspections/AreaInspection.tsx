@@ -178,7 +178,24 @@ const AreaInspection = () => {
     e.target.value = '';
   };
 
-  const goNext = async () => {
+  const handleDeletePhoto = async (photo: any) => {
+    if (!currentArea) return;
+    // Delete from storage
+    if (photo.url) {
+      await supabase.storage.from('inspection-photos').remove([photo.url]);
+    }
+    // Delete from DB
+    if (photo.id) {
+      await supabase.from('inspection_photos').delete().eq('id', photo.id);
+    }
+    // Update local state
+    setPhotos(prev => ({
+      ...prev,
+      [currentArea.key]: (prev[currentArea.key] ?? []).filter((p: any) => p.id !== photo.id),
+    }));
+    toast.success('Photo deleted');
+  };
+
     await autoSave();
     if (currentAreaIndex < areas.length - 1) {
       setCurrentAreaIndex(prev => prev + 1);
