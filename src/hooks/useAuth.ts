@@ -11,14 +11,14 @@ export const useAuth = () => {
   const fetchUserProfile = useCallback(async (authUserId: string, email?: string | null) => {
     let { data, error } = await supabase
       .from('users')
-      .select('id, full_name, email, roles, dark_mode')
+      .select('id, full_name, email, dark_mode')
       .eq('id', authUserId)
       .maybeSingle();
 
     if ((!data || error) && email) {
       const fallback = await supabase
         .from('users')
-        .select('id, full_name, email, roles, dark_mode')
+        .select('id, full_name, email, dark_mode')
         .eq('email', email)
         .maybeSingle();
 
@@ -33,11 +33,19 @@ export const useAuth = () => {
       useThemeStore.getState().setDark(data.dark_mode);
     }
 
+    // Read roles from user_roles table (single source of truth for RLS)
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', data.id);
+
+    const roles = (rolesData ?? []).map(r => r.role) as AppRole[];
+
     return {
       id: data.id,
       full_name: data.full_name ?? '',
       email: data.email ?? '',
-      roles: (data.roles ?? []) as AppRole[],
+      roles,
     };
   }, []);
 

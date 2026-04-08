@@ -28,7 +28,7 @@ const Splash = () => {
       // Fetch user profile
       const { data: profile } = await supabase
         .from('users')
-        .select('id, full_name, email, roles')
+        .select('id, full_name, email')
         .eq('email', session.user.email ?? '')
         .maybeSingle();
 
@@ -37,19 +37,24 @@ const Splash = () => {
         return;
       }
 
+      // Read roles from user_roles (single source of truth)
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', profile.id);
+
+      const roles = (rolesData ?? []).map(r => r.role) as AppRole[];
+
       setUser({
         id: profile.id,
         full_name: profile.full_name ?? '',
         email: profile.email ?? '',
-        roles: (profile.roles ?? []) as AppRole[],
+        roles,
       });
       setLoading(false);
 
-      const roles = (profile.roles ?? []) as AppRole[];
-      const isAdmin = roles.includes('admin');
-
       // Check if setup is completed
-      if (isAdmin) {
+      if (roles.includes('admin')) {
         const { data: company } = await supabase
           .from('company_profile')
           .select('setup_completed')
