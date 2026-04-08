@@ -383,6 +383,14 @@ const InspectionDetail = () => {
               ))
             )}
 
+            {/* General note */}
+            {(inspection as any).pm_general_note && (
+              <div className="bg-card border border-border rounded-lg p-3">
+                <h4 className="text-sm font-semibold text-foreground mb-1">PM General Note</h4>
+                <p className="text-sm text-muted-foreground italic">"{(inspection as any).pm_general_note}"</p>
+              </div>
+            )}
+
             {/* Signature */}
             {inspection.pm_signature_data && (
               <div>
