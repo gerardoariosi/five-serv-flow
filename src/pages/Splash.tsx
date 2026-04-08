@@ -54,7 +54,7 @@ const Splash = () => {
       setLoading(false);
 
       // Check if setup is completed
-      if (isAdmin) {
+      if (roles.includes('admin')) {
         const { data: company } = await supabase
           .from('company_profile')
           .select('setup_completed')
