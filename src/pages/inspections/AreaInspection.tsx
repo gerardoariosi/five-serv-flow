@@ -151,14 +151,16 @@ const AreaInspection = () => {
     if (!e.target.files?.length || !currentArea || !id) return;
     setUploading(true);
     const file = e.target.files[0];
-    const path = `inspections/${id}/${currentArea.key}/${Date.now()}-${file.name}`;
+    // Sanitize filename: remove spaces and special chars to avoid storage key errors
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `inspections/${id}/${currentArea.key}/${Date.now()}-${safeName}`;
     const { error } = await supabase.storage.from('inspection-photos').upload(path, file, { contentType: file.type || 'image/jpeg' });
     if (error) { toast.error('Upload failed: ' + error.message); setUploading(false); return; }
-    // Store the path (not a public URL) since bucket is private
+    // Store the path; use 'process' as stage to satisfy check constraint (start/process/close)
     const { error: insertError } = await supabase.from('ticket_photos').insert({
       ticket_id: id,
       url: path,
-      stage: currentArea.key,
+      stage: 'process',
       technician_id: user?.id ?? null,
     });
     if (insertError) { toast.error('Failed to save photo record: ' + insertError.message); setUploading(false); return; }
