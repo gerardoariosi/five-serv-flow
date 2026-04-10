@@ -484,7 +484,7 @@ const TicketForm = () => {
         {/* Related Inspection */}
         <div>
           <Label>Related Inspection</Label>
-          <Select value={form.related_inspection_id} onValueChange={v => setForm(p => ({ ...p, related_inspection_id: v }))}>
+          <Select value={form.related_inspection_id || 'none'} onValueChange={v => setForm(p => ({ ...p, related_inspection_id: v === 'none' ? '' : v }))}>
             <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
