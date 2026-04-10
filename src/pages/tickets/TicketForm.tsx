@@ -487,7 +487,7 @@ const TicketForm = () => {
           <Select value={form.related_inspection_id} onValueChange={v => setForm(p => ({ ...p, related_inspection_id: v }))}>
             <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               {inspections.map((ins: any) => <SelectItem key={ins.id} value={ins.id}>{ins.ins_number ?? ins.id.slice(0, 8)}</SelectItem>)}
             </SelectContent>
           </Select>
