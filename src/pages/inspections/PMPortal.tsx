@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Shield, Lock, Mail, Check, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Mail, Check, AlertTriangle, Camera } from 'lucide-react';
 import SignaturePad from '@/components/inspections/SignaturePad';
 import Spinner from '@/components/ui/Spinner';
 
@@ -17,6 +17,8 @@ const PMPortal = () => {
   const { token } = useParams();
   const [inspection, setInspection] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
+  const [photos, setPhotos] = useState<Record<string, any[]>>({});
+  const [techNotes, setTechNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [expired, setExpired] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -61,6 +63,7 @@ const PMPortal = () => {
 
     setInspection(ins);
 
+    // Fetch items needing repair
     const { data: itemsData } = await supabase.from('inspection_items')
       .select('*')
       .eq('inspection_id', ins.id)
@@ -68,7 +71,35 @@ const PMPortal = () => {
       .order('status', { ascending: true });
     setItems(itemsData ?? []);
 
-    // Pre-select items that PM had selected
+    // Extract technician notes per area (from the `note` column)
+    const notesMap: Record<string, string> = {};
+    (itemsData ?? []).forEach((item: any) => {
+      if (item.note && !notesMap[item.area]) {
+        notesMap[item.area] = item.note;
+      }
+    });
+    setTechNotes(notesMap);
+
+    // Fetch inspection photos
+    const { data: photosData } = await supabase.from('inspection_photos')
+      .select('*')
+      .eq('inspection_id', ins.id)
+      .order('uploaded_at', { ascending: true });
+
+    const photosMap: Record<string, any[]> = {};
+    for (const p of (photosData ?? [])) {
+      const area = p.area ?? 'other';
+      if (!photosMap[area]) photosMap[area] = [];
+      if (p.url && !p.url.startsWith('http')) {
+        const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
+        photosMap[area].push({ ...p, displayUrl: signedData?.signedUrl || p.url });
+      } else {
+        photosMap[area].push({ ...p, displayUrl: p.url });
+      }
+    }
+    setPhotos(photosMap);
+
+    // Pre-select items that PM had selected (read-only mode)
     if (ins.pm_submitted_at) {
       const selected = new Set<string>();
       const notes: Record<string, string> = {};
@@ -127,6 +158,15 @@ const PMPortal = () => {
       .reduce((sum, i) => sum + ((i.quantity ?? 1) * (i.unit_price ?? 0)), 0)
   , [items, selectedItems]);
 
+  // Get unique areas from items for grouping photos/notes
+  const areas = useMemo(() => {
+    const areaSet = new Set<string>();
+    items.forEach(i => { if (i.area) areaSet.add(i.area); });
+    Object.keys(photos).forEach(a => areaSet.add(a));
+    Object.keys(techNotes).forEach(a => areaSet.add(a));
+    return Array.from(areaSet);
+  }, [items, photos, techNotes]);
+
   const handleSubmit = async () => {
     if (!signatureData) { toast.error('Signature is required'); return; }
     setSubmitting(true);
@@ -139,7 +179,7 @@ const PMPortal = () => {
       }).eq('id', item.id);
     }
 
-    // Update inspection with general note
+    // Update inspection
     await supabase.from('inspections').update({
       pm_submitted_at: new Date().toISOString(),
       pm_signature_data: signatureData,
@@ -147,6 +187,40 @@ const PMPortal = () => {
       pm_general_note: generalNote || null,
       status: 'pm_responded',
     } as any).eq('id', inspection.id);
+
+    // Notify admin via transactional email
+    try {
+      // Get admin email from company_profile
+      const { data: company } = await supabase.from('company_profile').select('contact_email').limit(1).single();
+      const adminEmail = company?.contact_email;
+      // Get property name and client name
+      const { data: prop } = inspection.property_id
+        ? await supabase.from('properties').select('name').eq('id', inspection.property_id).single()
+        : { data: null };
+      const { data: client } = inspection.client_id
+        ? await supabase.from('clients').select('company_name').eq('id', inspection.client_id).single()
+        : { data: null };
+
+      if (adminEmail) {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'pm-response-received',
+            recipientEmail: adminEmail,
+            idempotencyKey: `pm-response-${inspection.id}`,
+            templateData: {
+              ins_number: inspection.ins_number ?? '',
+              property_name: prop?.name ?? 'N/A',
+              pm_name: client?.company_name ?? 'N/A',
+              items_approved: selectedItems.size,
+              total_approved: total.toFixed(2),
+              detail_url: `${window.location.origin}/inspections/${inspection.id}`,
+            },
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Admin notification failed', err);
+    }
 
     setShowConfirm(false);
     setSubmitted(true);
@@ -229,6 +303,14 @@ const PMPortal = () => {
     );
   }
 
+  // Group items by area
+  const itemsByArea: Record<string, any[]> = {};
+  items.forEach(i => {
+    const area = i.area ?? 'other';
+    if (!itemsByArea[area]) itemsByArea[area] = [];
+    itemsByArea[area].push(i);
+  });
+
   // Main portal
   return (
     <div className="min-h-screen bg-gray-50">
@@ -273,39 +355,70 @@ const PMPortal = () => {
           </div>
         )}
 
-        {/* Items */}
-        {items.map((item: any) => (
-          <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                checked={selectedItems.has(item.id)}
-                onCheckedChange={() => !readOnly && toggleItem(item.id)}
-                disabled={readOnly}
-                className="mt-0.5"
-              />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">{item.item_name}</span>
-                  <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                  </Badge>
+        {/* Photos and notes by area */}
+        {areas.map(area => {
+          const areaPhotos = photos[area] ?? [];
+          const areaNote = techNotes[area];
+          if (areaPhotos.length === 0 && !areaNote) return null;
+          return (
+            <div key={area} className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{area.replace(/_/g, ' ')}</h3>
+              {areaNote && (
+                <div className="bg-gray-50 rounded-md p-2 border border-gray-100">
+                  <p className="text-xs text-gray-500 font-medium mb-0.5">Technician Note</p>
+                  <p className="text-sm text-gray-700">{areaNote}</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">{(item.area ?? '').replace(/_/g, ' ')}</p>
-                <div className="flex items-center gap-4 mt-1 text-sm text-gray-700">
-                  <span>Qty: {item.quantity}</span>
-                  <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
-                  <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+              )}
+              {areaPhotos.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {areaPhotos.map((p: any, i: number) => (
+                    <div key={p.id ?? i} className="rounded-lg overflow-hidden border border-gray-200">
+                      <img src={p.displayUrl || p.url} alt="" className="w-full h-28 object-cover" />
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
-            <Textarea
-              placeholder="Add a note (optional)..."
-              value={itemNotes[item.id] ?? ''}
-              onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-              rows={1}
-              className="bg-gray-50 border-gray-200 text-gray-900 text-sm"
-              disabled={readOnly}
-            />
+          );
+        })}
+
+        {/* Items grouped by area */}
+        {Object.entries(itemsByArea).map(([area, areaItems]) => (
+          <div key={area} className="space-y-2">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{area.replace(/_/g, ' ')} — Items</h3>
+            {areaItems.map((item: any) => (
+              <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedItems.has(item.id)}
+                    onCheckedChange={() => !readOnly && toggleItem(item.id)}
+                    disabled={readOnly}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900">{item.item_name}</span>
+                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-700">
+                      <span>Qty: {item.quantity}</span>
+                      <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
+                      <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+                <Textarea
+                  placeholder="Add a note (optional)..."
+                  value={itemNotes[item.id] ?? ''}
+                  onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                  rows={1}
+                  className="bg-gray-50 border-gray-200 text-gray-900 text-sm"
+                  disabled={readOnly}
+                />
+              </div>
+            ))}
           </div>
         ))}
 
