@@ -78,7 +78,7 @@ const AppLayout = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <TopNav onMenuClick={() => setDrawerOpen(true)} />
       <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
       <SessionExpiredModal open={sessionExpired} onSignIn={handleSignIn} />

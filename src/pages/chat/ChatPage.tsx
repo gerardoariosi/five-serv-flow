@@ -216,7 +216,21 @@ const ChatPage = () => {
     inputRef.current?.focus();
   };
 
-  // Parse mentions in message content
+  // Parse mentions in message content — resolve to detail routes
+  const handleMentionClick = async (type: string, value: string) => {
+    if (type === 'ticket') {
+      const { data } = await supabase.from('tickets').select('id').eq('fs_number', value).maybeSingle();
+      if (data) { navigate(`/tickets/${data.id}`); return; }
+    } else if (type === 'property') {
+      const { data } = await supabase.from('properties').select('id').eq('name', value).maybeSingle();
+      if (data) { navigate(`/properties/${data.id}`); return; }
+    } else if (type === 'inspection') {
+      const { data } = await supabase.from('inspections').select('id').eq('ins_number', value).maybeSingle();
+      if (data) { navigate(`/inspections/${data.id}`); return; }
+    }
+    toast.error(`Could not find ${type}: ${value}`);
+  };
+
   const renderContent = (content: string) => {
     const mentionRegex = /@(ticket|property|inspection|technician)\s+([^\s,]+(?:\s+[^\s,@]+)*)/g;
     const parts: React.ReactNode[] = [];
@@ -226,12 +240,8 @@ const ChatPage = () => {
       if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index));
       const type = match[1];
       const value = match[2];
-      let href = '#';
-      if (type === 'ticket') href = `/tickets`;
-      else if (type === 'property') href = `/properties`;
-      else if (type === 'inspection') href = `/inspections`;
       parts.push(
-        <span key={match.index} className="text-primary font-medium cursor-pointer hover:underline" onClick={() => window.location.href = href}>
+        <span key={match.index} className="text-primary font-medium cursor-pointer hover:underline" onClick={() => handleMentionClick(type, value)}>
           @{type} {value}
         </span>
       );

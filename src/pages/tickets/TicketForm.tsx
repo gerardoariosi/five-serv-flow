@@ -79,23 +79,27 @@ const TicketForm = () => {
   useEffect(() => {
     if (isEdit) {
       setLoading(true);
-      supabase.from('tickets').select('*').eq('id', id).single().then(({ data }) => {
-        if (data) {
-          setForm({
-            client_id: data.client_id ?? '',
-            property_id: data.property_id ?? '',
-            zone_id: data.zone_id ?? '',
-            unit: data.unit ?? '',
-            work_type: data.work_type ?? 'repair',
-            priority: data.priority ?? 'normal',
-            technician_id: data.technician_id ?? '',
-            appointment_time: data.appointment_time ? new Date(data.appointment_time).toISOString().slice(0, 16) : '',
-            description: data.description ?? '',
-            internal_note: data.internal_note ?? '',
-            quote_reference: data.quote_reference ?? '',
-            related_inspection_id: data.related_inspection_id ?? '',
-          });
+      supabase.from('tickets').select('*').eq('id', id).maybeSingle().then(({ data, error }) => {
+        if (error || !data) {
+          toast.error(error?.message || 'Ticket not found');
+          setLoading(false);
+          navigate('/tickets', { replace: true });
+          return;
         }
+        setForm({
+          client_id: data.client_id ?? '',
+          property_id: data.property_id ?? '',
+          zone_id: data.zone_id ?? '',
+          unit: data.unit ?? '',
+          work_type: data.work_type ?? 'repair',
+          priority: data.priority ?? 'normal',
+          technician_id: data.technician_id ?? '',
+          appointment_time: data.appointment_time ? new Date(data.appointment_time).toISOString().slice(0, 16) : '',
+          description: data.description ?? '',
+          internal_note: data.internal_note ?? '',
+          quote_reference: data.quote_reference ?? '',
+          related_inspection_id: data.related_inspection_id ?? '',
+        });
         setLoading(false);
       });
     } else {
