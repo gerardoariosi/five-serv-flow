@@ -1,98 +1,80 @@
 
-# Fix: Master PIN sigue fallando al crear el primer PIN
 
-## Diagnóstico exacto
-El problema ya no está en el formulario visual del PIN. El fallo real es de permisos.
+# Analysis: 4 Issues in FiveServ App
 
-La app decide si eres admin usando `users.roles`, pero la base de datos protege `master_pin` usando `user_roles` con la función `has_role(...)`.
+## Issue 1: ALL EMAILS ARE FAILING
 
-Eso crea una inconsistencia:
+**Verdict: The transactional email system IS working. Auth emails (2fa, invite) are sending successfully.**
 
-- En frontend puedes entrar a Settings como admin
-- Pero al guardar en `master_pin`, la política RLS solo te deja si también existes en `user_roles`
+The `email_send_log` shows multiple emails with status `sent` — including `2fa_verification` and `invite` templates. These go through the same queue infrastructure (`process-email-queue`).
 
-Revisando los datos actuales:
-- `master_pin` sí existe y sigue en `0000`
-- Hay usuarios admin en `users.roles`
-- Pero al menos un admin (`owner@fiveserv.net`) no tiene fila en `user_roles`
+The `send-transactional-email` function has no invocation logs in the edge function analytics, which means **it has never been called yet**. The `pm-inspection-link` template is registered in `registry.ts` and the code in `PricingReview.tsx` calls `supabase.functions.invoke('send-transactional-email', ...)` correctly.
 
-Si estás entrando con un usuario que tiene `roles: ['admin']` en `users` pero no tiene su fila correspondiente en `user_roles`, el update del primer PIN falla y la UI solo muestra el error genérico `"Failed to update PIN"` / `"fail"`.
+**Root cause**: The email infrastructure works. The issue is likely that:
+1. No inspection has been sent to PM yet (the function was never invoked), OR
+2. The `send-transactional-email` edge function was never deployed. The function file exists but may not have been deployed to the runtime.
 
-## Qué está roto
-### 1. Doble fuente de verdad para roles
-- `useAuth.ts` carga roles desde `users.roles`
-- navegación y UI usan esos roles
-- pero RLS de `master_pin` usa `has_role()` sobre `user_roles`
+**Fix**: Deploy `send-transactional-email` (and related functions) using `deploy_edge_functions`. Then test by sending an inspection to a PM with a valid email.
 
-### 2. Mensaje de error poco útil
-En `SettingsPage.tsx`, cualquier error del save cae en:
-- `"Failed to update PIN."`
+---
 
-Por eso parece un fallo misterioso, cuando en realidad probablemente es un rechazo por permisos.
+## Issue 2: INSPECTION NOTES NOT SHOWING IN FIVESERV VIEW
 
-## Qué construir
-### Paso 1: Corregir la fuente de roles en autenticación
-Actualizar `useAuth.ts` para que el perfil lea los roles desde `user_roles`, no desde `users.roles`.
+**Root cause**: `AreaInspection.tsx` saves the per-area note into the `pm_note` column on ALL items in that area (line 135: `pm_note: notes[currentArea.key] || null`). This is a **naming collision** — `pm_note` is also used by the PM portal for PM-specific notes per item.
 
-Objetivo:
-- que frontend y RLS usen la misma fuente de verdad
-- si el usuario no tiene rol real en `user_roles`, no aparezca como admin en UI
+But the real display problem is in `InspectionDetail.tsx`: the FiveServ View tab (lines 317-350) renders items and photos grouped by area, but **there is zero code to display notes**. The notes are stored in `pm_note` on items, but the detail view never reads or renders them.
 
-### Paso 2: Corregir el bootstrap / gestión de usuarios
-Revisar los flujos que crean o editan usuarios para garantizar sincronización total:
-- `SetupStep3.tsx`
-- `UserManagement.tsx`
+**Fix**:
+1. Add a dedicated `note` column to `inspection_items` for FiveServ technician notes (separate from `pm_note` which is the PM's note).
+2. Update `AreaInspection.tsx` to save to `note` instead of `pm_note`.
+3. Update `InspectionDetail.tsx` FiveServ View to render the note per area.
 
-Regla:
-- cuando se crea/administra un usuario, siempre mantener `user_roles` consistente
-- opcionalmente dejar `users.roles` solo como legado visual o dejar de depender de él en frontend
+---
 
-### Paso 3: Mejorar el error del Master PIN
-En `SettingsPage.tsx`, mostrar el mensaje real cuando falle el save:
-- si el error viene por RLS/permisos, mostrar algo como:
-  - “Your account does not have permission to update the Master PIN.”
-- no esconderlo detrás de “Failed”
+## Issue 3: PM PORTAL MISSING NOTES AND PHOTOS
 
-### Paso 4: Endurecer el estado inicial del primer PIN
-Mantener la lógica actual:
-- si `pin === '0000'`, mostrar flujo de “Set PIN”
-- ocultar “Current PIN”
-- permitir update directo del registro existente
+**Root cause**: `PMPortal.tsx` fetches only `inspection_items` (line 64-68). It **never fetches `inspection_photos`** and never fetches any notes. The portal shows items with prices, checkboxes, and PM note fields — but no existing technician notes or photos.
 
-Pero además:
-- diferenciar error de permisos vs error de validación
-- evitar que el usuario piense que el problema es el PIN actual
+- **Photos**: No query to `inspection_photos` exists in `PMPortal.tsx`. No signed URL generation. No photo rendering in the portal UI.
+- **Notes**: The technician's area notes are stored in `pm_note` on items (naming collision from Issue 2), but the portal doesn't display them either — it only shows PM input fields.
 
-## Archivos a tocar
-- `src/hooks/useAuth.ts`
-- `src/pages/settings/SettingsPage.tsx`
-- `src/pages/setup/SetupStep3.tsx`
-- `src/pages/settings/UserManagement.tsx`
+**Fix**:
+1. Add a fetch for `inspection_photos` by `inspection_id` in `PMPortal.tsx`.
+2. Generate signed URLs for each photo (the bucket is private).
+3. Display photos grouped by area alongside the items.
+4. Display the technician's notes (from the new `note` column) as read-only text per area.
+5. Ensure anon SELECT on `inspection_photos` is allowed (currently it's not — only authenticated users can view). Need an RLS policy for anon SELECT with token validation.
 
-## Resultado esperado
-Después del arreglo:
-- solo los admins reales podrán ver/usar Settings como admin
-- el primer Master PIN se podrá crear si el usuario tiene rol admin real
-- si no tiene permisos reales, el sistema lo dirá claramente
-- se elimina la inconsistencia entre frontend y RLS
+---
 
-## Technical details
-```text
-Current failing path:
+## Issue 4: ADMIN NOT NOTIFIED WHEN PM SUBMITS
 
-Frontend admin check:
-users.roles -> shows admin UI
+**Root cause**: `PMPortal.tsx` `handleSubmit` (lines 130-156) updates `inspection_items` and the `inspections` row, then shows a success toast. **There is no code to notify the admin.** No email call, no in-app notification trigger, nothing.
 
-Database admin check:
-master_pin RLS -> has_role(auth.uid(), 'admin') -> checks user_roles
+**Fix**:
+1. After the PM submit succeeds, call `send-transactional-email` with a new template (e.g., `pm-response-received`) to notify the admin.
+2. Create the `pm-response-received` email template.
+3. Register it in `registry.ts`.
+4. The recipient should be the company admin email (from `company_profile.contact_email` or a similar source). Since this is a public/anon route, the call must go through an edge function or the admin email must be determinable without auth.
 
-Mismatch:
-user looks admin in UI
-but DB rejects update
+---
 
-Current master_pin row:
-pin = '0000'
+## Summary of Fixes
 
-So first-PIN flow is logically correct now,
-but save still fails when logged-in user is missing user_roles row.
-```
+| # | Issue | Root Cause | Fix |
+|---|-------|-----------|-----|
+| 1 | Emails failing | Edge function not deployed | Deploy `send-transactional-email` |
+| 2 | Notes missing in FiveServ view | No render code + `pm_note` naming collision | Add `note` column, update save/display |
+| 3 | PM portal missing photos/notes | No fetch for `inspection_photos`, no anon RLS | Add photo fetch, signed URLs, anon RLS, display |
+| 4 | No admin notification on PM submit | No notification code exists | Add email template + trigger after submit |
+
+## Files to Change
+
+- **Database migration**: Add `note` column to `inspection_items`, add anon SELECT policy on `inspection_photos`
+- `src/pages/inspections/AreaInspection.tsx` — save to `note` instead of `pm_note`
+- `src/pages/inspections/InspectionDetail.tsx` — render notes per area
+- `src/pages/inspections/PMPortal.tsx` — fetch/display photos and notes; add admin notification call
+- `supabase/functions/_shared/transactional-email-templates/pm-response-received.tsx` — new template
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register new template
+- Deploy edge functions
+
