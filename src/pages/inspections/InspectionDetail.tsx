@@ -5,12 +5,15 @@ import { useAuthStore } from '@/stores/authStore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send } from 'lucide-react';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
+import { generateFiveServPdf, generatePmVersionPdf, downloadPdf, pdfToBase64 } from '@/lib/inspectionPdf';
 
 const InspectionDetail = () => {
   const { id } = useParams();
@@ -32,6 +35,12 @@ const InspectionDetail = () => {
 
   // Delete confirm
   const [showDelete, setShowDelete] = useState(false);
+
+  // Email modal
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailType, setEmailType] = useState<'fiveserv' | 'pm'>('fiveserv');
+  const [emailTo, setEmailTo] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -119,6 +128,63 @@ const InspectionDetail = () => {
     setConverting(false);
   };
 
+  // PDF Export handlers
+  const handleExportFiveServ = () => {
+    const doc = generateFiveServPdf({ inspection, items, photos, clients, properties });
+    downloadPdf(doc, `${inspection.ins_number ?? 'inspection'}-fiveserv-report.pdf`);
+    toast.success('FiveServ PDF downloaded');
+  };
+
+  const handleExportPm = () => {
+    const doc = generatePmVersionPdf({ inspection, items, photos, clients, properties });
+    downloadPdf(doc, `${inspection.ins_number ?? 'inspection'}-pm-report.pdf`);
+    toast.success('PM Version PDF downloaded');
+  };
+
+  const handleOpenEmailModal = (type: 'fiveserv' | 'pm') => {
+    setEmailType(type);
+    setEmailTo('');
+    setShowEmailModal(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailTo.trim()) { toast.error('Enter an email address'); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTo.trim())) { toast.error('Enter a valid email address'); return; }
+
+    setSendingEmail(true);
+    try {
+      const doc = emailType === 'fiveserv'
+        ? generateFiveServPdf({ inspection, items, photos, clients, properties })
+        : generatePmVersionPdf({ inspection, items, photos, clients, properties });
+
+      const base64 = pdfToBase64(doc);
+      const filename = `${inspection.ins_number ?? 'inspection'}-${emailType === 'fiveserv' ? 'fiveserv' : 'pm'}-report.pdf`;
+
+      const reportType = emailType === 'fiveserv' ? 'FiveServ Internal Report' : 'PM Version Report';
+      const propertyName = inspection.property_id ? properties[inspection.property_id] ?? '' : '';
+
+      const { data, error } = await supabase.functions.invoke('send-inspection-email', {
+        body: {
+          to_email: emailTo.trim(),
+          subject: `Inspection Report: ${inspection.ins_number ?? ''} — ${reportType}`,
+          body_text: `Please find the attached inspection report for ${inspection.ins_number ?? 'the inspection'}.\n\nProperty: ${propertyName}\nReport Type: ${reportType}\nDate: ${inspection.visit_date ?? 'N/A'}`,
+          pdf_base64: base64,
+          pdf_filename: filename,
+        },
+      });
+
+      if (error) throw error;
+      toast.success(`Report sent to ${emailTo.trim()}`);
+      setShowEmailModal(false);
+    } catch (err: any) {
+      console.error('Failed to send email:', err);
+      toast.error('Failed to send email. Please try again.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const portalUrl = inspection?.pm_link_token
     ? `${window.location.origin}/portal/${inspection.pm_link_token}`
     : null;
@@ -199,6 +265,40 @@ const InspectionDetail = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Email modal */}
+      <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              Send {emailType === 'fiveserv' ? 'FiveServ' : 'PM'} Report by Email
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="email-to">Recipient Email</Label>
+              <Input
+                id="email-to"
+                type="email"
+                placeholder="Enter email address"
+                value={emailTo}
+                onChange={e => setEmailTo(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The {emailType === 'fiveserv' ? 'FiveServ internal' : 'PM version'} PDF report will be attached to the email.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailModal(false)} disabled={sendingEmail}>Cancel</Button>
+            <Button onClick={handleSendEmail} disabled={sendingEmail || !emailTo.trim()}>
+              {sendingEmail ? <Spinner size="sm" /> : <><Send className="w-4 h-4 mr-1" /> Send</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
@@ -245,6 +345,31 @@ const InspectionDetail = () => {
               {inspection.has_laundry ? ' · Laundry' : ''}
               {inspection.has_exterior ? ' · Exterior' : ''}
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Export & Email buttons */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <FileText className="w-4 h-4 text-primary" /> Export & Share
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="space-y-2">
+            <Button size="sm" variant="outline" className="w-full justify-start" onClick={handleExportFiveServ}>
+              <Download className="w-4 h-4 mr-2" /> Export FiveServ PDF
+            </Button>
+            <Button size="sm" variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => handleOpenEmailModal('fiveserv')}>
+              <Mail className="w-4 h-4 mr-2" /> Send FiveServ by Email
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <Button size="sm" variant="outline" className="w-full justify-start" onClick={handleExportPm}>
+              <Download className="w-4 h-4 mr-2" /> Export PM Version PDF
+            </Button>
+            <Button size="sm" variant="ghost" className="w-full justify-start text-muted-foreground" onClick={() => handleOpenEmailModal('pm')}>
+              <Mail className="w-4 h-4 mr-2" /> Send PM Version by Email
+            </Button>
           </div>
         </div>
       </div>
