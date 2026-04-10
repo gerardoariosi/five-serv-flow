@@ -65,9 +65,9 @@ const AreaInspection = () => {
         };
       });
       itemsMap[area.key] = areaItems;
-      // Load notes from first item's pm_note (stored per area)
-      const firstWithNote = (existingItems ?? []).find((e: any) => e.area === area.key && e.pm_note);
-      notesMap[area.key] = firstWithNote?.pm_note ?? '';
+      // Load notes from first item's note column (stored per area)
+      const firstWithNote = (existingItems ?? []).find((e: any) => e.area === area.key && e.note);
+      notesMap[area.key] = firstWithNote?.note ?? '';
     }
     setItems(itemsMap);
     setNotes(notesMap);
@@ -132,7 +132,7 @@ const AreaInspection = () => {
         area: item.area,
         item_name: item.item_name,
         status: item.status,
-        pm_note: notes[currentArea.key] || null,
+        note: notes[currentArea.key] || null,
       };
       if (item.dbId) {
         await supabase.from('inspection_items').update(payload).eq('id', item.dbId);

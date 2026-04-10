@@ -331,6 +331,16 @@ const InspectionDetail = () => {
                   </div>
                 ))}
               </div>
+              {/* Area technician note */}
+              {(() => {
+                const areaNote = areaItems.find((i: any) => i.note)?.note;
+                return areaNote ? (
+                  <div className="mt-2 px-2 py-1.5 rounded-md bg-secondary/50 border border-border">
+                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Technician Note</p>
+                    <p className="text-sm text-foreground">{areaNote}</p>
+                  </div>
+                ) : null;
+              })()}
               {/* Area photos */}
               {photosByArea[area] && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
