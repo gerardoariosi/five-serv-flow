@@ -343,6 +343,7 @@ export type Database = {
           id: string
           inspection_id: string | null
           item_name: string | null
+          note: string | null
           pm_note: string | null
           pm_selected: boolean | null
           quantity: number | null
@@ -355,6 +356,7 @@ export type Database = {
           id?: string
           inspection_id?: string | null
           item_name?: string | null
+          note?: string | null
           pm_note?: string | null
           pm_selected?: boolean | null
           quantity?: number | null
@@ -367,6 +369,7 @@ export type Database = {
           id?: string
           inspection_id?: string | null
           item_name?: string | null
+          note?: string | null
           pm_note?: string | null
           pm_selected?: boolean | null
           quantity?: number | null
