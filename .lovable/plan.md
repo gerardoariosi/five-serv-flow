@@ -1,80 +1,106 @@
 
 
-# Analysis: 4 Issues in FiveServ App
+# Analysis: 4 UI and Functionality Issues
 
-## Issue 1: ALL EMAILS ARE FAILING
+## Issue 1: MOBILE DRAWER MENU CUT IN HALF
 
-**Verdict: The transactional email system IS working. Auth emails (2fa, invite) are sending successfully.**
+**Root cause: `AppLayout.tsx` line 73 — `overflow-x-hidden` on `<main>`**
 
-The `email_send_log` shows multiple emails with status `sent` — including `2fa_verification` and `invite` templates. These go through the same queue infrastructure (`process-email-queue`).
+The `<main>` element has `className="flex-1 overflow-x-hidden"`. The drawer (`DrawerMenu.tsx`) uses `position: fixed` with `z-50`, but the drawer is rendered **inside** the `AppLayout` component tree. While `fixed` positioning should escape overflow clipping, the real problem is the `AppLayout` wrapper itself:
 
-The `send-transactional-email` function has no invocation logs in the edge function analytics, which means **it has never been called yet**. The `pm-inspection-link` template is registered in `registry.ts` and the code in `PricingReview.tsx` calls `supabase.functions.invoke('send-transactional-email', ...)` correctly.
+```
+<div className="min-h-screen flex flex-col bg-background">  ← root flex column
+  <TopNav />
+  <DrawerMenu />   ← rendered here, inside the flex layout
+  <main className="flex-1 overflow-x-hidden">  ← clips horizontal overflow
+    <Outlet />
+  </main>
+</div>
+```
 
-**Root cause**: The email infrastructure works. The issue is likely that:
-1. No inspection has been sent to PM yet (the function was never invoked), OR
-2. The `send-transactional-email` edge function was never deployed. The function file exists but may not have been deployed to the runtime.
+The drawer is `w-72` (288px). On narrow mobile viewports (320-414px), the drawer renders correctly with `fixed` positioning, BUT there's a secondary issue: `App.css` contains `#root { max-width: 1280px; margin: 0 auto; padding: 2rem; }`. Although `App.css` is **not imported** in `main.tsx`, if Vite processes it as part of the build (glob or legacy config), it would constrain the `#root` div to `max-width: 1280px` with `padding: 2rem`, which would clip fixed-position children on some viewports.
 
-**Fix**: Deploy `send-transactional-email` (and related functions) using `deploy_edge_functions`. Then test by sending an inspection to a PM with a valid email.
-
----
-
-## Issue 2: INSPECTION NOTES NOT SHOWING IN FIVESERV VIEW
-
-**Root cause**: `AreaInspection.tsx` saves the per-area note into the `pm_note` column on ALL items in that area (line 135: `pm_note: notes[currentArea.key] || null`). This is a **naming collision** — `pm_note` is also used by the PM portal for PM-specific notes per item.
-
-But the real display problem is in `InspectionDetail.tsx`: the FiveServ View tab (lines 317-350) renders items and photos grouped by area, but **there is zero code to display notes**. The notes are stored in `pm_note` on items, but the detail view never reads or renders them.
+**Most likely cause**: The `#root` CSS in `App.css` is a Vite template leftover. If it IS being applied (check via DevTools), the `padding: 2rem` shrinks available space and the drawer's `left-0` position is relative to the padded container. Even if not applied, the `overflow-x-hidden` on main could cause clipping in certain mobile browsers.
 
 **Fix**:
-1. Add a dedicated `note` column to `inspection_items` for FiveServ technician notes (separate from `pm_note` which is the PM's note).
-2. Update `AreaInspection.tsx` to save to `note` instead of `pm_note`.
-3. Update `InspectionDetail.tsx` FiveServ View to render the note per area.
+1. Delete `App.css` entirely (it's a Vite template leftover, not imported).
+2. Remove `overflow-x-hidden` from `<main>` in `AppLayout.tsx`, or scope it more narrowly.
 
 ---
 
-## Issue 3: PM PORTAL MISSING NOTES AND PHOTOS
+## Issue 2: TICKET EDIT SCREEN SHOWS BLACK SCREEN
 
-**Root cause**: `PMPortal.tsx` fetches only `inspection_items` (line 64-68). It **never fetches `inspection_photos`** and never fetches any notes. The portal shows items with prices, checkboxes, and PM note fields — but no existing technician notes or photos.
+**Root cause: RLS policy on `tickets` table blocks the UPDATE query, but the SELECT for loading works fine.**
 
-- **Photos**: No query to `inspection_photos` exists in `PMPortal.tsx`. No signed URL generation. No photo rendering in the portal UI.
-- **Notes**: The technician's area notes are stored in `pm_note` on items (naming collision from Issue 2), but the portal doesn't display them either — it only shows PM input fields.
+The route `/tickets/:id/edit` renders `TicketForm` with `isEdit = true`. The component:
+1. Sets `loading = true` (line 81)
+2. Fetches the ticket via `.select('*').eq('id', id).single()` (line 82)
+3. If data exists, populates the form and sets `loading = false` (line 99)
 
-**Fix**:
-1. Add a fetch for `inspection_photos` by `inspection_id` in `PMPortal.tsx`.
-2. Generate signed URLs for each photo (the bucket is private).
-3. Display photos grouped by area alongside the items.
-4. Display the technician's notes (from the new `note` column) as read-only text per area.
-5. Ensure anon SELECT on `inspection_photos` is allowed (currently it's not — only authenticated users can view). Need an RLS policy for anon SELECT with token validation.
+The SELECT query works (RLS allows all authenticated users). The form renders. However, **the "black screen" is not a rendering failure** — the form should load. The issue is likely that the query fails silently when `data` is `null` (no `.catch()` handler), leaving the spinner showing forever on a dark background, which the user perceives as "black screen."
 
----
+Possible causes:
+- The ticket ID in the URL doesn't match any row (deleted or wrong UUID)
+- The `.single()` call returns an error (not `data`) when RLS blocks or no rows match, and the code only checks `if (data)` — if the query errors, `loading` stays `true` forever showing the spinner on the dark `bg-background`
 
-## Issue 4: ADMIN NOT NOTIFIED WHEN PM SUBMITS
-
-**Root cause**: `PMPortal.tsx` `handleSubmit` (lines 130-156) updates `inspection_items` and the `inspections` row, then shows a success toast. **There is no code to notify the admin.** No email call, no in-app notification trigger, nothing.
-
-**Fix**:
-1. After the PM submit succeeds, call `send-transactional-email` with a new template (e.g., `pm-response-received`) to notify the admin.
-2. Create the `pm-response-received` email template.
-3. Register it in `registry.ts`.
-4. The recipient should be the company admin email (from `company_profile.contact_email` or a similar source). Since this is a public/anon route, the call must go through an edge function or the admin email must be determinable without auth.
+**Fix**: Add error handling to the edit fetch. If no data is returned, show an error message or redirect instead of staying in loading state forever.
 
 ---
 
-## Summary of Fixes
+## Issue 3: CHAT @MENTIONS NOT LINKING TO SPECIFIC TICKET
 
-| # | Issue | Root Cause | Fix |
-|---|-------|-----------|-----|
-| 1 | Emails failing | Edge function not deployed | Deploy `send-transactional-email` |
-| 2 | Notes missing in FiveServ view | No render code + `pm_note` naming collision | Add `note` column, update save/display |
-| 3 | PM portal missing photos/notes | No fetch for `inspection_photos`, no anon RLS | Add photo fetch, signed URLs, anon RLS, display |
-| 4 | No admin notification on PM submit | No notification code exists | Add email template + trigger after submit |
+**Root cause: `ChatPage.tsx` lines 229-232 — mention links hardcoded to list routes**
+
+The `renderContent` function parses `@ticket FS-2025-XXXX` mentions but sets the href to the **list page**, not the detail page:
+
+```typescript
+if (type === 'ticket') href = `/tickets`;        // ← goes to list
+else if (type === 'property') href = `/properties`;  // ← goes to list
+else if (type === 'inspection') href = `/inspections`; // ← goes to list
+```
+
+The `value` variable contains the FS number (e.g., `FS-2025-0001`), but it's never used to build the URL. To link to a specific ticket, the code needs to look up the ticket's UUID by its `fs_number`, then navigate to `/tickets/{uuid}`.
+
+**Fix**: Change the `renderContent` function to:
+1. For `@ticket FS-XXXX`: query `tickets` table by `fs_number` to get the UUID, then navigate to `/tickets/{uuid}`
+2. Similarly for properties and inspections — look up by name/number and navigate to detail
+
+---
+
+## Issue 4: NOTIFICATION BELL IS EMPTY — NOT WORKING
+
+**Root cause: No notification system exists.**
+
+The bell in `TopNav.tsx` (lines 65-70) is a **static, non-functional element**:
+- It renders a hardcoded badge showing "3"
+- The button has no `onClick` handler
+- There is no `notifications` table in the database (confirmed via query)
+- There is no notifications component, no dropdown, no popover
+- No code anywhere captures app events into a notification store or table
+
+The entire notification system needs to be built from scratch:
+1. Create a `notifications` table (user_id, type, title, message, link, read, created_at)
+2. Create database triggers or application-level code to insert notifications on events (ticket created, status changed, chat message, inspection changes)
+3. Build a notification dropdown/popover component
+4. Wire the bell button to open the dropdown
+5. Show real unread count instead of hardcoded "3"
+6. Add realtime subscription for live updates
+
+---
+
+## Summary
+
+| # | Issue | Root Cause | Severity |
+|---|-------|-----------|----------|
+| 1 | Drawer cut in half on mobile | `overflow-x-hidden` on main + potential `App.css` `#root` padding | Medium |
+| 2 | Ticket edit black screen | No error handling on fetch — `loading` stays `true` forever on failure | Medium |
+| 3 | @mentions link to list not detail | `href` hardcoded to `/tickets` instead of `/tickets/{uuid}` | Low |
+| 4 | Notification bell empty | No notification system exists — bell is purely decorative | Critical |
 
 ## Files to Change
 
-- **Database migration**: Add `note` column to `inspection_items`, add anon SELECT policy on `inspection_photos`
-- `src/pages/inspections/AreaInspection.tsx` — save to `note` instead of `pm_note`
-- `src/pages/inspections/InspectionDetail.tsx` — render notes per area
-- `src/pages/inspections/PMPortal.tsx` — fetch/display photos and notes; add admin notification call
-- `supabase/functions/_shared/transactional-email-templates/pm-response-received.tsx` — new template
-- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register new template
-- Deploy edge functions
+1. **Issue 1**: Delete `src/App.css`, update `AppLayout.tsx` overflow
+2. **Issue 2**: Add `.catch()` and error state to `TicketForm.tsx` edit fetch
+3. **Issue 3**: Update `renderContent` in `ChatPage.tsx` to resolve FS numbers to UUIDs and link to detail routes
+4. **Issue 4**: Create `notifications` table + RLS, create NotificationDropdown component, update `TopNav.tsx`, add triggers/inserts for app events
 
