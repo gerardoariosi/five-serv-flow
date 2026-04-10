@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -14,6 +15,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 
 const ChatPage = () => {
   const { user, activeRole } = useAuthStore();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
