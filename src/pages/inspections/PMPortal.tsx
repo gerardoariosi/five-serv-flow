@@ -17,8 +17,9 @@ const PMPortal = () => {
   const { token } = useParams();
   const [inspection, setInspection] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
+  const [photos, setPhotos] = useState<Record<string, any[]>>({});
+  const [techNotes, setTechNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [expired, setExpired] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
 
