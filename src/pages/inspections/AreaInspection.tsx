@@ -32,6 +32,8 @@ const AreaInspection = () => {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
 
   const fetchData = useCallback(async () => {
     if (!id) return;
