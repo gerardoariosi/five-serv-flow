@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send } from 'lucide-react';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
-import { generateFiveServPdf, generatePmVersionPdf, downloadPdf, pdfToBase64 } from '@/lib/inspectionPdf';
+import { generateFiveServPdf, generatePmVersionPdf, downloadPdf } from '@/lib/inspectionPdf';
 
 const InspectionDetail = () => {
   const { id } = useParams();
