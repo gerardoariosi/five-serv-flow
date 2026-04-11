@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send } from 'lucide-react';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
-import { generateFiveServPdf, generatePmVersionPdf, downloadPdf, pdfToBase64 } from '@/lib/inspectionPdf';
+import { generateFiveServPdf, generatePmVersionPdf, downloadPdf } from '@/lib/inspectionPdf';
 
 const InspectionDetail = () => {
   const { id } = useParams();
@@ -158,19 +158,40 @@ const InspectionDetail = () => {
         ? generateFiveServPdf({ inspection, items, photos, clients, properties })
         : generatePmVersionPdf({ inspection, items, photos, clients, properties });
 
-      const base64 = pdfToBase64(doc);
-      const filename = `${inspection.ins_number ?? 'inspection'}-${emailType === 'fiveserv' ? 'fiveserv' : 'pm'}-report.pdf`;
-
       const reportType = emailType === 'fiveserv' ? 'FiveServ Internal Report' : 'PM Version Report';
       const propertyName = inspection.property_id ? properties[inspection.property_id] ?? '' : '';
+      const filename = `${inspection.ins_number ?? 'inspection'}-${emailType === 'fiveserv' ? 'fiveserv' : 'pm'}-report.pdf`;
 
-      const { data, error } = await supabase.functions.invoke('send-inspection-email', {
+      // Convert PDF to blob and upload to storage
+      const pdfBlob = doc.output('blob');
+      const storagePath = `reports/${inspection.id}/${Date.now()}-${filename}`;
+      const { error: uploadError } = await supabase.storage
+        .from('inspection-reports')
+        .upload(storagePath, pdfBlob, { contentType: 'application/pdf' });
+
+      if (uploadError) throw new Error('Failed to upload PDF: ' + uploadError.message);
+
+      // Get public URL for the download link
+      const { data: urlData } = supabase.storage
+        .from('inspection-reports')
+        .getPublicUrl(storagePath);
+
+      const downloadUrl = urlData?.publicUrl;
+      if (!downloadUrl) throw new Error('Failed to generate download URL');
+
+      // Send via transactional email with download link
+      const { error } = await supabase.functions.invoke('send-transactional-email', {
         body: {
-          to_email: emailTo.trim(),
-          subject: `Inspection Report: ${inspection.ins_number ?? ''} — ${reportType}`,
-          body_text: `Please find the attached inspection report for ${inspection.ins_number ?? 'the inspection'}.\n\nProperty: ${propertyName}\nReport Type: ${reportType}\nDate: ${inspection.visit_date ?? 'N/A'}`,
-          pdf_base64: base64,
-          pdf_filename: filename,
+          templateName: 'inspection-report',
+          recipientEmail: emailTo.trim(),
+          idempotencyKey: `inspection-report-${inspection.id}-${emailType}-${Date.now()}`,
+          templateData: {
+            ins_number: inspection.ins_number ?? '',
+            property_name: propertyName,
+            report_type: reportType,
+            visit_date: inspection.visit_date ?? 'N/A',
+            download_url: downloadUrl,
+          },
         },
       });
 
