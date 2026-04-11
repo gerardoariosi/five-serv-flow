@@ -280,7 +280,53 @@ const AreaInspection = () => {
         ))}
       </div>
 
-      {/* Photos */}
+      {/* Add custom item */}
+      {showAddItem ? (
+        <div className="flex gap-2">
+          <Input
+            placeholder="Item name..."
+            value={newItemName}
+            onChange={e => setNewItemName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && newItemName.trim()) {
+                setItems(prev => ({
+                  ...prev,
+                  [currentArea.key]: [...(prev[currentArea.key] ?? []), {
+                    item_name: newItemName.trim(),
+                    area: currentArea.key,
+                    status: 'good' as ItemStatus,
+                  }],
+                }));
+                setNewItemName('');
+                setShowAddItem(false);
+              }
+            }}
+            autoFocus
+            className="flex-1"
+          />
+          <Button size="sm" onClick={() => {
+            if (!newItemName.trim()) return;
+            setItems(prev => ({
+              ...prev,
+              [currentArea.key]: [...(prev[currentArea.key] ?? []), {
+                item_name: newItemName.trim(),
+                area: currentArea.key,
+                status: 'good' as ItemStatus,
+              }],
+            }));
+            setNewItemName('');
+            setShowAddItem(false);
+          }}>Add</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setShowAddItem(false); setNewItemName(''); }}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      ) : (
+        <Button variant="outline" size="sm" className="w-full" onClick={() => setShowAddItem(true)}>
+          <Plus className="w-4 h-4 mr-1" /> Add Item
+        </Button>
+      )}
+
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">
