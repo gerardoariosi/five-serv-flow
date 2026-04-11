@@ -235,8 +235,9 @@ const PricingReview = () => {
                         type="number"
                         min={0}
                         step={0.01}
-                        value={item.unit_price ?? ''}
+                        value={item.unit_price || ''}
                         onChange={e => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                        onFocus={e => e.target.select()}
                         className="h-8 text-sm"
                       />
                     </div>

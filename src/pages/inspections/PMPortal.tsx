@@ -355,20 +355,60 @@ const PMPortal = () => {
           </div>
         )}
 
-        {/* Photos and notes by area */}
+        {/* Items, notes, and photos grouped by area */}
         {areas.map(area => {
           const areaPhotos = photos[area] ?? [];
           const areaNote = techNotes[area];
-          if (areaPhotos.length === 0 && !areaNote) return null;
+          const areaItems = itemsByArea[area] ?? [];
+          if (areaItems.length === 0 && areaPhotos.length === 0 && !areaNote) return null;
           return (
-            <div key={area} className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
+            <div key={area} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{area.replace(/_/g, ' ')}</h3>
+
+              {/* Items */}
+              {areaItems.map((item: any) => (
+                <div key={item.id} className="border border-gray-100 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={selectedItems.has(item.id)}
+                      onCheckedChange={() => !readOnly && toggleItem(item.id)}
+                      disabled={readOnly}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900">{item.item_name}</span>
+                        <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-700">
+                        <span>Qty: {item.quantity}</span>
+                        <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
+                        <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Textarea
+                    placeholder="Add a note (optional)..."
+                    value={itemNotes[item.id] ?? ''}
+                    onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                    rows={1}
+                    className="bg-gray-50 border-gray-200 text-gray-900 text-sm"
+                    disabled={readOnly}
+                  />
+                </div>
+              ))}
+
+              {/* Technician note */}
               {areaNote && (
                 <div className="bg-gray-50 rounded-md p-2 border border-gray-100">
                   <p className="text-xs text-gray-500 font-medium mb-0.5">Technician Note</p>
                   <p className="text-sm text-gray-700">{areaNote}</p>
                 </div>
               )}
+
+              {/* Photos */}
               {areaPhotos.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                   {areaPhotos.map((p: any, i: number) => (
@@ -381,46 +421,6 @@ const PMPortal = () => {
             </div>
           );
         })}
-
-        {/* Items grouped by area */}
-        {Object.entries(itemsByArea).map(([area, areaItems]) => (
-          <div key={area} className="space-y-2">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{area.replace(/_/g, ' ')} — Items</h3>
-            {areaItems.map((item: any) => (
-              <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={selectedItems.has(item.id)}
-                    onCheckedChange={() => !readOnly && toggleItem(item.id)}
-                    disabled={readOnly}
-                    className="mt-0.5"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900">{item.item_name}</span>
-                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-700">
-                      <span>Qty: {item.quantity}</span>
-                      <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
-                      <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-                <Textarea
-                  placeholder="Add a note (optional)..."
-                  value={itemNotes[item.id] ?? ''}
-                  onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-                  rows={1}
-                  className="bg-gray-50 border-gray-200 text-gray-900 text-sm"
-                  disabled={readOnly}
-                />
-              </div>
-            ))}
-          </div>
-        ))}
 
         {/* Total */}
         <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 flex items-center justify-between">

@@ -8,37 +8,58 @@ interface InspectionData {
   properties: Record<string, string>;
 }
 
-const GOLD = [255, 215, 0] as const;
-const DARK_BG = [26, 26, 26] as const;
-const CARD_BG = [38, 38, 38] as const;
-const WHITE = [255, 255, 255] as const;
-const MUTED = [160, 160, 160] as const;
-const GREEN = [34, 197, 94] as const;
-const RED = [239, 68, 68] as const;
-const ORANGE = [249, 115, 22] as const;
+const GOLD: [number, number, number] = [255, 215, 0];
+const BLACK: [number, number, number] = [0, 0, 0];
+const DARK_TEXT: [number, number, number] = [33, 33, 33];
+const MUTED: [number, number, number] = [120, 120, 120];
+const LIGHT_BG: [number, number, number] = [245, 245, 245];
+const GREEN: [number, number, number] = [34, 150, 70];
+const RED: [number, number, number] = [200, 40, 40];
+const ORANGE: [number, number, number] = [210, 100, 20];
+const WHITE: [number, number, number] = [255, 255, 255];
 
-function addHeader(doc: jsPDF, title: string, subtitle: string) {
-  doc.setFillColor(...DARK_BG);
-  doc.rect(0, 0, 210, 40, 'F');
+function addHeader(doc: jsPDF, subtitle: string) {
+  // White header with gold accent line
+  doc.setFillColor(...WHITE);
+  doc.rect(0, 0, 210, 36, 'F');
   doc.setFillColor(...GOLD);
-  doc.rect(0, 38, 210, 2, 'F');
+  doc.rect(0, 34, 210, 2, 'F');
 
-  doc.setTextColor(...WHITE);
-  doc.setFontSize(20);
+  // FiveServ wordmark: "F" in gold, "iveServ" in black
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, 15, 18);
+  doc.setTextColor(...GOLD);
+  doc.text('F', 15, 18);
+  const fWidth = doc.getTextWidth('F');
+  doc.setTextColor(...BLACK);
+  doc.text('iveServ', 15 + fWidth, 18);
 
+  // Subtitle
   doc.setTextColor(...MUTED);
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text(subtitle, 15, 28);
+  doc.text(subtitle, 15, 27);
+}
+
+function addFooter(doc: jsPDF) {
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    // Tagline footer
+    doc.setFillColor(...GOLD);
+    doc.rect(0, 286, 210, 0.5, 'F');
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(7);
+    doc.text('One Team. One Call. Done.', 15, 292);
+    doc.text(`Page ${i} of ${pageCount}`, 180, 292);
+  }
 }
 
 function addSectionTitle(doc: jsPDF, y: number, text: string): number {
   if (y > 260) { doc.addPage(); y = 20; }
   doc.setFillColor(...GOLD);
   doc.rect(15, y, 3, 8, 'F');
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...DARK_TEXT);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text(text, 22, y + 6);
@@ -51,32 +72,30 @@ function addInfoRow(doc: jsPDF, y: number, label: string, value: string): number
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text(label, 20, y);
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...DARK_TEXT);
   doc.setFontSize(10);
   doc.text(value || '—', 65, y);
   return y + 7;
 }
 
-function statusColor(status: string): readonly [number, number, number] {
+function statusColor(status: string): [number, number, number] {
   if (status === 'good') return GREEN;
   if (status === 'urgent') return RED;
   return ORANGE;
 }
 
-function addPageBackground(doc: jsPDF) {
-  doc.setFillColor(...DARK_BG);
-  doc.rect(0, 0, 210, 297, 'F');
+function checkPageBreak(doc: jsPDF, y: number, needed: number = 20): number {
+  if (y + needed > 280) { doc.addPage(); return 20; }
+  return y;
 }
 
 export function generateFiveServPdf(data: InspectionData): jsPDF {
-  const { inspection, items, clients, properties } = data;
+  const { inspection, items, photos, clients, properties } = data;
   const doc = new jsPDF();
 
-  // Page 1 background
-  addPageBackground(doc);
-  addHeader(doc, 'FiveServ Inspection Report', `${inspection.ins_number ?? 'No INS#'} — Full Internal Report`);
+  addHeader(doc, `${inspection.ins_number ?? 'No INS#'} — Full Internal Report`);
 
-  let y = 50;
+  let y = 44;
 
   // Info section
   y = addSectionTitle(doc, y, 'Inspection Details');
@@ -93,25 +112,33 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
   );
   y += 5;
 
-  // Group items by area
+  // Group items and photos by area
   const itemsByArea: Record<string, any[]> = {};
   items.forEach(i => {
     const area = i.area ?? 'other';
     if (!itemsByArea[area]) itemsByArea[area] = [];
     itemsByArea[area].push(i);
   });
+  const photosByArea: Record<string, any[]> = {};
+  photos.forEach(p => {
+    const area = p.area ?? 'other';
+    if (!photosByArea[area]) photosByArea[area] = [];
+    photosByArea[area].push(p);
+  });
 
-  // Items section
+  // All areas
+  const allAreas = new Set([...Object.keys(itemsByArea), ...Object.keys(photosByArea)]);
+
   y = addSectionTitle(doc, y, 'Inspection Items');
 
   let totalItems = 0;
   let totalValue = 0;
 
-  for (const [area, areaItems] of Object.entries(itemsByArea)) {
-    if (y > 250) { doc.addPage(); addPageBackground(doc); y = 20; }
+  for (const area of allAreas) {
+    y = checkPageBreak(doc, y, 20);
 
     // Area header
-    doc.setFillColor(...CARD_BG);
+    doc.setFillColor(...LIGHT_BG);
     doc.roundedRect(15, y, 180, 8, 2, 2, 'F');
     doc.setTextColor(...GOLD);
     doc.setFontSize(10);
@@ -119,60 +146,72 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
     doc.text(area.replace(/_/g, ' ').toUpperCase(), 20, y + 6);
     y += 12;
 
+    // Items for this area
+    const areaItems = itemsByArea[area] ?? [];
     for (const item of areaItems) {
-      if (y > 270) { doc.addPage(); addPageBackground(doc); y = 20; }
+      y = checkPageBreak(doc, y, 12);
 
       const color = statusColor(item.status ?? 'needs_repair');
       const price = (item.quantity ?? 1) * (item.unit_price ?? 0);
       totalItems++;
       totalValue += price;
 
-      // Item row
-      doc.setFillColor(color[0], color[1], color[2]);
+      doc.setFillColor(...color);
       doc.circle(20, y - 1, 1.5, 'F');
 
-      doc.setTextColor(...WHITE);
+      doc.setTextColor(...DARK_TEXT);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text(item.item_name ?? '', 25, y);
 
-      // Status
-      doc.setTextColor(color[0], color[1], color[2]);
+      doc.setTextColor(...color);
       doc.setFontSize(8);
       const statusText = item.status === 'good' ? 'Good' : item.status === 'urgent' ? 'Urgent' : 'Needs Repair';
       doc.text(statusText, 130, y);
 
-      // Price
-      doc.setTextColor(...GOLD);
+      doc.setTextColor(...DARK_TEXT);
       doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
       doc.text(`$${price.toFixed(2)}`, 170, y);
 
       y += 5;
 
-      // Note
       if (item.note) {
-        if (y > 270) { doc.addPage(); addPageBackground(doc); y = 20; }
+        y = checkPageBreak(doc, y, 8);
         doc.setTextColor(...MUTED);
         doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
         const noteLines = doc.splitTextToSize(`Note: ${item.note}`, 160);
         doc.text(noteLines, 25, y);
         y += noteLines.length * 4;
       }
       y += 2;
     }
+
+    // Photos for this area (as placeholders — we can't fetch images into jsPDF client-side easily)
+    const areaPhotos = photosByArea[area] ?? [];
+    if (areaPhotos.length > 0) {
+      y = checkPageBreak(doc, y, 10);
+      doc.setTextColor(...MUTED);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`📷 ${areaPhotos.length} photo${areaPhotos.length > 1 ? 's' : ''} captured for this area`, 25, y);
+      y += 6;
+    }
+
     y += 3;
   }
 
   // Summary
   y += 5;
-  if (y > 250) { doc.addPage(); addPageBackground(doc); y = 20; }
+  y = checkPageBreak(doc, y, 30);
   y = addSectionTitle(doc, y, 'Summary');
-  doc.setFillColor(...CARD_BG);
+  doc.setFillColor(...LIGHT_BG);
   doc.roundedRect(15, y, 180, 20, 3, 3, 'F');
   doc.setTextColor(...MUTED);
   doc.setFontSize(9);
   doc.text('Total Items:', 20, y + 8);
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...DARK_TEXT);
   doc.text(String(totalItems), 55, y + 8);
   doc.setTextColor(...MUTED);
   doc.text('Total Value:', 20, y + 16);
@@ -181,17 +220,7 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
   doc.setFont('helvetica', 'bold');
   doc.text(`$${totalValue.toFixed(2)}`, 55, y + 16);
 
-  // Footer
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    if (i > 1) addPageBackground(doc);
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(7);
-    doc.text(`FiveServ Operations Hub — Generated ${new Date().toLocaleDateString('en-US')}`, 15, 290);
-    doc.text(`Page ${i} of ${pageCount}`, 175, 290);
-  }
-
+  addFooter(doc);
   return doc;
 }
 
@@ -199,12 +228,10 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
   const { inspection, items, clients, properties } = data;
   const doc = new jsPDF();
 
-  addPageBackground(doc);
-  addHeader(doc, 'PM Inspection Report', `${inspection.ins_number ?? 'No INS#'} — Property Manager Version`);
+  addHeader(doc, `${inspection.ins_number ?? 'No INS#'} — Property Manager Version`);
 
-  let y = 50;
+  let y = 44;
 
-  // Info
   y = addSectionTitle(doc, y, 'Inspection Details');
   y = addInfoRow(doc, y, 'INS Number', inspection.ins_number ?? '—');
   y = addInfoRow(doc, y, 'Property', inspection.property_id ? properties[inspection.property_id] ?? '—' : '—');
@@ -215,9 +242,7 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     : '—');
   y += 5;
 
-  // PM selected items only
   const pmSelected = items.filter(i => i.pm_selected);
-
   y = addSectionTitle(doc, y, `Approved Items (${pmSelected.length})`);
 
   if (pmSelected.length === 0) {
@@ -227,14 +252,14 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     y += 10;
   } else {
     for (const item of pmSelected) {
-      if (y > 260) { doc.addPage(); addPageBackground(doc); y = 20; }
+      const noteHeight = item.pm_note ? 18 : 12;
+      y = checkPageBreak(doc, y, noteHeight + 4);
 
       const price = (item.quantity ?? 1) * (item.unit_price ?? 0);
+      doc.setFillColor(...LIGHT_BG);
+      doc.roundedRect(15, y, 180, noteHeight, 2, 2, 'F');
 
-      doc.setFillColor(...CARD_BG);
-      doc.roundedRect(15, y, 180, item.pm_note ? 18 : 12, 2, 2, 'F');
-
-      doc.setTextColor(...WHITE);
+      doc.setTextColor(...DARK_TEXT);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text(item.item_name ?? '', 20, y + 7);
@@ -252,15 +277,15 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
         doc.text(noteLines, 20, y + 14);
       }
 
-      y += item.pm_note ? 22 : 16;
+      y += noteHeight + 4;
     }
   }
 
   // Approved total
   y += 5;
-  if (y > 260) { doc.addPage(); addPageBackground(doc); y = 20; }
+  y = checkPageBreak(doc, y, 25);
   y = addSectionTitle(doc, y, 'Approved Total');
-  doc.setFillColor(...CARD_BG);
+  doc.setFillColor(...LIGHT_BG);
   doc.roundedRect(15, y, 180, 14, 3, 3, 'F');
   doc.setTextColor(...GOLD);
   doc.setFontSize(14);
@@ -270,9 +295,9 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
 
   // PM general note
   if (inspection.pm_general_note) {
-    if (y > 250) { doc.addPage(); addPageBackground(doc); y = 20; }
+    y = checkPageBreak(doc, y, 20);
     y = addSectionTitle(doc, y, 'PM General Note');
-    doc.setTextColor(...WHITE);
+    doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
     const noteLines = doc.splitTextToSize(`"${inspection.pm_general_note}"`, 170);
@@ -280,27 +305,16 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     y += noteLines.length * 5 + 5;
   }
 
-  // Signature placeholder
+  // Signature
   if (inspection.pm_signature_data) {
-    if (y > 250) { doc.addPage(); addPageBackground(doc); y = 20; }
+    y = checkPageBreak(doc, y, 15);
     y = addSectionTitle(doc, y, 'PM Signature');
     doc.setTextColor(...MUTED);
     doc.setFontSize(8);
     doc.text('Digital signature captured and stored on file.', 20, y);
-    y += 10;
   }
 
-  // Footer
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    if (i > 1) addPageBackground(doc);
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(7);
-    doc.text(`FiveServ Operations Hub — PM Report — Generated ${new Date().toLocaleDateString('en-US')}`, 15, 290);
-    doc.text(`Page ${i} of ${pageCount}`, 175, 290);
-  }
-
+  addFooter(doc);
   return doc;
 }
 
