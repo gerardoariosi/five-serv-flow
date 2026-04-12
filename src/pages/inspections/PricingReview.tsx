@@ -77,12 +77,24 @@ const PricingReview = () => {
 
       if (!inspection) { toast.error('Inspection not found'); setSending(false); return; }
 
+      if (!inspection.client_id) {
+        toast.error('No client assigned to this inspection. Please add a client before sending.');
+        setSending(false);
+        return;
+      }
+
       // Fetch client email
-      const { data: client } = await supabase
+      const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('email, company_name')
         .eq('id', inspection.client_id)
-        .single();
+        .maybeSingle();
+
+      if (clientError || !client?.email) {
+        toast.error(clientError ? 'Failed to retrieve client info.' : 'Client has no email address. Please add one before sending.');
+        setSending(false);
+        return;
+      }
 
       // Fetch property name
       const { data: property } = await supabase
@@ -103,38 +115,34 @@ const PricingReview = () => {
       }).eq('id', id);
 
       // Send email to PM
-      if (client?.email) {
-        const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
-          body: {
-            templateName: 'pm-inspection-link',
-            recipientEmail: client.email,
-            idempotencyKey: `pm-inspection-${id}-${token}`,
-            templateData: {
-              ins_number: inspection.ins_number ?? '',
-              property_name: property?.name ?? '',
-              visit_date: inspection.visit_date ?? '',
-              items_count: items.length,
-              total_estimate: total.toFixed(2),
-              portal_url: portalUrl,
-              link_expires_at: expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-            },
+      const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'pm-inspection-link',
+          recipientEmail: client.email,
+          idempotencyKey: `pm-inspection-${id}-${token}`,
+          templateData: {
+            ins_number: inspection.ins_number ?? '',
+            property_name: property?.name ?? '',
+            visit_date: inspection.visit_date ?? '',
+            items_count: items.length,
+            total_estimate: total.toFixed(2),
+            portal_url: portalUrl,
+            link_expires_at: expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
           },
-        });
+        },
+      });
 
-        if (emailError) {
-          console.error('Email send error:', emailError);
-          toast.warning('Inspection sent but email notification failed. Share the link manually.');
-        } else {
-          toast.success('Sent to PM! Email notification delivered.');
-        }
+      if (emailError) {
+        console.error('Email send error:', emailError);
+        toast.warning('Inspection sent but email notification failed. Share the link manually.');
       } else {
-        toast.warning('Inspection sent but no PM email found. Share the link manually.');
+        toast.success('Sent to PM! Email notification delivered.');
       }
 
       navigate(`/inspections/${id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Send to PM error:', err);
-      toast.error('Failed to send to PM');
+      toast.error(`Failed to send to PM: ${err?.message || 'Unknown error'}`);
     }
     setSending(false);
   };
