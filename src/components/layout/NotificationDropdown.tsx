@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
@@ -61,6 +61,18 @@ const NotificationDropdown = () => {
     queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
   };
 
+  const deleteNotification = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    await supabase.from('notifications').delete().eq('id', id);
+    queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+  };
+
+  const clearAll = async () => {
+    if (!user?.id) return;
+    await supabase.from('notifications').delete().eq('user_id', user.id);
+    queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+  };
+
   const handleClick = (n: any) => {
     if (!n.is_read) markAsRead(n.id);
     if (n.link) {
@@ -91,13 +103,20 @@ const NotificationDropdown = () => {
       <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
         <div className="flex items-center justify-between px-3 py-2 border-b border-border">
           <span className="text-sm font-bold text-foreground">Notifications</span>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={markAllRead}>
-              <CheckCheck className="w-3 h-3" /> Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={markAllRead}>
+                <CheckCheck className="w-3 h-3" /> Mark all read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:text-destructive" onClick={clearAll}>
+                <Trash2 className="w-3 h-3" /> Clear all
+              </Button>
+            )}
+          </div>
         </div>
-        <ScrollArea className="max-h-80">
+        <div className="max-h-80 overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">No notifications yet</div>
           ) : (
@@ -120,12 +139,15 @@ const NotificationDropdown = () => {
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </p>
                   </div>
+                  <button onClick={(e) => deleteNotification(e, n.id)} className="shrink-0 mt-0.5 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="Delete">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
                   {!n.is_read && <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1" />}
                 </div>
               </button>
             ))
           )}
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );
