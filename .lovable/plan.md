@@ -1,99 +1,57 @@
 
 
-# Analysis: 5 Issues — Root Causes
+# Analysis: "Send to PM" Email Flow
 
-## Issue 1: EMAILS NOT SENDING — CRITICAL
+## Step-by-step trace of `handleSendToPM` in `PricingReview.tsx`
 
-**Root cause: The `send-transactional-email` and related edge functions were not redeployed after the latest code changes.**
+### Step 1: Token generation — WORKING
+Lines 95-97: Generates a UUID token, 60-day expiry, and portal URL. This logic is correct.
 
-The `email_send_log` shows all failures come from an older code path. The old `send-inspection-email` function (now deleted) enqueued emails directly to pgmq WITHOUT including `unsubscribe_token`, causing `process-email-queue` to fail with:
-```
-Email API error: 400 {"type":"missing_unsubscribe","message":"Transactional emails must include an unsubscribe_token"}
-```
+### Step 2: Client email fetch — FAILS ON SOME INSPECTIONS
+Lines 81-85: Fetches `email` from `clients` where `id = inspection.client_id`.
 
-The current `send-transactional-email/index.ts` code (line 324) DOES include `unsubscribe_token` in the enqueued payload. The `inspection-report` template exists and is registered in `registry.ts`. The cron job and infrastructure are all in place.
+**Problem found**: The most recent inspection (`INS-2026-0006`) has `client_id: NULL`. When `client_id` is null, the query `supabase.from('clients').select().eq('id', null).single()` returns no data. The code handles this on line 130 with a warning toast ("no PM email found"), but the user sees this as a failure.
 
-**The fix is to deploy the edge functions.** The functions `send-transactional-email` and `process-email-queue` need to be redeployed so the latest code (with correct `unsubscribe_token` handling) is live. No code changes needed — just deployment.
+For inspections that DO have a `client_id` (e.g., `INS-2026-0005` with client_id pointing to `iragorrymariel44@gmail.com`), the fetch would succeed.
 
-Additionally, there are stale DLQ entries from the old broken attempts that can be ignored.
+### Step 3: Email function call — CORRECT
+Lines 107-122: Calls `supabase.functions.invoke('send-transactional-email')` with:
+- `templateName: 'pm-inspection-link'` — registered in registry.ts ✓
+- `recipientEmail: client.email` — correct field ✓
+- `idempotencyKey: pm-inspection-${id}-${token}` — unique ✓
+- `templateData` with all required fields ✓
 
-**Note:** This is NOT a Resend issue. The app uses Lovable's built-in email infrastructure (domain: `notify.fiveserv.net`), not Resend. No `RESEND_API_KEY` is needed.
+### Step 4: Edge function deployment — WORKING
+I tested the function directly with curl — it returned `{"queued":true,"success":true}` with status 200. The function is deployed and active.
 
----
+### Step 5: Edge function logs — NO PM EMAILS EVER SENT
+The `email_send_log` table has zero entries for template `pm-inspection-link`. Every logged email is for `inspection-report` template. This means the "Send to PM" button either:
+- Never reached the email call (because `client_id` was null), or
+- The `supabase.functions.invoke` call failed with a network/auth error that was caught by the try/catch on line 135 and shown as a generic "Failed to send to PM" toast
 
-## Issue 2: PM PORTAL — IMAGE EXPAND AND SAVE
+### Step 6: Resend / API keys — NOT RELEVANT
+The app uses Lovable's built-in email infrastructure (domain: `notify.fiveserv.net`), not Resend. No `RESEND_API_KEY` is needed. The `SENDER_DOMAIN` is correctly set to `notify.fiveserv.net`.
 
-**Root cause: `PMPortal.tsx` lines 414-417 render photos as plain `<img>` tags inside a grid with no click handler, no lightbox, and no download button.**
-
-```tsx
-<img src={p.displayUrl || p.url} alt="" className="w-full h-28 object-cover" />
-```
-
-Photos are small thumbnails (h-28 = 112px) with no interaction. Missing:
-- No `onClick` handler to open a fullscreen/lightbox view
-- No download button or "save image" option
-- No Dialog/modal component for expanded view
-
-**Fix**: Add a lightbox Dialog that opens on photo click showing the full-size image, with a download button that triggers `window.open(url)` or an anchor with `download` attribute.
-
----
-
-## Issue 3: PM PORTAL — INSTRUCTIONS GUIDE AT TOP
-
-**Root cause: `PMPortal.tsx` line 345 starts the content area (`<div className="max-w-2xl mx-auto p-4 space-y-4">`) with the submitted confirmation (if applicable), then immediately jumps to the area-grouped items (line 359). There is no instruction section.**
-
-The portal has no explanation of what the report is, how to select items, add notes, sign, or submit. The PM lands directly on the items list.
-
-**Fix**: Add a collapsible instruction card between lines 356-358 (after the submitted banner, before the items loop) with bullet points explaining the workflow.
+### Step 7: Verified sender domain — WORKING
+The domain `notify.fiveserv.net` is configured and active. The most recent `inspection-report` email on Apr 12 shows `status: sent` — proving the email infra works.
 
 ---
 
-## Issue 4: QUANTITY FIELD — DEFAULT NOT CLEARING
+## Root cause
 
-**Root cause: `PricingReview.tsx` line 227 — `value={item.quantity ?? 1}`**
+The email system itself is functional — the edge function is deployed, the template is registered, and Lovable's email infra is sending successfully.
 
-```tsx
-<Input type="number" min={1} value={item.quantity ?? 1}
-  onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)} />
-```
+**The failure is at the data level**: inspections can have a `null` `client_id`, which causes the client email lookup to return nothing. When `client?.email` is falsy (line 106), the code skips the email send entirely and shows a warning toast.
 
-The quantity input always shows `1` (or the current value). Unlike the unit price field (line 238) which was already fixed to use `value={item.unit_price || ''}` and `onFocus={e => e.target.select()}`, the quantity field:
-- Uses `value={item.quantity ?? 1}` instead of showing empty string when default
-- Has no `onFocus` handler to select the text
+For inspections with a valid `client_id`, the flow should work end-to-end. However, since there are ZERO `pm-inspection-link` entries in `email_send_log`, it's possible that every "Send to PM" attempt so far was either on an inspection with null `client_id`, or the `supabase.functions.invoke` call failed due to the user not being authenticated (the function requires JWT auth via `verify_jwt = true`).
 
-**Fix**: Change to `value={item.quantity || ''}` and add `onFocus={e => e.target.select()}`, matching the pattern already used for unit price on lines 238-240.
+**Two issues to fix:**
 
----
+1. **Null `client_id`**: The pricing review screen should validate that a client is associated with the inspection before allowing "Send to PM". If `client_id` is null, show a clear message like "No client assigned — please add a client before sending."
 
-## Issue 5: NOTIFICATION BELL — SCROLL AND DELETE
+2. **No feedback on actual failure**: The try/catch on line 135 shows a generic "Failed to send to PM" toast. The `emailError` on line 124 logs to console but the user may not see it. Better error messages would help diagnose future issues.
 
-**Root cause: `NotificationDropdown.tsx` has two problems:**
+## Files to change
 
-1. **Scroll**: Line 100 uses `<ScrollArea className="max-h-80">` which should work, but `ScrollArea` from Radix requires an explicit `h-*` or the viewport doesn't constrain height properly. Using `max-h-80` on the Root without a fixed height means the viewport may expand beyond the popover. The `PopoverContent` itself has no max-height constraint either.
-
-2. **Delete**: There is no delete functionality at all — no delete button per notification, no swipe-to-delete, no "Clear all" button. The only actions are "Mark as read" (implicit on click) and "Mark all read" (line 95). There is no `deleteNotification` function, no trash icon, no clear-all handler.
-
-**Fix**:
-- For scroll: Set explicit height on ScrollArea or use `overflow-y-auto` directly on a div with `max-h-80`
-- For delete: Add a delete button (trash icon) on each notification row, add a "Clear all" button in the header, and implement `supabase.from('notifications').delete().eq('id', id)` handlers
-
----
-
-## Summary
-
-| # | Issue | Root Cause | Fix |
-|---|-------|-----------|-----|
-| 1 | Emails failing | Edge functions not redeployed after code fix | Deploy `send-transactional-email` + `process-email-queue` |
-| 2 | No image expand/save | Photos are plain thumbnails, no lightbox | Add lightbox Dialog + download button |
-| 3 | No instructions in PM portal | No instruction section exists | Add instruction card before items |
-| 4 | Quantity not clearing | `value={item.quantity ?? 1}` + no `onFocus` | Match unit price pattern: empty string + select |
-| 5 | No scroll/delete in notifications | ScrollArea height issue + no delete UI | Fix height, add delete per-item + clear all |
-
-## Files to Change
-
-1. **Issue 1**: Deploy edge functions (no code changes needed)
-2. **Issue 2**: `src/pages/inspections/PMPortal.tsx` — add lightbox Dialog + download
-3. **Issue 3**: `src/pages/inspections/PMPortal.tsx` — add instruction section
-4. **Issue 4**: `src/pages/inspections/PricingReview.tsx` — fix quantity input
-5. **Issue 5**: `src/components/layout/NotificationDropdown.tsx` — fix scroll, add delete + clear all
+1. `src/pages/inspections/PricingReview.tsx` — Add client validation before enabling "Send to PM", improve error messaging
 
