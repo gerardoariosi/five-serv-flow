@@ -139,14 +139,11 @@ const PricingReview = () => {
         } else {
           toast.success('Sent to PM! Email notification delivered.');
         }
-      } else {
-        toast.warning('Inspection sent but no PM email found. Share the link manually.');
-      }
 
       navigate(`/inspections/${id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Send to PM error:', err);
-      toast.error('Failed to send to PM');
+      toast.error(`Failed to send to PM: ${err?.message || 'Unknown error'}`);
     }
     setSending(false);
   };
