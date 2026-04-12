@@ -4,84 +4,78 @@
 
 ## Issue 1: EMAILS NOT SENDING — CRITICAL
 
-**Root cause: `missing_unsubscribe` — the email API rejects emails without an `unsubscribe_token`.**
+**Root cause: The `send-transactional-email` and related edge functions were not redeployed after the latest code changes.**
 
-The `email_send_log` shows every `inspection-report` email failing with:
+The `email_send_log` shows all failures come from an older code path. The old `send-inspection-email` function (now deleted) enqueued emails directly to pgmq WITHOUT including `unsubscribe_token`, causing `process-email-queue` to fail with:
 ```
 Email API error: 400 {"type":"missing_unsubscribe","message":"Transactional emails must include an unsubscribe_token"}
 ```
 
-The `send-inspection-email` Edge Function enqueues emails directly into the `transactional_emails` pgmq queue with a raw payload (lines 87-105). It bypasses `send-transactional-email`, which normally handles unsubscribe token generation. The `process-email-queue` dispatcher then tries to send the raw payload to the Lovable Email API, which rejects it because no `unsubscribe_token` is present.
+The current `send-transactional-email/index.ts` code (line 324) DOES include `unsubscribe_token` in the enqueued payload. The `inspection-report` template exists and is registered in `registry.ts`. The cron job and infrastructure are all in place.
 
-Additionally, Lovable's email infrastructure does **not support file attachments**. The `attachments` field in the payload (lines 98-104) is silently ignored by the API — there is no attachment support in the sending pipeline.
+**The fix is to deploy the edge functions.** The functions `send-transactional-email` and `process-email-queue` need to be redeployed so the latest code (with correct `unsubscribe_token` handling) is live. No code changes needed — just deployment.
 
-**Fix**: Stop using `send-inspection-email` entirely. Instead, use a download-link workaround:
-1. Upload the PDF to Supabase Storage
-2. Generate a signed URL
-3. Send the email via `send-transactional-email` with a template that includes a "Download Report" button linking to the signed URL
-4. Create a new `inspection-report` template in the transactional email templates
-5. Delete the `send-inspection-email` Edge Function
+Additionally, there are stale DLQ entries from the old broken attempts that can be ignored.
+
+**Note:** This is NOT a Resend issue. The app uses Lovable's built-in email infrastructure (domain: `notify.fiveserv.net`), not Resend. No `RESEND_API_KEY` is needed.
 
 ---
 
-## Issue 2: PM PORTAL — NOTES AND PHOTOS SEPARATED FROM ITEMS
+## Issue 2: PM PORTAL — IMAGE EXPAND AND SAVE
 
-**Root cause: `PMPortal.tsx` renders photos/notes in one loop (lines 359-383) and items in a separate loop (lines 386-423).**
+**Root cause: `PMPortal.tsx` lines 414-417 render photos as plain `<img>` tags inside a grid with no click handler, no lightbox, and no download button.**
 
-The current rendering structure is:
-1. First loop: `areas.map()` → renders photos and tech notes per area (lines 359-383)
-2. Second loop: `Object.entries(itemsByArea).map()` → renders items per area (lines 386-423)
+```tsx
+<img src={p.displayUrl || p.url} alt="" className="w-full h-28 object-cover" />
+```
 
-This means photos/notes appear as a block at the top, then items appear below — not grouped together per area.
+Photos are small thumbnails (h-28 = 112px) with no interaction. Missing:
+- No `onClick` handler to open a fullscreen/lightbox view
+- No download button or "save image" option
+- No Dialog/modal component for expanded view
 
-**Fix**: Merge both loops into a single per-area rendering block:
-- Area header
-- Items for that area (with checkboxes, price, quantity)
-- Technician note for that area
-- Photos for that area
+**Fix**: Add a lightbox Dialog that opens on photo click showing the full-size image, with a download button that triggers `window.open(url)` or an anchor with `download` attribute.
 
 ---
 
-## Issue 3: PDF BLACK BACKGROUND AND INCOMPLETE
+## Issue 3: PM PORTAL — INSTRUCTIONS GUIDE AT TOP
 
-**Root cause: `inspectionPdf.ts` uses `DARK_BG [26,26,26]` as the page background (line 67) and white text throughout.**
+**Root cause: `PMPortal.tsx` line 345 starts the content area (`<div className="max-w-2xl mx-auto p-4 space-y-4">`) with the submitted confirmation (if applicable), then immediately jumps to the area-grouped items (line 359). There is no instruction section.**
 
-The `addPageBackground()` function (lines 66-69) fills the entire page with near-black. All text is set to `WHITE [255,255,255]`. This produces a dark-themed PDF matching the app's dark UI, but PDFs should be white-background for printing and professional use.
+The portal has no explanation of what the report is, how to select items, add notes, sign, or submit. The PM lands directly on the items list.
 
-Additionally:
-- No FiveServ wordmark in the header — just plain text "FiveServ Inspection Report"
-- No footer tagline "One Team. One Call. Done."
-- Photos are not included in the PDF at all — `generateFiveServPdf` only renders items and notes, never fetches or embeds photos
+**Fix**: Add a collapsible instruction card between lines 356-358 (after the submitted banner, before the items loop) with bullet points explaining the workflow.
+
+---
+
+## Issue 4: QUANTITY FIELD — DEFAULT NOT CLEARING
+
+**Root cause: `PricingReview.tsx` line 227 — `value={item.quantity ?? 1}`**
+
+```tsx
+<Input type="number" min={1} value={item.quantity ?? 1}
+  onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)} />
+```
+
+The quantity input always shows `1` (or the current value). Unlike the unit price field (line 238) which was already fixed to use `value={item.unit_price || ''}` and `onFocus={e => e.target.select()}`, the quantity field:
+- Uses `value={item.quantity ?? 1}` instead of showing empty string when default
+- Has no `onFocus` handler to select the text
+
+**Fix**: Change to `value={item.quantity || ''}` and add `onFocus={e => e.target.select()}`, matching the pattern already used for unit price on lines 238-240.
+
+---
+
+## Issue 5: NOTIFICATION BELL — SCROLL AND DELETE
+
+**Root cause: `NotificationDropdown.tsx` has two problems:**
+
+1. **Scroll**: Line 100 uses `<ScrollArea className="max-h-80">` which should work, but `ScrollArea` from Radix requires an explicit `h-*` or the viewport doesn't constrain height properly. Using `max-h-80` on the Root without a fixed height means the viewport may expand beyond the popover. The `PopoverContent` itself has no max-height constraint either.
+
+2. **Delete**: There is no delete functionality at all — no delete button per notification, no swipe-to-delete, no "Clear all" button. The only actions are "Mark as read" (implicit on click) and "Mark all read" (line 95). There is no `deleteNotification` function, no trash icon, no clear-all handler.
 
 **Fix**:
-1. Change background to white, text to dark colors
-2. Add FiveServ wordmark in header: "F" in gold #FFD700, "iveServ" in black
-3. Add footer tagline "One Team. One Call. Done."
-4. Accept photo data (signed URLs or base64) and embed photos in the PDF per area using `doc.addImage()`
-5. Ensure all areas, items, notes, and photos are included
-
----
-
-## Issue 4: NO "ADD CUSTOM ITEM" BUTTON DURING INSPECTION
-
-**Root cause: `AreaInspection.tsx` only renders pre-defined items from `buildAreas()`. There is no UI or logic to add custom items.**
-
-The component loads items from `buildAreas()` (line 58-66) which returns a fixed list per area. There is no "Add Item" button, no input field for custom item names, and no handler to insert a new item into the `items` state or the `inspection_items` table.
-
-**Fix**: Add an "Add Item" button below the items list that:
-1. Toggles an input field for the custom item name
-2. On submit, appends a new `AreaItemState` to `items[currentArea.key]` with status `good`
-3. The item is saved to `inspection_items` during `autoSave()` like all other items
-
----
-
-## Issue 5: UNIT PRICE FIELD — ZERO NOT CLEARING ON TYPE
-
-**Root cause: `PricingReview.tsx` uses a standard `<Input type="number" value={item.unit_price ?? 0}>` which keeps the "0" in the field.**
-
-When `unit_price` is `0` or `null`, the input shows "0". HTML number inputs don't auto-clear on focus — the user must manually select and delete. The field needs an `onFocus` handler to clear the value when it's 0, or use a controlled string state that shows empty string instead of "0".
-
-**Fix**: Change the `value` to show empty string when `unit_price` is `0` or `null`, and add `onFocus` to select all text so typing replaces it immediately.
+- For scroll: Set explicit height on ScrollArea or use `overflow-y-auto` directly on a div with `max-h-80`
+- For delete: Add a delete button (trash icon) on each notification row, add a "Clear all" button in the header, and implement `supabase.from('notifications').delete().eq('id', id)` handlers
 
 ---
 
@@ -89,17 +83,17 @@ When `unit_price` is `0` or `null`, the input shows "0". HTML number inputs don'
 
 | # | Issue | Root Cause | Fix |
 |---|-------|-----------|-----|
-| 1 | Emails failing | Missing `unsubscribe_token` + unsupported attachments | Use `send-transactional-email` with download link instead |
-| 2 | PM portal layout | Photos/notes rendered in separate loop from items | Merge into single per-area block |
-| 3 | PDF black background | `addPageBackground()` fills dark bg, no photos/wordmark | White bg, add wordmark, footer, photos |
-| 4 | No Add Item button | Only pre-defined items rendered, no custom add UI | Add button + input + save logic |
-| 5 | Price zero not clearing | `value={0}` stays in input on focus | Show empty string when 0, select on focus |
+| 1 | Emails failing | Edge functions not redeployed after code fix | Deploy `send-transactional-email` + `process-email-queue` |
+| 2 | No image expand/save | Photos are plain thumbnails, no lightbox | Add lightbox Dialog + download button |
+| 3 | No instructions in PM portal | No instruction section exists | Add instruction card before items |
+| 4 | Quantity not clearing | `value={item.quantity ?? 1}` + no `onFocus` | Match unit price pattern: empty string + select |
+| 5 | No scroll/delete in notifications | ScrollArea height issue + no delete UI | Fix height, add delete per-item + clear all |
 
 ## Files to Change
 
-1. **Issue 1**: Delete `send-inspection-email/`, create `inspection-report` template, update `InspectionDetail.tsx` email flow to upload PDF to storage + use `send-transactional-email` with download link
-2. **Issue 2**: Refactor `PMPortal.tsx` render to single per-area loop
-3. **Issue 3**: Rewrite `inspectionPdf.ts` with white bg, wordmark, footer, photo embedding
-4. **Issue 4**: Add custom item UI + logic to `AreaInspection.tsx`
-5. **Issue 5**: Fix `unit_price` input in `PricingReview.tsx`
+1. **Issue 1**: Deploy edge functions (no code changes needed)
+2. **Issue 2**: `src/pages/inspections/PMPortal.tsx` — add lightbox Dialog + download
+3. **Issue 3**: `src/pages/inspections/PMPortal.tsx` — add instruction section
+4. **Issue 4**: `src/pages/inspections/PricingReview.tsx` — fix quantity input
+5. **Issue 5**: `src/components/layout/NotificationDropdown.tsx` — fix scroll, add delete + clear all
 
