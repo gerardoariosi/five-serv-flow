@@ -224,8 +224,9 @@ const PricingReview = () => {
                       <Input
                         type="number"
                         min={1}
-                        value={item.quantity ?? 1}
+                        value={item.quantity || ''}
                         onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                        onFocus={e => e.target.select()}
                         className="h-8 text-sm"
                       />
                     </div>

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Shield, Lock, Mail, Check, AlertTriangle, Camera } from 'lucide-react';
+import { Shield, Lock, Mail, Check, AlertTriangle, Camera, Download, ZoomIn, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import SignaturePad from '@/components/inspections/SignaturePad';
 import Spinner from '@/components/ui/Spinner';
 
@@ -37,6 +37,8 @@ const PMPortal = () => {
   const [signatureData, setSignatureData] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -355,6 +357,32 @@ const PMPortal = () => {
           </div>
         )}
 
+        {/* Instructions guide */}
+        {!submitted && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowInstructions(prev => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+                <Info className="w-4 h-4" /> How to Complete This Report
+              </span>
+              {showInstructions ? <ChevronUp className="w-4 h-4 text-blue-600" /> : <ChevronDown className="w-4 h-4 text-blue-600" />}
+            </button>
+            {showInstructions && (
+              <div className="px-4 pb-3 space-y-1.5">
+                <p className="text-xs text-blue-700">This is the inspection report for your property. Please review and approve the repair items you'd like completed.</p>
+                <ul className="text-xs text-blue-700 list-disc pl-4 space-y-1">
+                  <li><strong>Select items</strong> — Check the box next to each repair you approve</li>
+                  <li><strong>Add notes</strong> — Add optional notes per item for special instructions</li>
+                  <li><strong>Review total</strong> — Your selected total updates automatically</li>
+                  <li><strong>Sign & submit</strong> — Draw your signature at the bottom and click Submit</li>
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Items, notes, and photos grouped by area */}
         {areas.map(area => {
           const areaPhotos = photos[area] ?? [];
@@ -412,8 +440,11 @@ const PMPortal = () => {
               {areaPhotos.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                   {areaPhotos.map((p: any, i: number) => (
-                    <div key={p.id ?? i} className="rounded-lg overflow-hidden border border-gray-200">
+                    <div key={p.id ?? i} className="relative rounded-lg overflow-hidden border border-gray-200 group cursor-pointer" onClick={() => setLightboxUrl(p.displayUrl || p.url)}>
                       <img src={p.displayUrl || p.url} alt="" className="w-full h-28 object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <ZoomIn className="w-6 h-6 text-white" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -475,6 +506,24 @@ const PMPortal = () => {
           </Button>
         )}
       </div>
+
+      {/* Image lightbox */}
+      <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
+        <DialogContent className="max-w-3xl p-2 bg-white">
+          {lightboxUrl && (
+            <div className="space-y-2">
+              <img src={lightboxUrl} alt="" className="w-full max-h-[75vh] object-contain rounded" />
+              <div className="flex justify-end">
+                <a href={lightboxUrl} download target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-gray-700">
+                    <Download className="w-4 h-4" /> Save Image
+                  </Button>
+                </a>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
