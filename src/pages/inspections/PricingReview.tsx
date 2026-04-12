@@ -115,30 +115,29 @@ const PricingReview = () => {
       }).eq('id', id);
 
       // Send email to PM
-      if (client?.email) {
-        const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
-          body: {
-            templateName: 'pm-inspection-link',
-            recipientEmail: client.email,
-            idempotencyKey: `pm-inspection-${id}-${token}`,
-            templateData: {
-              ins_number: inspection.ins_number ?? '',
-              property_name: property?.name ?? '',
-              visit_date: inspection.visit_date ?? '',
-              items_count: items.length,
-              total_estimate: total.toFixed(2),
-              portal_url: portalUrl,
-              link_expires_at: expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-            },
+      const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'pm-inspection-link',
+          recipientEmail: client.email,
+          idempotencyKey: `pm-inspection-${id}-${token}`,
+          templateData: {
+            ins_number: inspection.ins_number ?? '',
+            property_name: property?.name ?? '',
+            visit_date: inspection.visit_date ?? '',
+            items_count: items.length,
+            total_estimate: total.toFixed(2),
+            portal_url: portalUrl,
+            link_expires_at: expiresAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
           },
-        });
+        },
+      });
 
-        if (emailError) {
-          console.error('Email send error:', emailError);
-          toast.warning('Inspection sent but email notification failed. Share the link manually.');
-        } else {
-          toast.success('Sent to PM! Email notification delivered.');
-        }
+      if (emailError) {
+        console.error('Email send error:', emailError);
+        toast.warning('Inspection sent but email notification failed. Share the link manually.');
+      } else {
+        toast.success('Sent to PM! Email notification delivered.');
+      }
 
       navigate(`/inspections/${id}`);
     } catch (err: any) {
