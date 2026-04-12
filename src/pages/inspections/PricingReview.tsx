@@ -77,12 +77,24 @@ const PricingReview = () => {
 
       if (!inspection) { toast.error('Inspection not found'); setSending(false); return; }
 
+      if (!inspection.client_id) {
+        toast.error('No client assigned to this inspection. Please add a client before sending.');
+        setSending(false);
+        return;
+      }
+
       // Fetch client email
-      const { data: client } = await supabase
+      const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('email, company_name')
         .eq('id', inspection.client_id)
-        .single();
+        .maybeSingle();
+
+      if (clientError || !client?.email) {
+        toast.error(clientError ? 'Failed to retrieve client info.' : 'Client has no email address. Please add one before sending.');
+        setSending(false);
+        return;
+      }
 
       // Fetch property name
       const { data: property } = await supabase
