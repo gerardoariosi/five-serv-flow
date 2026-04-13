@@ -101,16 +101,43 @@ const InspectionDetail = () => {
     if (selectedForTicket.size === 0) { toast.error('Select at least one item'); return; }
     setConverting(true);
 
+    const selected = items.filter(i => selectedForTicket.has(i.id));
+
+    // Build description grouped by area
+    const byArea: Record<string, any[]> = {};
+    selected.forEach(i => {
+      const area = i.area ?? 'other';
+      if (!byArea[area]) byArea[area] = [];
+      byArea[area].push(i);
+    });
+    const descParts: string[] = [`From inspection ${inspection.ins_number}.`];
+    for (const [area, areaItems] of Object.entries(byArea)) {
+      descParts.push(`\n${area.replace(/_/g, ' ').toUpperCase()}:`);
+      areaItems.forEach((i: any) => {
+        let line = `- ${i.item_name}`;
+        if (i.item_note) line += ` — ${i.item_note}`;
+        if (i.pm_note) line += ` [PM: ${i.pm_note}]`;
+        descParts.push(line);
+      });
+    }
+
+    // Determine work_type: if any urgent → emergency, else repair
+    const hasUrgent = selected.some(i => i.status === 'urgent');
+    const workType = hasUrgent ? 'emergency' : 'repair';
+
+    // Internal note with PM approved total
+    const pmTotal = inspection.pm_total_selected ?? 0;
+    const internalNote = pmTotal > 0 ? `PM approved total: $${pmTotal.toFixed(2)}` : null;
+
     const { data: fsNumber } = await supabase.rpc('generate_fs_number');
     const { data: ticket } = await supabase.from('tickets').insert({
       fs_number: fsNumber as string,
       client_id: inspection.client_id,
       property_id: inspection.property_id,
       status: 'open',
-      work_type: 'repair',
-      description: `From inspection ${inspection.ins_number}. Items: ${
-        items.filter(i => selectedForTicket.has(i.id)).map(i => i.item_name).join(', ')
-      }`,
+      work_type: workType,
+      description: descParts.join('\n'),
+      internal_note: internalNote,
       related_inspection_id: id,
     }).select('id').single();
 
@@ -253,13 +280,21 @@ const InspectionDetail = () => {
       </Dialog>
 
       {/* Convert modal */}
-      <Dialog open={showConvert} onOpenChange={setShowConvert}>
+      <Dialog open={showConvert} onOpenChange={(open) => {
+        setShowConvert(open);
+        // Pre-select PM-selected items when opening
+        if (open) {
+          const pmIds = new Set(items.filter(i => i.pm_selected).map(i => i.id));
+          // Fall back to all non-good items if no PM selection
+          setSelectedForTicket(pmIds.size > 0 ? pmIds : new Set(items.filter(i => i.status !== 'good').map(i => i.id)));
+        }
+      }}>
         <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Convert to Ticket</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground mb-3">Select items to include in the new ticket:</p>
+          <p className="text-xs text-muted-foreground mb-3">Select items to include in the new ticket. PM-approved items are pre-selected.</p>
           <div className="space-y-2">
             {items.filter(i => i.status !== 'good').map(item => (
-              <label key={item.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary cursor-pointer">
+              <label key={item.id} className="flex items-start gap-2 p-2 rounded-md hover:bg-secondary cursor-pointer">
                 <Checkbox
                   checked={selectedForTicket.has(item.id)}
                   onCheckedChange={() => {
@@ -269,14 +304,36 @@ const InspectionDetail = () => {
                       return next;
                     });
                   }}
+                  className="mt-0.5"
                 />
-                <span className="text-sm text-foreground">{item.item_name}</span>
-                <Badge className={`text-[10px] ml-auto ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
-                  {item.status}
-                </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-foreground">{item.item_name}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item.pm_selected && (
+                        <Badge className="text-[10px] bg-green-500/20 text-green-400">PM ✓</Badge>
+                      )}
+                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
+                        {item.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  {item.item_note && (
+                    <p className="text-xs text-muted-foreground mt-0.5 italic">Tech: {item.item_note}</p>
+                  )}
+                  {item.pm_note && (
+                    <p className="text-xs text-muted-foreground mt-0.5 italic">PM: {item.pm_note}</p>
+                  )}
+                </div>
               </label>
             ))}
           </div>
+          {inspection.pm_total_selected != null && inspection.pm_total_selected > 0 && (
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <span className="text-xs text-muted-foreground">PM Approved Total</span>
+              <span className="text-sm font-bold text-primary">${inspection.pm_total_selected.toFixed(2)}</span>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConvert(false)}>Cancel</Button>
             <Button onClick={handleConvertToTickets} disabled={converting || selectedForTicket.size === 0}>
