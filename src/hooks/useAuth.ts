@@ -11,14 +11,14 @@ export const useAuth = () => {
   const fetchUserProfile = useCallback(async (authUserId: string, email?: string | null) => {
     let { data, error } = await supabase
       .from('users')
-      .select('id, full_name, email, dark_mode')
+      .select('id, full_name, email, dark_mode, avatar_url')
       .eq('id', authUserId)
       .maybeSingle();
 
     if ((!data || error) && email) {
       const fallback = await supabase
         .from('users')
-        .select('id, full_name, email, dark_mode')
+        .select('id, full_name, email, dark_mode, avatar_url')
         .eq('email', email)
         .maybeSingle();
 
@@ -46,6 +46,7 @@ export const useAuth = () => {
       full_name: data.full_name ?? '',
       email: data.email ?? '',
       roles,
+      avatar_url: data.avatar_url ?? null,
     };
   }, []);
 
