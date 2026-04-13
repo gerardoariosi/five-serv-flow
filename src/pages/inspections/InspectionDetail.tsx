@@ -522,15 +522,20 @@ const InspectionDetail = () => {
               <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{area.replace(/_/g, ' ')}</h4>
               <div className="space-y-1">
                 {areaItems.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-card">
-                    <span className="text-sm text-foreground">{item.item_name}</span>
-                    <Badge className={`text-[10px] ${
-                      item.status === 'good' ? 'bg-green-500/20 text-green-400' :
-                      item.status === 'urgent' ? 'bg-destructive/20 text-destructive' :
-                      'bg-orange-500/20 text-orange-400'
-                    }`}>
-                      {item.status === 'good' ? 'Good' : item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                    </Badge>
+                  <div key={item.id} className="py-1.5 px-2 rounded-md bg-card">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-foreground">{item.item_name}</span>
+                      <Badge className={`text-[10px] ${
+                        item.status === 'good' ? 'bg-green-500/20 text-green-400' :
+                        item.status === 'urgent' ? 'bg-destructive/20 text-destructive' :
+                        'bg-orange-500/20 text-orange-400'
+                      }`}>
+                        {item.status === 'good' ? 'Good' : item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                      </Badge>
+                    </div>
+                    {item.item_note && (
+                      <p className="text-xs text-muted-foreground mt-0.5 italic pl-1">→ {item.item_note}</p>
+                    )}
                   </div>
                 ))}
               </div>

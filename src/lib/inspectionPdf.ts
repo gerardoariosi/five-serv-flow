@@ -176,12 +176,22 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
 
       y += 5;
 
+      if (item.item_note) {
+        y = checkPageBreak(doc, y, 8);
+        doc.setTextColor(...ORANGE);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        const itemNoteLines = doc.splitTextToSize(`→ ${item.item_note}`, 160);
+        doc.text(itemNoteLines, 25, y);
+        y += itemNoteLines.length * 4;
+      }
+
       if (item.note) {
         y = checkPageBreak(doc, y, 8);
         doc.setTextColor(...MUTED);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        const noteLines = doc.splitTextToSize(`Note: ${item.note}`, 160);
+        const noteLines = doc.splitTextToSize(`Area note: ${item.note}`, 160);
         doc.text(noteLines, 25, y);
         y += noteLines.length * 4;
       }
