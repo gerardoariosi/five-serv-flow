@@ -1,8 +1,17 @@
-import { Menu, Sun, Moon } from 'lucide-react';
+import { Menu, Sun, Moon, User, Settings, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import NotificationDropdown from './NotificationDropdown';
 import { useThemeStore } from '@/stores/themeStore';
 import { supabase } from '@/integrations/supabase/client';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface TopNavProps {
   onMenuClick: () => void;
@@ -16,8 +25,10 @@ const roleBadgeColors: Record<AppRole, string> = {
 };
 
 const TopNav = ({ onMenuClick }: TopNavProps) => {
+  const navigate = useNavigate();
   const activeRole = useAuthStore((s) => s.activeRole);
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const { isDark, toggle } = useThemeStore();
 
   const handleThemeToggle = async () => {
@@ -26,6 +37,19 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
       await supabase.from('users').update({ dark_mode: !isDark }).eq('id', user.id);
     }
   };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    logout();
+    navigate('/login');
+  };
+
+  const initials = (user?.full_name ?? 'U')
+    .split(' ')
+    .map(w => w.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <header className="h-14 bg-background border-b border-border flex items-center justify-between px-4 shrink-0">
@@ -47,7 +71,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         </div>
       </div>
 
-      {/* Right: Role badge + theme toggle + bell */}
+      {/* Right: Role badge + theme toggle + bell + profile */}
       <div className="flex items-center gap-2 sm:gap-3">
         {activeRole && (
           <span
@@ -64,6 +88,39 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
         <NotificationDropdown />
+
+        {/* Profile avatar dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="focus:outline-none">
+              <Avatar className="w-8 h-8 cursor-pointer border border-border hover:border-primary transition-colors">
+                {user?.avatar_url ? (
+                  <AvatarImage src={user.avatar_url} alt={user.full_name} />
+                ) : null}
+                <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <div className="px-3 py-2">
+              <p className="text-sm font-medium text-foreground truncate">{user?.full_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+              <User className="w-4 h-4 mr-2" /> View Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
+              <Settings className="w-4 h-4 mr-2" /> My Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4 mr-2" /> Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

@@ -176,12 +176,22 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
 
       y += 5;
 
+      if (item.item_note) {
+        y = checkPageBreak(doc, y, 8);
+        doc.setTextColor(...ORANGE);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        const itemNoteLines = doc.splitTextToSize(`→ ${item.item_note}`, 160);
+        doc.text(itemNoteLines, 25, y);
+        y += itemNoteLines.length * 4;
+      }
+
       if (item.note) {
         y = checkPageBreak(doc, y, 8);
         doc.setTextColor(...MUTED);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        const noteLines = doc.splitTextToSize(`Note: ${item.note}`, 160);
+        const noteLines = doc.splitTextToSize(`Area note: ${item.note}`, 160);
         doc.text(noteLines, 25, y);
         y += noteLines.length * 4;
       }
@@ -252,7 +262,9 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     y += 10;
   } else {
     for (const item of pmSelected) {
-      const noteHeight = item.pm_note ? 18 : 12;
+      const hasItemNote = !!item.item_note;
+      const hasPmNote = !!item.pm_note;
+      const noteHeight = 12 + (hasItemNote ? 6 : 0) + (hasPmNote ? 6 : 0);
       y = checkPageBreak(doc, y, noteHeight + 4);
 
       const price = (item.quantity ?? 1) * (item.unit_price ?? 0);
@@ -269,12 +281,19 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
       doc.setFont('helvetica', 'bold');
       doc.text(`$${price.toFixed(2)}`, 170, y + 7);
 
-      if (item.pm_note) {
+      let noteY = y + 12;
+      if (hasItemNote) {
+        doc.setTextColor(...ORANGE);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        doc.text(`Tech: ${item.item_note}`, 20, noteY);
+        noteY += 5;
+      }
+      if (hasPmNote) {
         doc.setTextColor(...MUTED);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        const noteLines = doc.splitTextToSize(`"${item.pm_note}"`, 160);
-        doc.text(noteLines, 20, y + 14);
+        doc.text(`PM: "${item.pm_note}"`, 20, noteY);
       }
 
       y += noteHeight + 4;

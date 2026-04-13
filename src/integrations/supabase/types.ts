@@ -343,6 +343,7 @@ export type Database = {
           id: string
           inspection_id: string | null
           item_name: string | null
+          item_note: string | null
           note: string | null
           pm_note: string | null
           pm_selected: boolean | null
@@ -356,6 +357,7 @@ export type Database = {
           id?: string
           inspection_id?: string | null
           item_name?: string | null
+          item_note?: string | null
           note?: string | null
           pm_note?: string | null
           pm_selected?: boolean | null
@@ -369,6 +371,7 @@ export type Database = {
           id?: string
           inspection_id?: string | null
           item_name?: string | null
+          item_note?: string | null
           note?: string | null
           pm_note?: string | null
           pm_selected?: boolean | null
@@ -1079,6 +1082,7 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           dark_mode: boolean | null
           email: string | null
@@ -1094,6 +1098,7 @@ export type Database = {
           roles: string[] | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
           email?: string | null
@@ -1109,6 +1114,7 @@ export type Database = {
           roles?: string[] | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
           email?: string | null

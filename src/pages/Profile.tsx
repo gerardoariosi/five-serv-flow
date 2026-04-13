@@ -29,7 +29,7 @@ const Profile = () => {
 
   // Photo
   const [uploading, setUploading] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(user?.avatar_url ?? null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSaveProfile = async () => {
@@ -108,7 +108,13 @@ const Profile = () => {
       .from('profile-photos')
       .getPublicUrl(path);
 
-    setPhotoUrl(urlData.publicUrl);
+    const publicUrl = urlData.publicUrl;
+
+    // Save avatar_url to users table
+    await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id);
+
+    setPhotoUrl(publicUrl);
+    setUser({ ...user, avatar_url: publicUrl });
     toast.success('Photo uploaded.');
     setUploading(false);
   };

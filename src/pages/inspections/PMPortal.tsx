@@ -415,6 +415,12 @@ const PMPortal = () => {
                         <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
                         <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
                       </div>
+                      {/* Technician per-item note */}
+                      {item.item_note && (
+                        <p className="text-xs text-gray-500 mt-1 italic bg-gray-50 rounded px-2 py-1">
+                          Tech note: {item.item_note}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Textarea
