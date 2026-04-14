@@ -739,13 +739,13 @@ const SettingsPage = () => {
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-xl font-bold text-foreground mb-6">Settings</h1>
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar */}
         <div className="hidden md:block w-56 flex-shrink-0">
           <div className="flex flex-col gap-1">
             {settingsSections.map(s => (
               <button key={s.key} onClick={() => setActiveSection(s.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors ${activeSection === s.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                className={`flex items-center gap-2 px-3 py-3 rounded-md text-sm text-left transition-colors min-h-[44px] ${activeSection === s.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                 <s.icon className="w-4 h-4" />{s.label}
               </button>
             ))}
@@ -755,8 +755,8 @@ const SettingsPage = () => {
         {/* Mobile tabs */}
         <div className="md:hidden w-full">
           <Select value={activeSection} onValueChange={setActiveSection}>
-            <SelectTrigger className="bg-secondary border-border mb-4"><SelectValue /></SelectTrigger>
-            <SelectContent>{settingsSections.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
+            <SelectTrigger className="bg-secondary border-border mb-4 min-h-[44px]"><SelectValue /></SelectTrigger>
+            <SelectContent>{settingsSections.map(s => <SelectItem key={s.key} value={s.key} className="min-h-[44px]">{s.label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
 

@@ -265,7 +265,7 @@ const ChatPage = () => {
   const showChat = isMobile ? !!activeGroup : true;
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-56px)] overflow-hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Group List */}
       {showList && (
         <div className={`${isMobile ? 'w-full' : 'w-64 border-r border-border'} flex flex-col bg-card`}>
@@ -365,7 +365,7 @@ const ChatPage = () => {
 
           {/* Input */}
           {activeGroup && (
-            <div className="p-2 border-t border-border bg-card">
+            <div className="sticky bottom-0 p-2 border-t border-border bg-card" style={{ paddingBottom: `calc(0.5rem + env(safe-area-inset-bottom))` }}>
               <div className="flex items-center gap-1.5">
                 <div className="relative">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMentionMenu(!showMentionMenu)}>
