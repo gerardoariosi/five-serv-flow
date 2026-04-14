@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Filter } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Search, Plus, Filter, MoreVertical, Trash2 } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
+import { toast } from 'sonner';
 
 const TicketList = () => {
   const { activeRole } = useAuthStore();
@@ -25,6 +28,7 @@ const TicketList = () => {
   const [zoneMap, setZoneMap] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -89,10 +93,30 @@ const TicketList = () => {
     return result;
   }, [tickets, search, filterStatus, filterType, filterZone, activeRole, clients, properties, users]);
 
+  const handleDeleteTicket = async (ticket: any) => {
+    await supabase.from('ticket_photos').delete().eq('ticket_id', ticket.id);
+    await supabase.from('ticket_timeline').delete().eq('ticket_id', ticket.id);
+    await supabase.from('tickets').delete().eq('id', ticket.id);
+    toast.success('Ticket deleted');
+    setDeleteTarget(null);
+    fetchData();
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
 
   return (
     <div className="p-4 space-y-4">
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Permanently Delete Ticket?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">This action cannot be undone. The ticket, all photos, and timeline entries will be permanently removed.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteTarget && handleDeleteTicket(deleteTarget)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Tickets</h1>
         <div className="flex items-center gap-2">
@@ -151,36 +175,51 @@ const TicketList = () => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
             const isEmergency = ticket.work_type === 'emergency';
             return (
-              <button
-                key={ticket.id}
-                onClick={() => navigate(`/tickets/${ticket.id}`)}
-                className={`w-full text-left p-4 rounded-lg border ${isEmergency ? 'border-destructive bg-destructive/10' : colors.border + ' ' + colors.bg} transition-colors hover:opacity-90`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
-                      <Badge className={`text-[10px] ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-                      <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1 truncate">
-                      {ticket.property_id ? properties[ticket.property_id]?.name : ''}
-                      {ticket.unit ? ` · Unit ${ticket.unit}` : ''}
-                      {ticket.client_id ? ` · ${clients[ticket.client_id]}` : ''}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-muted-foreground">
-                      {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
-                    </p>
-                    {ticket.appointment_time && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              <div key={ticket.id} className="flex items-start gap-0">
+                <button
+                  onClick={() => navigate(`/tickets/${ticket.id}`)}
+                  className={`flex-1 text-left p-4 rounded-lg border ${isEmergency ? 'border-destructive bg-destructive/10' : colors.border + ' ' + colors.bg} transition-colors hover:opacity-90`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
+                        <Badge className={`text-[10px] ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
+                        <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1 truncate">
+                        {ticket.property_id ? properties[ticket.property_id]?.name : ''}
+                        {ticket.unit ? ` · Unit ${ticket.unit}` : ''}
+                        {ticket.client_id ? ` · ${clients[ticket.client_id]}` : ''}
                       </p>
-                    )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-muted-foreground">
+                        {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
+                      </p>
+                      {ticket.appointment_time && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                {activeRole === 'admin' && (ticket.status === 'draft' || ticket.status === 'cancelled') && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="shrink-0 mt-3 ml-1">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(ticket); }}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
             );
           })
         )}
