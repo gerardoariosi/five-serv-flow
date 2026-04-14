@@ -7,7 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, FileEdit, Clock } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Search, Plus, FileEdit, Clock, MoreVertical, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
 
@@ -20,6 +23,7 @@ const InspectionList = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [clients, setClients] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<Record<string, string>>({});
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -60,43 +64,71 @@ const InspectionList = () => {
     return Math.floor((Date.now() - new Date(sentDate).getTime()) / (1000 * 60 * 60 * 24));
   };
 
+  const canDelete = activeRole === 'admin' || activeRole === 'supervisor';
+
+  const handleDeleteInspection = async (ins: any) => {
+    await supabase.from('inspection_items').delete().eq('inspection_id', ins.id);
+    await supabase.from('inspection_photos').delete().eq('inspection_id', ins.id);
+    await supabase.from('inspection_tickets').delete().eq('inspection_id', ins.id);
+    await supabase.from('inspections').delete().eq('id', ins.id);
+    toast.success('Inspection deleted');
+    setDeleteTarget(null);
+    fetchData();
+  };
+
   const InspectionCard = ({ ins }: { ins: any }) => {
     const isSent = ins.status === 'sent';
     const isPmPending = isSent && !ins.pm_submitted_at;
     const daysPending = isSent ? daysSinceSent(ins.created_at) : 0;
 
     return (
-      <button
-        onClick={() => navigate(`/inspections/${ins.id}`)}
-        className="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-sm font-bold text-foreground">{ins.ins_number ?? 'No INS#'}</span>
-              <Badge className={`text-[10px] ${inspectionStatusColors[ins.status ?? 'draft']}`}>
-                {inspectionStatusLabels[ins.status ?? 'draft']}
-              </Badge>
-              {isPmPending && daysPending >= 2 && (
-                <Badge className="text-[10px] bg-yellow-500/20 text-yellow-400">
-                  Pending Response · {daysPending}d
+      <div className="flex items-start gap-0">
+        <button
+          onClick={() => navigate(`/inspections/${ins.id}`)}
+          className="flex-1 text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-sm font-bold text-foreground">{ins.ins_number ?? 'No INS#'}</span>
+                <Badge className={`text-[10px] ${inspectionStatusColors[ins.status ?? 'draft']}`}>
+                  {inspectionStatusLabels[ins.status ?? 'draft']}
                 </Badge>
+                {isPmPending && daysPending >= 2 && (
+                  <Badge className="text-[10px] bg-yellow-500/20 text-yellow-400">
+                    Pending Response · {daysPending}d
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1 truncate">
+                {ins.property_id ? properties[ins.property_id] : '—'}
+                {ins.client_id ? ` · ${clients[ins.client_id]}` : ''}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              {ins.visit_date && (
+                <p className="text-xs text-muted-foreground">
+                  {new Date(ins.visit_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
               )}
             </div>
-            <p className="text-sm text-muted-foreground mt-1 truncate">
-              {ins.property_id ? properties[ins.property_id] : '—'}
-              {ins.client_id ? ` · ${clients[ins.client_id]}` : ''}
-            </p>
           </div>
-          <div className="text-right shrink-0">
-            {ins.visit_date && (
-              <p className="text-xs text-muted-foreground">
-                {new Date(ins.visit_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </p>
-            )}
-          </div>
-        </div>
-      </button>
+        </button>
+        {canDelete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0 mt-3 ml-1">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(ins); }}>
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
     );
   };
 
@@ -104,6 +136,24 @@ const InspectionList = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{deleteTarget?.status === 'draft' ? 'Delete Draft?' : 'Delete Inspection?'}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {deleteTarget?.status === 'draft'
+              ? 'This will permanently delete this inspection draft and all its items.'
+              : 'This inspection has been sent to PM. Are you sure you want to delete it? This action cannot be undone.'}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteTarget && handleDeleteInspection(deleteTarget)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Inspections</h1>
         {(activeRole === 'admin' || activeRole === 'supervisor') && (

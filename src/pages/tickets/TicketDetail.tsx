@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, AlertTriangle, DollarSign, Send, UserPlus, Check, XCircle, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, AlertTriangle, DollarSign, Send, UserPlus, Check, XCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import { getBusinessDaysElapsed, getCountdownDaysRemaining, getCountdownColor } from '@/lib/businessDays';
 import Spinner from '@/components/ui/Spinner';
@@ -47,6 +47,7 @@ const TicketDetail = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignTechId, setAssignTechId] = useState('');
   const [technicians, setTechnicians] = useState<any[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Lookup maps
   const [clients, setClients] = useState<Record<string, string>>({});
@@ -434,6 +435,31 @@ const TicketDetail = () => {
             <RotateCcw className="w-4 h-4 mr-1" /> Reopen
           </Button>
         )}
+
+        {/* Permanently Delete — admin only, draft or cancelled */}
+        {activeRole === 'admin' && (ticket.status === 'draft' || ticket.status === 'cancelled') && (
+          <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+            <Trash2 className="w-4 h-4 mr-1" /> Permanently Delete
+          </Button>
+        )}
+
+        {/* Delete confirmation dialog */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Permanently Delete Ticket?</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">This action cannot be undone. The ticket, all photos, and timeline entries will be permanently removed.</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={async () => {
+                await supabase.from('ticket_photos').delete().eq('ticket_id', id);
+                await supabase.from('ticket_timeline').delete().eq('ticket_id', id);
+                await supabase.from('tickets').delete().eq('id', id);
+                toast.success('Ticket deleted');
+                navigate('/tickets');
+              }}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Send Report to PM — after close */}
         {isAdminOrSupervisor && ticket.status === 'closed' && (

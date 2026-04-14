@@ -84,10 +84,12 @@ const InspectionDetail = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleDeleteDraft = async () => {
+  const handleDeleteInspection = async () => {
     await supabase.from('inspection_items').delete().eq('inspection_id', id);
+    await supabase.from('inspection_photos').delete().eq('inspection_id', id);
+    await supabase.from('inspection_tickets').delete().eq('inspection_id', id);
     await supabase.from('inspections').delete().eq('id', id);
-    toast.success('Draft deleted');
+    toast.success('Inspection deleted');
     navigate('/inspections');
   };
 
@@ -270,11 +272,17 @@ const InspectionDetail = () => {
       {/* Delete confirm */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Delete Draft?</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">This will permanently delete this inspection draft and all its items.</p>
+          <DialogHeader>
+            <DialogTitle>{inspection.status === 'draft' ? 'Delete Draft?' : 'Delete Inspection?'}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {inspection.status === 'draft'
+              ? 'This will permanently delete this inspection draft and all its items.'
+              : 'This inspection has been sent to PM. Are you sure you want to delete it? This action cannot be undone.'}
+          </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteDraft}>Delete</Button>
+            <Button variant="destructive" onClick={handleDeleteInspection}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -455,14 +463,14 @@ const InspectionDetail = () => {
       {/* Action buttons by status */}
       <div className="flex gap-2 flex-wrap">
         {inspection.status === 'draft' && (
-          <>
-            <Button size="sm" onClick={() => navigate(`/inspections/${id}/inspect`)}>
-              <ArrowRight className="w-4 h-4 mr-1" /> Continue Inspection
-            </Button>
-            <Button size="sm" variant="destructive" onClick={() => setShowDelete(true)}>
-              <Trash2 className="w-4 h-4 mr-1" /> Delete Draft
-            </Button>
-          </>
+          <Button size="sm" onClick={() => navigate(`/inspections/${id}/inspect`)}>
+            <ArrowRight className="w-4 h-4 mr-1" /> Continue Inspection
+          </Button>
+        )}
+        {(activeRole === 'admin' || activeRole === 'supervisor') && (
+          <Button size="sm" variant="destructive" onClick={() => setShowDelete(true)}>
+            <Trash2 className="w-4 h-4 mr-1" /> {inspection.status === 'draft' ? 'Delete Draft' : 'Delete Inspection'}
+          </Button>
         )}
         {inspection.status === 'sent' && portalUrl && (
           <>
