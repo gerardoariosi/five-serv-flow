@@ -36,6 +36,7 @@ const TicketForm = () => {
   const [zones, setZones] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [inspections, setInspections] = useState<any[]>([]);
+  const [workTypes, setWorkTypes] = useState<{ key: string; label: string }[]>([]);
   const [initialPhotos, setInitialPhotos] = useState<File[]>([]);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<any>(null);

@@ -76,7 +76,15 @@ const Dashboard = () => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchData();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchData]);
 
   const filteredTickets = useMemo(() => {
