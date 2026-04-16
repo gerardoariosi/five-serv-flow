@@ -1,9 +1,12 @@
+const makeReadyColors = {
+  bg: 'bg-primary/10',
+  border: 'border-primary/40',
+  badge: 'bg-primary text-primary-foreground',
+};
+
 export const workTypeColors: Record<string, { bg: string; border: string; badge: string }> = {
-  'make-ready': {
-    bg: 'bg-primary/10',
-    border: 'border-primary/40',
-    badge: 'bg-primary text-primary-foreground',
-  },
+  'make-ready': makeReadyColors,
+  'make_ready': makeReadyColors,
   emergency: {
     bg: 'bg-destructive/10',
     border: 'border-destructive/40',

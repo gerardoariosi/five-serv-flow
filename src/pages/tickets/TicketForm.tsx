@@ -36,6 +36,7 @@ const TicketForm = () => {
   const [zones, setZones] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [inspections, setInspections] = useState<any[]>([]);
+  const [workTypes, setWorkTypes] = useState<{ key: string; label: string }[]>([]);
   const [initialPhotos, setInitialPhotos] = useState<File[]>([]);
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<any>(null);
@@ -59,18 +60,25 @@ const TicketForm = () => {
   // Fetch options
   useEffect(() => {
     const fetchOptions = async () => {
-      const [cRes, pRes, zRes, uRes, iRes] = await Promise.all([
+      const [cRes, pRes, zRes, uRes, iRes, wtRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
         supabase.from('properties').select('id, name, zone_id, current_pm_id').eq('status', 'active'),
         supabase.from('zones').select('id, name').eq('status', 'active'),
         supabase.from('users').select('id, full_name, roles').filter('roles', 'cs', '{"technician"}'),
         supabase.from('inspections').select('id, ins_number, property_id').in('status', ['draft', 'pending']),
+        supabase.from('work_types').select('key, label'),
       ]);
       setClients(cRes.data ?? []);
       setProperties(pRes.data ?? []);
       setZones(zRes.data ?? []);
       setTechnicians(uRes.data ?? []);
       setInspections(iRes.data ?? []);
+      setWorkTypes((wtRes.data ?? []).length > 0 ? wtRes.data! : [
+        { key: 'make-ready', label: 'Make-Ready' },
+        { key: 'emergency', label: 'Emergency' },
+        { key: 'repair', label: 'Repair' },
+        { key: 'capex', label: 'CapEx' },
+      ]);
     };
     fetchOptions();
   }, []);
@@ -366,10 +374,9 @@ const TicketForm = () => {
             <Select value={form.work_type} onValueChange={v => setForm(p => ({ ...p, work_type: v }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="make-ready">Make-Ready</SelectItem>
-                <SelectItem value="emergency">Emergency</SelectItem>
-                <SelectItem value="repair">Repair</SelectItem>
-                <SelectItem value="capex">CapEx</SelectItem>
+                {workTypes.map(wt => (
+                  <SelectItem key={wt.key} value={wt.key}>{wt.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

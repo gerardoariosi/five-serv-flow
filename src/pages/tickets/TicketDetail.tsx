@@ -86,7 +86,7 @@ const TicketDetail = () => {
     (uRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
 
-    if (tRes.data?.work_type === 'make-ready' && tRes.data?.work_started_at && (activeRole === 'admin' || activeRole === 'supervisor')) {
+    if (['make-ready', 'make_ready'].includes(tRes.data?.work_type ?? '') && tRes.data?.work_started_at && (activeRole === 'admin' || activeRole === 'supervisor')) {
       const elapsed = await getBusinessDaysElapsed(new Date(tRes.data.work_started_at));
       setCountdown(getCountdownDaysRemaining(elapsed));
     }
