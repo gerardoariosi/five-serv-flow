@@ -1,98 +1,115 @@
 
 
-# Analysis: 2 Issues — Root Causes & Required Changes
+# Analysis: 6 Issues — Root Causes
 
-## Issue 1: Mobile Responsive — Chat & Settings Broken
+## Issue 1: Property Name Redundant with Address
 
-### Chat (ChatPage.tsx)
+**Cause**: `PropertyForm.tsx` has separate `name` and `address` fields (lines 211-218). `canSubmit` requires both (line 187). DB column `properties.name` is used everywhere as the display label (Dashboard line 218, InspectionDetail line 416, CreateInspection line 210).
 
-**Layout structure**: Uses `h-[calc(100vh-56px)]` on the outer div (line 268), which is correct. The mobile toggle between group list and chat area (lines 264-265) works — `showList` and `showChat` swap based on `isMobile` and `activeGroup`. The back button exists (line 305).
+**What needs to change**:
+- Remove the "Property Name" input from `PropertyForm.tsx`. Keep only Address.
+- On save, set `name = address` (so existing reads `properties.name` keep working without touching every other file).
+- Update CSV import: drop required `property_name` column; use `address` as both.
+- Update `CreateInspection.tsx` `handleConfirmNewProperty` (already does `name: newPropertyName, address: newPropertyName` — fine), and rename the dialog/label to just "Address".
+- The dropdown render (line 210-211) shows `{p.name} — {p.address}` (duplicate). Show just the address.
 
-**Problems found**:
-
-1. **Input bar not fixed at bottom**: The input area (line 368) uses `border-t` and sits in the flex column, which is correct for flex layout. However, on some mobile browsers the soft keyboard pushes the viewport and the input can scroll out of view. Needs `sticky bottom-0` or equivalent to ensure it stays pinned.
-
-2. **Message area overflow**: The messages container (line 313) has `flex-1 overflow-y-auto` which should work, but the parent `h-[calc(100vh-56px)]` doesn't account for bottom safe areas on iOS. Needs `pb-safe` or `env(safe-area-inset-bottom)` padding.
-
-3. **No visible issues with overlapping elements** in the code — the mobile layout is structurally sound with the show/hide toggle. The main fix is ensuring input stays at bottom and scroll works on all mobile browsers.
-
-### Settings (SettingsPage.tsx)
-
-**Problems found**:
-
-1. **Mobile layout broken**: Lines 742-767 — the outer container uses `flex gap-6`. On mobile, the `md:hidden` Select dropdown (line 756) renders at full width, BUT the content area (`flex-1 min-w-0`, line 764) is a **sibling** in the same `flex` row. Since the sidebar is `hidden md:block`, on mobile you get: the Select dropdown + the content area side by side in a `flex` row. This causes content to be cut off or squeezed.
-
-2. **Fix**: The outer `flex gap-6` needs to become `flex flex-col md:flex-row gap-6`. Currently both the mobile Select and the content div are flex children in a horizontal row on mobile.
-
-3. **Tap targets**: The section buttons in the sidebar (line 747) have `px-3 py-2` which gives ~32px height — below the 44px minimum. On mobile the Select dropdown handles this, but the content sections themselves (e.g., specialty badges with 3px edit/delete buttons) have tiny tap targets.
-
-### Changes needed:
-
-**ChatPage.tsx**:
-- Add `sticky bottom-0` to the input container
-- Add safe-area padding for iOS (`pb-[env(safe-area-inset-bottom)]`)
-- Ensure the messages area fills remaining space correctly
-
-**SettingsPage.tsx**:
-- Change `flex gap-6` to `flex flex-col md:flex-row gap-6` on the outer container
-- The mobile Select and content area will then stack vertically
-- Increase tap targets in content sections for mobile (min 44px height on interactive elements)
+**Files**: `src/pages/properties/PropertyForm.tsx`, `src/pages/inspections/CreateInspection.tsx`.
 
 ---
 
-## Issue 2: Calendar — Improve Design & Functionality
+## Issue 2: Schedule Inspection for a Future Date
 
-### Current state (CalendarPage.tsx):
+**Cause**: `CreateInspection.tsx` only inserts with `status: 'draft'` (line 130) and immediately navigates to `/inspect`. There's no "Start Now vs Schedule" choice. `inspections.visit_date` exists but is purely informational. There's no `scheduled` status nor any logic that activates an inspection on its date.
 
-**What exists**:
-- ✅ react-big-calendar with Month/Week/Day views
-- ✅ Color-coded events by work type (line 16-25)
-- ✅ Click event → navigate to ticket/inspection detail (line 139)
-- ✅ Reschedule via right-click/long-press dialog (line 147)
-- ✅ Legend showing color codes (line 196)
-- ✅ Today highlighted via `.rbc-today` CSS (line 221)
-- ✅ Dark theme CSS overrides (lines 213-233)
+**What needs to be added**:
+- Two-button selector at top of CreateInspection: **Start Now** | **Schedule for later**.
+- If Schedule: show date+time picker (use shadcn Calendar in Popover + time input). Hide "Start Inspection" button; show "Schedule Inspection".
+- On schedule submit: insert with `status: 'scheduled'` and `visit_date` = chosen date. Navigate back to inspection list (don't open inspect screen).
+- Inspection list / Calendar already query `inspections` — surface `scheduled` ones with new label/color in `inspectionStatusLabels`/`inspectionStatusColors`.
+- Activation: on opening the inspection detail (or via a small client-side check), if `status === 'scheduled'` and `visit_date <= today`, auto-bump to `draft` so the user can begin. (No cron needed.)
 
-**What's missing**:
+**Files**: `src/pages/inspections/CreateInspection.tsx`, `src/lib/inspectionColors.ts`, `src/pages/inspections/InspectionDetail.tsx` (auto-activate), `src/pages/calendar/CalendarPage.tsx` (already pulls inspections — verify scheduled ones appear).
 
-| Feature | Status |
-|---------|--------|
-| Clean card-style events (property, tech, time) | ❌ Current `CustomEvent` is a single truncated line |
-| Today button always visible | ❌ Built into react-big-calendar toolbar but not customized |
-| Click on empty day to create ticket/inspection | ❌ No `onSelectSlot` handler, no `selectable` prop |
-| Drag to reschedule (desktop) | ❌ Not using `react-big-calendar/lib/addons/dragAndDrop` |
-| Filter by technician/zone/work type | ❌ No filter UI at all |
-| Technician workload at a glance | ❌ No workload summary |
+---
 
-### Changes needed:
+## Issue 3: Numeric Keyboard for Price/Quantity
 
-**CalendarPage.tsx — Visual**:
-- Enhance `CustomEvent` component to show property name, technician, and time on separate lines (in week/day view where space allows; truncated in month view)
-- Add a custom toolbar component with prominent "Today" button, cleaner Month/Week/Day switcher
-- Improve event card styling with rounded corners, left-border color indicator
+**Cause**: `PricingReview.tsx` already uses `type="number"` (lines 233, 244). On iOS, `type="number"` does NOT reliably show the numeric keypad — `inputMode` is required. Both inputs are missing `inputMode`.
 
-**CalendarPage.tsx — Functional**:
-- Add `selectable` prop to BigCalendar + `onSelectSlot` handler that opens a dialog asking "Create Ticket" or "Create Inspection" pre-filled with the selected date
-- Add drag-and-drop addon (`withDragAndDrop` HOC from react-big-calendar) for desktop rescheduling
-- Add filter bar above calendar with Select dropdowns for: Technician, Zone, Work Type — filter the `events` array based on selections
-- Add a small workload summary panel (or inline badges) showing ticket count per technician for the visible date range
+**What needs to change**:
+- Line 232-239 (Qty): add `inputMode="numeric"` and `pattern="[0-9]*"`.
+- Line 243-251 (Unit Price): add `inputMode="decimal"`.
 
-**Files to change**: `src/pages/calendar/CalendarPage.tsx` only (all changes are in this single file)
+**Files**: `src/pages/inspections/PricingReview.tsx`.
+
+---
+
+## Issue 4: PM Response Missing Per-Item Notes
+
+**Cause**: `InspectionDetail.tsx` PM Response tab (lines 600-610) renders each PM-selected item showing only `item.item_name`, subtotal, and `item.pm_note` — but **never renders `item.item_note`** (the technician's per-item note). The data is in the same row (already in `items` state), it's simply not displayed in this tab. The FiveServ tab does show it (line 544-546).
+
+**What needs to change**:
+- Line 601-609: add a render block for `item.item_note` (e.g. `<p>Tech note: {item.item_note}</p>`) alongside `pm_note`.
+
+**Files**: `src/pages/inspections/InspectionDetail.tsx`.
+
+---
+
+## Issue 5: Ticket Priority Not Updating on Dashboard
+
+**Cause**: `Dashboard.tsx` already subscribes to realtime on `tickets` table (lines 72-77) and refetches on any change. BUT — the dashboard renders `work_type` badges (line 206) and `status` badges (line 208), and **does not render `priority` at all**. So when priority changes, there is nothing on the card showing it; the user perceives "stale" because the change is invisible. Realtime is working; the field is just absent from the UI.
+
+Additionally, `priority` is not part of `metricCards` or any sort/filter — it has no visible surface.
+
+**What needs to change**:
+- Add a `priority` badge to each ticket card in `Dashboard.tsx` (line ~205, next to status).
+- Optionally sort high-priority tickets above normal (after emergency sort).
+
+**Files**: `src/pages/Dashboard.tsx`.
+
+---
+
+## Issue 6: Ticket Created from Inspection — Poor Format
+
+**Cause**: `InspectionDetail.tsx` `handleConvertToTickets` (lines 102-158) builds the description as:
+```
+From inspection INS-XXXX.
+KITCHEN:
+- Sink — broken [PM: replace]
+```
+Issues:
+- No clear header (just "From inspection X.")
+- No urgency markers per item
+- Mixes PM notes with tech notes inline; not visually clean
+- Doesn't show PM-approved subtotals (correct — the requirement says no prices, this is fine)
+- `work_type` already auto-sets to `emergency` if any urgent ✓
+
+**What needs to improve**:
+- Header: `### Work from Inspection #INS-XXXX`
+- Per area block:
+  ```
+  AREA: Kitchen
+  • Sink (URGENT) — Tech: broken pipe / PM: please replace
+  • Faucet — Tech: leaky
+  ```
+- Mark urgent items clearly
+- Drop the inline PM bracket format; use line breaks
+- Keep `internal_note` with PM approved total (already done, lines 131-132)
+- Keep `work_type` urgency logic (already done, line 127-128) ✓
+- No prices in description (already correct) ✓
+
+**Files**: `src/pages/inspections/InspectionDetail.tsx` (lines 108-124).
 
 ---
 
 ## Summary
 
-| Issue | Root Cause | Fix |
-|-------|-----------|-----|
-| Chat mobile | Input not sticky, no safe-area padding | Add sticky bottom-0 + safe-area inset |
-| Settings mobile | Flex row instead of column on mobile | Change to `flex-col md:flex-row` |
-| Calendar visual | Basic single-line events, no custom toolbar | Enhanced CustomEvent + custom toolbar |
-| Calendar functional | No selectable slots, no drag-drop, no filters | Add selectable, DnD addon, filter bar |
-
-## Files to Change
-
-1. `src/pages/chat/ChatPage.tsx` — sticky input, safe-area padding
-2. `src/pages/settings/SettingsPage.tsx` — fix flex direction, tap targets
-3. `src/pages/calendar/CalendarPage.tsx` — enhanced events, custom toolbar, selectable slots, filters, drag-drop, workload summary
+| # | Cause | Fix Location |
+|---|-------|------|
+| 1 | Two fields (`name`, `address`); `name` used as label everywhere | PropertyForm.tsx, CreateInspection.tsx |
+| 2 | No schedule option, no `scheduled` status | CreateInspection.tsx, inspectionColors.ts, InspectionDetail.tsx |
+| 3 | `type="number"` alone doesn't trigger iOS numeric keypad | PricingReview.tsx |
+| 4 | PM tab doesn't render `item.item_note` (data exists) | InspectionDetail.tsx |
+| 5 | Priority field never rendered on dashboard cards (realtime works fine) | Dashboard.tsx |
+| 6 | Description format flat, no clear header, mixed inline notes | InspectionDetail.tsx (handleConvertToTickets) |
 
