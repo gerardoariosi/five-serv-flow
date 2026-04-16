@@ -1,5 +1,6 @@
 export const inspectionStatusLabels: Record<string, string> = {
   draft: 'Draft',
+  scheduled: 'Scheduled',
   in_progress: 'In Progress',
   pending_pricing: 'Pending Pricing',
   sent: 'Sent to PM',
@@ -12,6 +13,7 @@ export const inspectionStatusLabels: Record<string, string> = {
 
 export const inspectionStatusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
+  scheduled: 'bg-blue-500/20 text-blue-400',
   in_progress: 'bg-blue-500/20 text-blue-400',
   pending_pricing: 'bg-orange-500/20 text-orange-400',
   sent: 'bg-primary/20 text-primary',
