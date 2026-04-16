@@ -19,7 +19,7 @@ const PropertyForm = () => {
   const isEdit = !!id;
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({ name: '', address: '', zone_id: '', current_pm_id: '' });
+  const [form, setForm] = useState({ address: '', zone_id: '', current_pm_id: '' });
   const [addressError, setAddressError] = useState('');
   const [newZoneDialog, setNewZoneDialog] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
@@ -53,7 +53,7 @@ const PropertyForm = () => {
 
   useEffect(() => {
     if (existing) {
-      setForm({ name: existing.name ?? '', address: existing.address ?? '', zone_id: existing.zone_id ?? '', current_pm_id: existing.current_pm_id ?? '' });
+      setForm({ address: existing.address ?? existing.name ?? '', zone_id: existing.zone_id ?? '', current_pm_id: existing.current_pm_id ?? '' });
     } else {
       const clientId = searchParams.get('client_id');
       if (clientId) setForm(f => ({ ...f, current_pm_id: clientId }));
@@ -74,10 +74,12 @@ const PropertyForm = () => {
 
   const mutation = useMutation({
     mutationFn: async () => {
+      // Address is the property identifier; mirror it to `name` for backward compatibility
+      const payload = { ...form, name: form.address };
       if (isEdit && existing?.current_pm_id && form.current_pm_id !== existing.current_pm_id) {
         // PM reassignment — update property + reassign active tickets
         const { error } = await supabase.from('properties').update({
-          ...form,
+          ...payload,
           previous_pm_id: existing.current_pm_id,
           pm_changed_at: new Date().toISOString(),
         }).eq('id', id!);
@@ -85,10 +87,10 @@ const PropertyForm = () => {
 
         await supabase.from('tickets').update({ client_id: form.current_pm_id }).eq('property_id', id!).not('status', 'in', '("closed","cancelled")');
       } else if (isEdit) {
-        const { error } = await supabase.from('properties').update(form).eq('id', id!);
+        const { error } = await supabase.from('properties').update(payload).eq('id', id!);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('properties').insert(form);
+        const { error } = await supabase.from('properties').insert(payload);
         if (error) throw error;
       }
     },
@@ -126,16 +128,15 @@ const PropertyForm = () => {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
-      const nameIdx = headers.indexOf('property_name');
       const addrIdx = headers.indexOf('address');
       const pmEmailIdx = headers.indexOf('pm_email');
       const zoneIdx = headers.indexOf('zone');
 
-      if (nameIdx === -1 || addrIdx === -1) throw new Error('Missing required columns: property_name, address');
+      if (addrIdx === -1) throw new Error('Missing required column: address');
 
       const rows = lines.slice(1).map(line => {
         const cols = line.split(',').map(c => c.trim());
-        return { name: cols[nameIdx], address: cols[addrIdx], pm_email: cols[pmEmailIdx] ?? '', zone: cols[zoneIdx] ?? '' };
+        return { address: cols[addrIdx], pm_email: cols[pmEmailIdx] ?? '', zone: cols[zoneIdx] ?? '' };
       });
 
       // Resolve zones
@@ -164,9 +165,9 @@ const PropertyForm = () => {
         throw new Error(`Duplicate addresses found: ${existingProps.map(p => p.address).join(', ')}`);
       }
 
-      // Insert all
+      // Insert all — address is the identifier; mirror to name for backward compatibility
       const inserts = rows.map(r => ({
-        name: r.name,
+        name: r.address,
         address: r.address,
         zone_id: r.zone ? zoneMap[r.zone.toLowerCase()] || null : null,
         current_pm_id: r.pm_email ? pmMap[r.pm_email.toLowerCase()] || null : null,
@@ -184,7 +185,7 @@ const PropertyForm = () => {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const canSubmit = form.name && form.address && !addressError && !mutation.isPending;
+  const canSubmit = form.address && !addressError && !mutation.isPending;
 
   if (isEdit && isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
 
@@ -208,13 +209,15 @@ const PropertyForm = () => {
 
       <div className="flex flex-col gap-4">
         <div>
-          <Label>Property Name *</Label>
-          <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-secondary border-border" />
-        </div>
-        <div>
           <Label>Address *</Label>
-          <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className="bg-secondary border-border" />
+          <Input
+            value={form.address}
+            onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+            placeholder="e.g. 123 Main St, Springfield"
+            className="bg-secondary border-border"
+          />
           {addressError && <p className="text-xs text-destructive mt-1">{addressError}</p>}
+          <p className="text-xs text-muted-foreground mt-1">The address identifies the property everywhere in the app.</p>
         </div>
         <div>
           <Label>Zone</Label>
