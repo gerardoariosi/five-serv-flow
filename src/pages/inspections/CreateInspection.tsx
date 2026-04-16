@@ -256,10 +256,67 @@ const CreateInspection = () => {
           )}
         </div>
 
-        {/* Visit Date */}
-        <div>
-          <Label>Visit Date (optional)</Label>
-          <Input type="date" value={form.visit_date} onChange={e => setForm(p => ({ ...p, visit_date: e.target.value }))} />
+        {/* Start Now vs Schedule */}
+        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+          <Label>When?</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={mode === 'now' ? 'default' : 'outline'}
+              onClick={() => setMode('now')}
+              className="h-12"
+            >
+              <Play className="w-4 h-4 mr-2" /> Start Now
+            </Button>
+            <Button
+              type="button"
+              variant={mode === 'schedule' ? 'default' : 'outline'}
+              onClick={() => setMode('schedule')}
+              className="h-12"
+            >
+              <CalendarIcon className="w-4 h-4 mr-2" /> Schedule
+            </Button>
+          </div>
+
+          {mode === 'now' && (
+            <div>
+              <Label className="text-xs">Visit Date (optional)</Label>
+              <Input type="date" value={form.visit_date} onChange={e => setForm(p => ({ ...p, visit_date: e.target.value }))} />
+            </div>
+          )}
+
+          {mode === 'schedule' && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn('w-full justify-start text-left font-normal', !scheduleDate && 'text-muted-foreground')}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {scheduleDate ? format(scheduleDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduleDate}
+                      onSelect={setScheduleDate}
+                      disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label className="text-xs">Time</Label>
+                <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Room counters */}
@@ -297,8 +354,8 @@ const CreateInspection = () => {
           <p className="text-xs text-muted-foreground italic">HVAC / A-C is always included.</p>
         </div>
 
-        <Button className="w-full" size="lg" onClick={handleSubmit} disabled={saving || !!propertyHasActiveInspection}>
-          {saving ? <Spinner size="sm" /> : 'Start Inspection →'}
+        <Button className="w-full" size="lg" onClick={handleSubmit} disabled={saving || !!propertyHasActiveInspection || (mode === 'schedule' && !scheduleDate)}>
+          {saving ? <Spinner size="sm" /> : (mode === 'schedule' ? 'Schedule Inspection →' : 'Start Inspection →')}
         </Button>
       </div>
 
