@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -7,8 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Minus, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
 
 const CreateInspection = () => {
@@ -21,6 +25,9 @@ const CreateInspection = () => {
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const [newAddressDialog, setNewAddressDialog] = useState<{ open: boolean; address: string; pmName: string }>({ open: false, address: '', pmName: '' });
   const [newPropertyName, setNewPropertyName] = useState('');
+  const [mode, setMode] = useState<'now' | 'schedule'>('now');
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
+  const [scheduleTime, setScheduleTime] = useState('09:00');
 
   const [form, setForm] = useState({
     client_id: '',
@@ -73,7 +80,7 @@ const CreateInspection = () => {
   const handleSelectProperty = (propId: string) => {
     setForm(p => ({ ...p, property_id: propId }));
     const prop = properties.find((p: any) => p.id === propId);
-    setPropertySearch(prop ? `${prop.name} — ${prop.address}` : '');
+    setPropertySearch(prop ? (prop.address || prop.name || '') : '');
     setShowPropertyDropdown(false);
   };
 
@@ -100,7 +107,7 @@ const CreateInspection = () => {
 
       setProperties(prev => [...prev, data]);
       setForm(p => ({ ...p, property_id: data.id }));
-      setPropertySearch(`${data.name} — ${data.address}`);
+      setPropertySearch(data.address || data.name || '');
       setNewAddressDialog({ open: false, address: '', pmName: '' });
       toast.success('Property created and linked.');
     } catch (err: any) {
@@ -112,6 +119,16 @@ const CreateInspection = () => {
     if (!form.property_id) { toast.error('Property is required'); return; }
     if (propertyHasActiveInspection) { toast.error('This property already has an active inspection'); return; }
 
+    let scheduledAt: Date | null = null;
+    let visitDate = form.visit_date || null;
+    if (mode === 'schedule') {
+      if (!scheduleDate) { toast.error('Pick a date for the scheduled inspection'); return; }
+      const [hh, mm] = scheduleTime.split(':').map(Number);
+      scheduledAt = new Date(scheduleDate);
+      scheduledAt.setHours(hh || 9, mm || 0, 0, 0);
+      visitDate = format(scheduledAt, 'yyyy-MM-dd');
+    }
+
     setSaving(true);
     try {
       const { data: insNumber } = await supabase.rpc('generate_ins_number');
@@ -120,19 +137,24 @@ const CreateInspection = () => {
         ins_number: insNumber as string,
         client_id: form.client_id || null,
         property_id: form.property_id,
-        visit_date: form.visit_date || null,
+        visit_date: visitDate,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
         living_rooms: form.living_rooms,
         has_garage: form.has_garage,
         has_laundry: form.has_laundry,
         has_exterior: form.has_exterior,
-        status: 'draft',
+        status: mode === 'schedule' ? 'scheduled' : 'draft',
       }).select('id').single();
 
       if (error) throw error;
-      toast.success('Inspection created');
-      navigate(`/inspections/${inserted!.id}/inspect`);
+      if (mode === 'schedule') {
+        toast.success('Inspection scheduled');
+        navigate('/inspections');
+      } else {
+        toast.success('Inspection created');
+        navigate(`/inspections/${inserted!.id}/inspect`);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Error creating inspection');
     }
@@ -207,8 +229,7 @@ const CreateInspection = () => {
                       disabled={hasActive}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${hasActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <span className="font-medium text-foreground">{p.name}</span>
-                      <span className="text-muted-foreground ml-2">{p.address}</span>
+                      <span className="font-medium text-foreground">{p.address || p.name}</span>
                       {hasActive && <span className="text-destructive ml-2 text-xs">(active inspection)</span>}
                     </button>
                   );
