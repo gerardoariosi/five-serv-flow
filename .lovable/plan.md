@@ -1,115 +1,47 @@
 
 
-# Analysis: 6 Issues — Root Causes
+## Análisis: work_type del ticket no se actualiza en el Dashboard
 
-## Issue 1: Property Name Redundant with Address
+### Causa raíz
 
-**Cause**: `PropertyForm.tsx` has separate `name` and `address` fields (lines 211-218). `canSubmit` requires both (line 187). DB column `properties.name` is used everywhere as the display label (Dashboard line 218, InspectionDetail line 416, CreateInspection line 210).
+El Dashboard SÍ tiene una suscripción realtime sobre `tickets` (líneas 72-77 de `Dashboard.tsx`) que dispara `fetchData()` ante cualquier cambio. La tabla `tickets` está en `supabase_realtime` (migración `20260406171739`). En teoría debería funcionar.
 
-**What needs to change**:
-- Remove the "Property Name" input from `PropertyForm.tsx`. Keep only Address.
-- On save, set `name = address` (so existing reads `properties.name` keep working without touching every other file).
-- Update CSV import: drop required `property_name` column; use `address` as both.
-- Update `CreateInspection.tsx` `handleConfirmNewProperty` (already does `name: newPropertyName, address: newPropertyName` — fine), and rename the dialog/label to just "Address".
-- The dropdown render (line 210-211) shows `{p.name} — {p.address}` (duplicate). Show just the address.
+El problema real son **dos bugs combinados**:
 
-**Files**: `src/pages/properties/PropertyForm.tsx`, `src/pages/inspections/CreateInspection.tsx`.
+**Bug 1 — Falta `REPLICA IDENTITY FULL` en `tickets`**
+Postgres realtime necesita `REPLICA IDENTITY FULL` para que los eventos UPDATE entreguen el payload completo de la fila. Sin esto, el evento aún se dispara, pero en algunos clientes Supabase Realtime el cambio no se notifica de forma confiable cuando solo cambian columnas no-indexadas como `work_type`. Esto explica el comportamiento intermitente.
 
----
+**Bug 2 — Inconsistencia de claves `work_type`**
+El formulario (`TicketForm.tsx` línea 369) guarda `make-ready` (con guión), pero otras partes del código (`AccountingList.tsx` 116, `ReportDetail.tsx` 262, calendar) usan `make_ready` (con guión bajo). El Dashboard busca colores con `workTypeColors[ticket.work_type]` y el mapa solo tiene la clave `'make-ready'` — si en algún momento se guarda con guión bajo, el badge queda con el color por defecto (Repair) y el usuario percibe que "no se actualizó". El mismo `TicketDetail` (línea 89) compara contra `'make-ready'` ignorando `'make_ready'`.
 
-## Issue 2: Schedule Inspection for a Future Date
+Además, los work types ahora son **dinámicos** (tabla `work_types` editable en Settings), pero el `<Select>` del formulario sigue **hardcodeado** con 4 valores fijos. Si un admin agrega un nuevo work type en Settings, no aparece en el formulario, y los tickets viejos con esa clave no encuentran color/label.
 
-**Cause**: `CreateInspection.tsx` only inserts with `status: 'draft'` (line 130) and immediately navigates to `/inspect`. There's no "Start Now vs Schedule" choice. `inspections.visit_date` exists but is purely informational. There's no `scheduled` status nor any logic that activates an inspection on its date.
+### Qué hay que arreglar
 
-**What needs to be added**:
-- Two-button selector at top of CreateInspection: **Start Now** | **Schedule for later**.
-- If Schedule: show date+time picker (use shadcn Calendar in Popover + time input). Hide "Start Inspection" button; show "Schedule Inspection".
-- On schedule submit: insert with `status: 'scheduled'` and `visit_date` = chosen date. Navigate back to inspection list (don't open inspect screen).
-- Inspection list / Calendar already query `inspections` — surface `scheduled` ones with new label/color in `inspectionStatusLabels`/`inspectionStatusColors`.
-- Activation: on opening the inspection detail (or via a small client-side check), if `status === 'scheduled'` and `visit_date <= today`, auto-bump to `draft` so the user can begin. (No cron needed.)
+**1. Migración DB**
+- `ALTER TABLE public.tickets REPLICA IDENTITY FULL;` para que realtime entregue payloads completos en UPDATE.
 
-**Files**: `src/pages/inspections/CreateInspection.tsx`, `src/lib/inspectionColors.ts`, `src/pages/inspections/InspectionDetail.tsx` (auto-activate), `src/pages/calendar/CalendarPage.tsx` (already pulls inspections — verify scheduled ones appear).
+**2. `TicketForm.tsx`**
+- Reemplazar el `<Select>` hardcodeado de Work Type por uno alimentado desde `supabase.from('work_types').select('key,label')`.
+- Esto asegura que la clave guardada coincide con la tabla maestra y elimina el desfase guión vs guión-bajo.
 
----
+**3. `src/lib/ticketColors.ts`**
+- Agregar alias `'make_ready'` apuntando a los mismos colores que `'make-ready'` (fallback defensivo para tickets ya existentes con cualquiera de las dos claves).
 
-## Issue 3: Numeric Keyboard for Price/Quantity
+**4. `Dashboard.tsx`**
+- El listener realtime ya existe pero refetch completo es pesado. Mantenerlo, pero también escuchar específicamente eventos UPDATE para forzar el refresh inmediato (ya lo hace con `event: '*'`, así que solo confirmar que sigue así tras el fix de REPLICA IDENTITY).
+- Agregar un `useEffect` que refetch al volver a montarse (ya pasa por defecto), y opcionalmente un refetch al recobrar foco de la ventana (`visibilitychange`) para cubrir el caso de navegación rápida en mobile.
 
-**Cause**: `PricingReview.tsx` already uses `type="number"` (lines 233, 244). On iOS, `type="number"` does NOT reliably show the numeric keypad — `inputMode` is required. Both inputs are missing `inputMode`.
+**5. `TicketDetail.tsx`**
+- Línea 89: cambiar la comparación a `['make-ready','make_ready'].includes(tRes.data?.work_type)` para que el countdown funcione con ambas claves.
 
-**What needs to change**:
-- Line 232-239 (Qty): add `inputMode="numeric"` and `pattern="[0-9]*"`.
-- Line 243-251 (Unit Price): add `inputMode="decimal"`.
+### Archivos a modificar
 
-**Files**: `src/pages/inspections/PricingReview.tsx`.
-
----
-
-## Issue 4: PM Response Missing Per-Item Notes
-
-**Cause**: `InspectionDetail.tsx` PM Response tab (lines 600-610) renders each PM-selected item showing only `item.item_name`, subtotal, and `item.pm_note` — but **never renders `item.item_note`** (the technician's per-item note). The data is in the same row (already in `items` state), it's simply not displayed in this tab. The FiveServ tab does show it (line 544-546).
-
-**What needs to change**:
-- Line 601-609: add a render block for `item.item_note` (e.g. `<p>Tech note: {item.item_note}</p>`) alongside `pm_note`.
-
-**Files**: `src/pages/inspections/InspectionDetail.tsx`.
-
----
-
-## Issue 5: Ticket Priority Not Updating on Dashboard
-
-**Cause**: `Dashboard.tsx` already subscribes to realtime on `tickets` table (lines 72-77) and refetches on any change. BUT — the dashboard renders `work_type` badges (line 206) and `status` badges (line 208), and **does not render `priority` at all**. So when priority changes, there is nothing on the card showing it; the user perceives "stale" because the change is invisible. Realtime is working; the field is just absent from the UI.
-
-Additionally, `priority` is not part of `metricCards` or any sort/filter — it has no visible surface.
-
-**What needs to change**:
-- Add a `priority` badge to each ticket card in `Dashboard.tsx` (line ~205, next to status).
-- Optionally sort high-priority tickets above normal (after emergency sort).
-
-**Files**: `src/pages/Dashboard.tsx`.
-
----
-
-## Issue 6: Ticket Created from Inspection — Poor Format
-
-**Cause**: `InspectionDetail.tsx` `handleConvertToTickets` (lines 102-158) builds the description as:
-```
-From inspection INS-XXXX.
-KITCHEN:
-- Sink — broken [PM: replace]
-```
-Issues:
-- No clear header (just "From inspection X.")
-- No urgency markers per item
-- Mixes PM notes with tech notes inline; not visually clean
-- Doesn't show PM-approved subtotals (correct — the requirement says no prices, this is fine)
-- `work_type` already auto-sets to `emergency` if any urgent ✓
-
-**What needs to improve**:
-- Header: `### Work from Inspection #INS-XXXX`
-- Per area block:
-  ```
-  AREA: Kitchen
-  • Sink (URGENT) — Tech: broken pipe / PM: please replace
-  • Faucet — Tech: leaky
-  ```
-- Mark urgent items clearly
-- Drop the inline PM bracket format; use line breaks
-- Keep `internal_note` with PM approved total (already done, lines 131-132)
-- Keep `work_type` urgency logic (already done, line 127-128) ✓
-- No prices in description (already correct) ✓
-
-**Files**: `src/pages/inspections/InspectionDetail.tsx` (lines 108-124).
-
----
-
-## Summary
-
-| # | Cause | Fix Location |
-|---|-------|------|
-| 1 | Two fields (`name`, `address`); `name` used as label everywhere | PropertyForm.tsx, CreateInspection.tsx |
-| 2 | No schedule option, no `scheduled` status | CreateInspection.tsx, inspectionColors.ts, InspectionDetail.tsx |
-| 3 | `type="number"` alone doesn't trigger iOS numeric keypad | PricingReview.tsx |
-| 4 | PM tab doesn't render `item.item_note` (data exists) | InspectionDetail.tsx |
-| 5 | Priority field never rendered on dashboard cards (realtime works fine) | Dashboard.tsx |
-| 6 | Description format flat, no clear header, mixed inline notes | InspectionDetail.tsx (handleConvertToTickets) |
+| # | Archivo | Cambio |
+|---|---------|--------|
+| 1 | Nueva migración SQL | `ALTER TABLE tickets REPLICA IDENTITY FULL` |
+| 2 | `src/pages/tickets/TicketForm.tsx` | Select de work_type alimentado desde tabla `work_types` |
+| 3 | `src/lib/ticketColors.ts` | Alias `make_ready` → mismos colores que `make-ready` |
+| 4 | `src/pages/Dashboard.tsx` | Refetch on `visibilitychange` (defensa adicional) |
+| 5 | `src/pages/tickets/TicketDetail.tsx` | Aceptar ambas variantes de make-ready en el countdown |
 
