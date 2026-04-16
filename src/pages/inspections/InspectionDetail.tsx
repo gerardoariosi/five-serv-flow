@@ -84,6 +84,18 @@ const InspectionDetail = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Auto-activate scheduled inspections when their date has arrived
+  useEffect(() => {
+    if (!inspection || inspection.status !== 'scheduled') return;
+    const visit = inspection.visit_date ? new Date(inspection.visit_date) : null;
+    if (!visit) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (visit <= today) {
+      supabase.from('inspections').update({ status: 'draft' }).eq('id', id).then(() => fetchData());
+    }
+  }, [inspection, id, fetchData]);
+
   const handleDeleteInspection = async () => {
     await supabase.from('inspection_items').delete().eq('inspection_id', id);
     await supabase.from('inspection_photos').delete().eq('inspection_id', id);
