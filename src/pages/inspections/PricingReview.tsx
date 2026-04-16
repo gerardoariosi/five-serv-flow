@@ -231,6 +231,8 @@ const PricingReview = () => {
                       <Label className="text-[10px]">Qty</Label>
                       <Input
                         type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         min={1}
                         value={item.quantity || ''}
                         onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
@@ -242,6 +244,7 @@ const PricingReview = () => {
                       <Label className="text-[10px]">Unit Price ($)</Label>
                       <Input
                         type="number"
+                        inputMode="decimal"
                         min={0}
                         step={0.01}
                         value={item.unit_price || ''}

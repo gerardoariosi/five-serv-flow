@@ -84,6 +84,18 @@ const InspectionDetail = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Auto-activate scheduled inspections when their date has arrived
+  useEffect(() => {
+    if (!inspection || inspection.status !== 'scheduled') return;
+    const visit = inspection.visit_date ? new Date(inspection.visit_date) : null;
+    if (!visit) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (visit <= today) {
+      supabase.from('inspections').update({ status: 'draft' }).eq('id', id).then(() => fetchData());
+    }
+  }, [inspection, id, fetchData]);
+
   const handleDeleteInspection = async () => {
     await supabase.from('inspection_items').delete().eq('inspection_id', id);
     await supabase.from('inspection_photos').delete().eq('inspection_id', id);
@@ -105,27 +117,33 @@ const InspectionDetail = () => {
 
     const selected = items.filter(i => selectedForTicket.has(i.id));
 
-    // Build description grouped by area
+    // Build description grouped by area — clean readable format, no prices
     const byArea: Record<string, any[]> = {};
     selected.forEach(i => {
       const area = i.area ?? 'other';
       if (!byArea[area]) byArea[area] = [];
       byArea[area].push(i);
     });
-    const descParts: string[] = [`From inspection ${inspection.ins_number}.`];
-    for (const [area, areaItems] of Object.entries(byArea)) {
-      descParts.push(`\n${area.replace(/_/g, ' ').toUpperCase()}:`);
-      areaItems.forEach((i: any) => {
-        let line = `- ${i.item_name}`;
-        if (i.item_note) line += ` — ${i.item_note}`;
-        if (i.pm_note) line += ` [PM: ${i.pm_note}]`;
-        descParts.push(line);
-      });
-    }
 
-    // Determine work_type: if any urgent → emergency, else repair
     const hasUrgent = selected.some(i => i.status === 'urgent');
     const workType = hasUrgent ? 'emergency' : 'repair';
+    const priority = hasUrgent ? 'high' : 'normal';
+
+    const descParts: string[] = [];
+    descParts.push(`### Work from Inspection #${inspection.ins_number ?? ''}`.trim());
+    descParts.push('');
+    for (const [area, areaItems] of Object.entries(byArea)) {
+      descParts.push(`AREA: ${area.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`);
+      areaItems.forEach((i: any) => {
+        const urgent = i.status === 'urgent' ? ' (URGENT)' : '';
+        const notes: string[] = [];
+        if (i.item_note) notes.push(`Tech: ${i.item_note}`);
+        if (i.pm_note) notes.push(`PM: ${i.pm_note}`);
+        const noteStr = notes.length ? ` — ${notes.join(' / ')}` : '';
+        descParts.push(`• ${i.item_name}${urgent}${noteStr}`);
+      });
+      descParts.push('');
+    }
 
     // Internal note with PM approved total
     const pmTotal = inspection.pm_total_selected ?? 0;
@@ -138,7 +156,8 @@ const InspectionDetail = () => {
       property_id: inspection.property_id,
       status: 'open',
       work_type: workType,
-      description: descParts.join('\n'),
+      priority,
+      description: descParts.join('\n').trim(),
       internal_note: internalNote,
       related_inspection_id: id,
     }).select('id').single();
@@ -604,7 +623,9 @@ const InspectionDetail = () => {
                     <span className="text-sm font-medium text-foreground">{item.item_name}</span>
                     <span className="text-sm font-bold text-primary">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
                   </div>
-                  {item.pm_note && <p className="text-xs text-muted-foreground mt-1 italic">"{item.pm_note}"</p>}
+                  {item.area && <p className="text-[11px] text-muted-foreground mt-0.5 uppercase tracking-wider">{String(item.area).replace(/_/g, ' ')}</p>}
+                  {item.item_note && <p className="text-xs text-muted-foreground mt-1"><span className="font-semibold">Tech:</span> <span className="italic">{item.item_note}</span></p>}
+                  {item.pm_note && <p className="text-xs text-muted-foreground mt-1"><span className="font-semibold">PM:</span> <span className="italic">"{item.pm_note}"</span></p>}
                 </div>
               ))
             )}

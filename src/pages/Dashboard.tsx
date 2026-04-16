@@ -102,11 +102,12 @@ const Dashboard = () => {
       );
     }
 
-    // Emergencies first
+    // Emergencies first, then high-priority
+    const priorityRank = (p: string | null) => (p === 'urgent' ? 0 : p === 'high' ? 1 : 2);
     result.sort((a, b) => {
       if (a.work_type === 'emergency' && b.work_type !== 'emergency') return -1;
       if (b.work_type === 'emergency' && a.work_type !== 'emergency') return 1;
-      return 0;
+      return priorityRank(a.priority) - priorityRank(b.priority);
     });
 
     return result;
@@ -208,6 +209,19 @@ const Dashboard = () => {
                       <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'draft']}`}>
                         {statusLabels[ticket.status ?? 'draft']}
                       </Badge>
+                      {ticket.priority && ticket.priority !== 'normal' && (
+                        <Badge
+                          className={`text-[10px] ${
+                            ticket.priority === 'urgent'
+                              ? 'bg-destructive text-destructive-foreground'
+                              : ticket.priority === 'high'
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {ticket.priority.toUpperCase()}
+                        </Badge>
+                      )}
                       {ticket.status === 'draft' && (
                         <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground">
                           DRAFT
