@@ -144,6 +144,10 @@ const Dashboard = () => {
     { label: 'PM Not Responding', value: metrics.pmNotResponding, icon: Clock, color: 'text-purple-400' },
   ];
 
+  if (isTechnician) {
+    return <Navigate to="/my-work" replace />;
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
