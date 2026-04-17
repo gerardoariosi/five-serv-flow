@@ -40,6 +40,7 @@ import TeamUserForm from "./pages/team/TeamUserForm";
 import AccountingList from "./pages/accounting/AccountingList";
 import AccountingDetail from "./pages/accounting/AccountingDetail";
 import CalendarPage from "./pages/calendar/CalendarPage";
+import TechnicianCalendar from "./pages/calendar/TechnicianCalendar";
 import ReportList from "./pages/reports/ReportList";
 import ReportDetail from "./pages/reports/ReportDetail";
 import ChatPage from "./pages/chat/ChatPage";
@@ -92,6 +93,7 @@ const App = () => {
             <Route path="/tickets/:id/work" element={<TicketWork />} />
             <Route path="/tickets/:id/review" element={<TicketReview />} />
             <Route path="/my-work" element={<TechnicianDashboard />} />
+            <Route path="/my-calendar" element={<TechnicianCalendar />} />
             <Route path="/inspections" element={<InspectionList />} />
             <Route path="/inspections/new" element={<CreateInspection />} />
             <Route path="/inspections/:id" element={<InspectionDetail />} />

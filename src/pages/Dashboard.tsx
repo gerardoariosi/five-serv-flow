@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,12 @@ interface TicketRow {
 const Dashboard = () => {
   const { activeRole } = useAuthStore();
   const navigate = useNavigate();
+
+  // Technicians get their own dashboard at /my-work
+  if (activeRole === 'technician') {
+    return <Navigate to="/my-work" replace />;
+  }
+
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
