@@ -50,7 +50,7 @@ const ResetPassword = () => {
 
   if (tokenValid === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="dark min-h-screen bg-background flex items-center justify-center">
         <Spinner />
       </div>
     );
@@ -58,7 +58,7 @@ const ResetPassword = () => {
 
   if (!tokenValid) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center">
           <FiveServLogo />
           <h2 className="text-lg font-bold text-foreground mb-2">Link Expired</h2>
@@ -74,7 +74,7 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <FiveServLogo />
 
