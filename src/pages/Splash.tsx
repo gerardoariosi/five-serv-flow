@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole } from '@/stores/authStore';
 import Spinner from '@/components/ui/Spinner';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 
 const Splash = () => {
   const navigate = useNavigate();
@@ -74,14 +75,14 @@ const Splash = () => {
   }, [navigate, setUser, setLoading]);
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6">
-      <span
-        className={`text-8xl font-extrabold text-primary transition-opacity duration-300 ${
+    <div className="dark fixed inset-0 bg-background flex flex-col items-center justify-center gap-6">
+      <div
+        className={`transition-opacity duration-300 ${
           visible ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        FS
-      </span>
+        <FiveServLogo />
+      </div>
       <Spinner size="sm" />
     </div>
   );

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Mail, Check, AlertTriangle } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 
 const Unsubscribe = () => {
   const [searchParams] = useSearchParams();
@@ -40,8 +41,9 @@ const Unsubscribe = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center space-y-6">
+        <FiveServLogo />
         {status === 'loading' && <Spinner size="lg" />}
         {status === 'valid' && (
           <>
