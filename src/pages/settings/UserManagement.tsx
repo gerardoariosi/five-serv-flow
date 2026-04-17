@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Spinner from '@/components/ui/Spinner';
@@ -40,6 +41,7 @@ const UserManagement = () => {
   const [editDialog, setEditDialog] = useState<{ open: boolean; user: any | null; mode: 'create' | 'edit' }>({ open: false, user: null, mode: 'create' });
   const [form, setForm] = useState({ full_name: '', email: '', phone: '', password: '', roles: [] as string[] });
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [archiveConfirm, setArchiveConfirm] = useState<{ open: boolean; user: any | null; lock: boolean }>({ open: false, user: null, lock: true });
 
   // Presence tracking
   useEffect(() => {
@@ -177,10 +179,13 @@ const UserManagement = () => {
 
   return (
     <div className="p-4 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-foreground">User Management</h1>
         <Button size="sm" onClick={openCreate} className="bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" />Create User</Button>
       </div>
+      <p className="text-xs text-muted-foreground mb-6">
+        Users cannot be permanently deleted. Use Archive to disable access — they can be restored anytime.
+      </p>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -238,9 +243,9 @@ const UserManagement = () => {
                     <BellOff className="w-4 h-4" />
                   </button>
                   {user.is_locked ? (
-                    <button onClick={() => archiveMutation.mutate({ userId: user.id, lock: false })} className="p-2 text-muted-foreground hover:text-primary" title="Restore"><RotateCcw className="w-4 h-4" /></button>
+                    <button onClick={() => setArchiveConfirm({ open: true, user, lock: false })} className="p-2 text-muted-foreground hover:text-primary" title="Restore"><RotateCcw className="w-4 h-4" /></button>
                   ) : (
-                    <button onClick={() => archiveMutation.mutate({ userId: user.id, lock: true })} className="p-2 text-muted-foreground hover:text-destructive" title="Archive"><Archive className="w-4 h-4" /></button>
+                    <button onClick={() => setArchiveConfirm({ open: true, user, lock: true })} className="p-2 text-muted-foreground hover:text-destructive" title="Archive"><Archive className="w-4 h-4" /></button>
                   )}
                 </div>
               </div>
@@ -295,6 +300,34 @@ const UserManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Archive/Restore confirmation */}
+      <AlertDialog open={archiveConfirm.open} onOpenChange={(o) => setArchiveConfirm(p => ({ ...p, open: o }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{archiveConfirm.lock ? 'Archive user?' : 'Restore user?'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveConfirm.lock
+                ? `${archiveConfirm.user?.full_name ?? 'This user'} will lose access to the app immediately. Their data is preserved and you can restore access anytime.`
+                : `${archiveConfirm.user?.full_name ?? 'This user'} will regain access to the app.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (archiveConfirm.user) {
+                  archiveMutation.mutate({ userId: archiveConfirm.user.id, lock: archiveConfirm.lock });
+                }
+                setArchiveConfirm({ open: false, user: null, lock: true });
+              }}
+              className={archiveConfirm.lock ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              {archiveConfirm.lock ? 'Archive' : 'Restore'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
