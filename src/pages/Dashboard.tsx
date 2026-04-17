@@ -28,11 +28,7 @@ interface TicketRow {
 const Dashboard = () => {
   const { activeRole } = useAuthStore();
   const navigate = useNavigate();
-
-  // Technicians get their own dashboard at /my-work
-  if (activeRole === 'technician') {
-    return <Navigate to="/my-work" replace />;
-  }
+  const isTechnician = activeRole === 'technician';
 
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
