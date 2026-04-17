@@ -140,10 +140,10 @@ const ChatPage = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-select first group
+  // Auto-select first group on desktop only — mobile starts on the list
   useEffect(() => {
-    if (!activeGroup && groups.length > 0) setActiveGroup(groups[0].id);
-  }, [groups, activeGroup]);
+    if (!isMobile && !activeGroup && groups.length > 0) setActiveGroup(groups[0].id);
+  }, [groups, activeGroup, isMobile]);
 
   const handleSend = async () => {
     if (!message.trim() || !activeGroup || !user?.id) return;
@@ -302,8 +302,8 @@ const ChatPage = () => {
           {/* Chat Header */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-card">
             {isMobile && (
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setActiveGroup(null)}>
-                <ArrowLeft className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-11 w-11 -ml-2" onClick={() => setActiveGroup(null)} aria-label="Back to chats">
+                <ArrowLeft className="w-5 h-5" />
               </Button>
             )}
             <span className="text-sm font-bold text-foreground">{activeGroupData?.name || 'Select a group'}</span>

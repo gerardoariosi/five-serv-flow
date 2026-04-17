@@ -46,6 +46,7 @@ const navItemsByRole: Record<string, { label: string; icon: any; path: string }[
   ],
   technician: [
     { label: 'My Work', icon: Wrench, path: '/my-work' },
+    { label: 'My Calendar', icon: CalendarDays, path: '/my-calendar' },
     { label: 'Chat', icon: MessageCircle, path: '/chat' },
     { label: 'My Profile', icon: User, path: '/profile' },
   ],

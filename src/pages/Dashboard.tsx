@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,8 @@ interface TicketRow {
 const Dashboard = () => {
   const { activeRole } = useAuthStore();
   const navigate = useNavigate();
+  const isTechnician = activeRole === 'technician';
+
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -141,6 +143,10 @@ const Dashboard = () => {
     { label: 'Emergencies', value: metrics.emergencies, icon: AlertTriangle, color: 'text-destructive' },
     { label: 'PM Not Responding', value: metrics.pmNotResponding, icon: Clock, color: 'text-purple-400' },
   ];
+
+  if (isTechnician) {
+    return <Navigate to="/my-work" replace />;
+  }
 
   if (loading) {
     return (
