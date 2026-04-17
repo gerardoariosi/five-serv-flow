@@ -1,47 +1,68 @@
 
 
-## Análisis: work_type del ticket no se actualiza en el Dashboard
+# Auth Screens — Design Audit
 
-### Causa raíz
+## Tokens vs requirements
 
-El Dashboard SÍ tiene una suscripción realtime sobre `tickets` (líneas 72-77 de `Dashboard.tsx`) que dispara `fetchData()` ante cualquier cambio. La tabla `tickets` está en `supabase_realtime` (migración `20260406171739`). En teoría debería funcionar.
+| Token used | Resolves to | Required | Match? |
+|---|---|---|---|
+| `bg-background` | `hsl(0 0% 10%)` = #1A1A1A | #1A1A1A | ✅ |
+| `bg-card` | `hsl(0 0% 16%)` ≈ #292929 | #2A2A2A | ✅ (close enough) |
+| `text-foreground` | white | white | ✅ |
+| `--primary` | gold #FFD700 | #FFD700 | ✅ |
 
-El problema real son **dos bugs combinados**:
+So the **CSS variables are correct for dark theme**. The colors only break when `light` mode is active (`.light` class on `<html>` from `themeStore`).
 
-**Bug 1 — Falta `REPLICA IDENTITY FULL` en `tickets`**
-Postgres realtime necesita `REPLICA IDENTITY FULL` para que los eventos UPDATE entreguen el payload completo de la fila. Sin esto, el evento aún se dispara, pero en algunos clientes Supabase Realtime el cambio no se notifica de forma confiable cuando solo cambian columnas no-indexadas como `work_type`. Esto explica el comportamiento intermitente.
+---
 
-**Bug 2 — Inconsistencia de claves `work_type`**
-El formulario (`TicketForm.tsx` línea 369) guarda `make-ready` (con guión), pero otras partes del código (`AccountingList.tsx` 116, `ReportDetail.tsx` 262, calendar) usan `make_ready` (con guión bajo). El Dashboard busca colores con `workTypeColors[ticket.work_type]` y el mapa solo tiene la clave `'make-ready'` — si en algún momento se guarda con guión bajo, el badge queda con el color por defecto (Repair) y el usuario percibe que "no se actualizó". El mismo `TicketDetail` (línea 89) compara contra `'make-ready'` ignorando `'make_ready'`.
+## Issues found per screen
 
-Además, los work types ahora son **dinámicos** (tabla `work_types` editable en Settings), pero el `<Select>` del formulario sigue **hardcodeado** con 4 valores fijos. Si un admin agrega un nuevo work type en Settings, no aparece en el formulario, y los tickets viejos con esa clave no encuentran color/label.
+### 1. `FiveServLogo.tsx` — tagline mismatch
+- Currently renders **"ONE TEAM. ONE CALL. DONE."** (uppercase, 2px letter-spacing).
+- Requirement: **"One Team. One Call. Done."** (title case).
+- Logo colors and structure (gold "F" + white "iveServ") are correct.
 
-### Qué hay que arreglar
+### 2. Theme store can override auth screens to light mode
+- All auth screens use `bg-background`, which becomes **#F5F5F5 (light gray)** when `.light` class is on `<html>`.
+- Auth screens must always render in dark theme regardless of user preference. **None of them force the dark class.**
+- Affected: Login, ForgotPassword, ResetPassword, VerifyTwoFactor, SetupStep1/2/3, Splash, Unsubscribe.
+- **Fix**: force dark mode on the wrapper of each auth screen (e.g., wrap outer `<div>` with `className="dark ..."`) OR force dark in `<html>` while on auth routes.
 
-**1. Migración DB**
-- `ALTER TABLE public.tickets REPLICA IDENTITY FULL;` para que realtime entregue payloads completos en UPDATE.
+### 3. `Login.tsx` — OK structurally
+- bg/card/logo correct. No white backgrounds. Only inherits the light-mode bug above.
 
-**2. `TicketForm.tsx`**
-- Reemplazar el `<Select>` hardcodeado de Work Type por uno alimentado desde `supabase.from('work_types').select('key,label')`.
-- Esto asegura que la clave guardada coincide con la tabla maestra y elimina el desfase guión vs guión-bajo.
+### 4. `ForgotPassword.tsx` — OK structurally
+- Same as Login. Inherits light-mode bug.
 
-**3. `src/lib/ticketColors.ts`**
-- Agregar alias `'make_ready'` apuntando a los mismos colores que `'make-ready'` (fallback defensivo para tickets ya existentes con cualquiera de las dos claves).
+### 5. `ResetPassword.tsx` — OK structurally  
+- Same as Login. Both branches (link expired + form) use correct tokens. Inherits light-mode bug.
 
-**4. `Dashboard.tsx`**
-- El listener realtime ya existe pero refetch completo es pesado. Mantenerlo, pero también escuchar específicamente eventos UPDATE para forzar el refresh inmediato (ya lo hace con `event: '*'`, así que solo confirmar que sigue así tras el fix de REPLICA IDENTITY).
-- Agregar un `useEffect` que refetch al volver a montarse (ya pasa por defecto), y opcionalmente un refetch al recobrar foco de la ventana (`visibilitychange`) para cubrir el caso de navegación rápida en mobile.
+### 6. `VerifyTwoFactor.tsx` — OK structurally
+- bg, card, OTP inputs all use correct tokens. Inherits light-mode bug.
 
-**5. `TicketDetail.tsx`**
-- Línea 89: cambiar la comparación a `['make-ready','make_ready'].includes(tRes.data?.work_type)` para que el countdown funcione con ambas claves.
+### 7. `SetupStep1/2/3.tsx` — OK structurally
+- All three use `bg-background` + `bg-card` with `FiveServLogo`. Inherits light-mode bug.
 
-### Archivos a modificar
+### 8. `Splash.tsx` — missing wordmark
+- Shows only "FS" (8xl gold text), not the FiveServ wordmark + tagline.
+- Requirement says onboarding screens must show the wordmark + tagline. Splash should use `<FiveServLogo />` instead of "FS".
+- Also inherits light-mode bug.
 
-| # | Archivo | Cambio |
-|---|---------|--------|
-| 1 | Nueva migración SQL | `ALTER TABLE tickets REPLICA IDENTITY FULL` |
-| 2 | `src/pages/tickets/TicketForm.tsx` | Select de work_type alimentado desde tabla `work_types` |
-| 3 | `src/lib/ticketColors.ts` | Alias `make_ready` → mismos colores que `make-ready` |
-| 4 | `src/pages/Dashboard.tsx` | Refetch on `visibilitychange` (defensa adicional) |
-| 5 | `src/pages/tickets/TicketDetail.tsx` | Aceptar ambas variantes de make-ready en el countdown |
+### 9. `Unsubscribe.tsx` — missing wordmark
+- No `FiveServLogo` rendered. Just an icon + heading.
+- It's an auth-adjacent screen — should include the wordmark for brand consistency per the rule "Any other auth or onboarding screen".
+- Inherits light-mode bug.
+
+---
+
+## Summary of changes needed
+
+| Screen / file | Change |
+|---|---|
+| `FiveServLogo.tsx` | Change tagline from `ONE TEAM. ONE CALL. DONE.` (uppercase, letter-spacing 2px) to `One Team. One Call. Done.` (title case) |
+| All 9 auth screens | Force dark theme regardless of `themeStore` (simplest: wrap each outer container with the `dark` class so the dark CSS vars apply locally) |
+| `Splash.tsx` | Replace the "FS" text with `<FiveServLogo />` |
+| `Unsubscribe.tsx` | Add `<FiveServLogo />` at top of the card |
+
+No screens currently render explicit white backgrounds (`bg-white`, `#fff`) — the only way they show white is via the global light-mode toggle.
 
