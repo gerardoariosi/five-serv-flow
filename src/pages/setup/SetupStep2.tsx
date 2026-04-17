@@ -31,7 +31,7 @@ const SetupStep2 = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <FiveServLogo />
         <div className="text-center mb-6">
