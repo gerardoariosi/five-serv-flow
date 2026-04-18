@@ -60,8 +60,20 @@ const CustomToolbar = ({ label, onNavigate, onView, view }: ToolbarProps) => (
 const TechnicianCalendar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [view, setView] = useState<any>(Views.WEEK);
   const [date, setDate] = useState(new Date());
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel('my-calendar-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-calendar-tickets', user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient, user?.id]);
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['my-calendar-tickets', user?.id],
