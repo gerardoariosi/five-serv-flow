@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar as BigCalendar, momentLocalizer, Views, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -60,8 +60,20 @@ const CustomToolbar = ({ label, onNavigate, onView, view }: ToolbarProps) => (
 const TechnicianCalendar = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [view, setView] = useState<any>(Views.WEEK);
   const [date, setDate] = useState(new Date());
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel('my-calendar-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['my-calendar-tickets', user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient, user?.id]);
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['my-calendar-tickets', user?.id],

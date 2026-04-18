@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar as BigCalendar, momentLocalizer, Views, ToolbarProps } from 'react-big-calendar';
@@ -160,6 +160,20 @@ const CalendarPage = () => {
       return data || [];
     },
   });
+
+  // Realtime: refresh calendar when tickets or inspections change
+  useEffect(() => {
+    const channel = supabase
+      .channel('calendar-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['calendar-tickets'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['calendar-inspections'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const userMap = useMemo(() => {
     const m: Record<string, string> = {};
