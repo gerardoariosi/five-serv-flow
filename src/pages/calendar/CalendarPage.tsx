@@ -161,6 +161,20 @@ const CalendarPage = () => {
     },
   });
 
+  // Realtime: refresh calendar when tickets or inspections change
+  useEffect(() => {
+    const channel = supabase
+      .channel('calendar-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['calendar-tickets'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['calendar-inspections'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const userMap = useMemo(() => {
     const m: Record<string, string> = {};
     users.forEach((u: any) => { m[u.id] = u.full_name || 'Unknown'; });
