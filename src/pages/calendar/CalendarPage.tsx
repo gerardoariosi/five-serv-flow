@@ -130,7 +130,7 @@ const CalendarPage = () => {
       const { data, error } = await supabase
         .from('inspections')
         .select('id, ins_number, visit_date, status, property_id, properties(name, address)')
-        .in('status', ['draft', 'inspecting', 'pricing', 'sent'])
+        .in('status', ['draft', 'scheduled', 'inspecting', 'pricing', 'sent'])
         .not('visit_date', 'is', null);
       if (error) throw error;
       return data;
