@@ -258,7 +258,7 @@ const EstimatePortal = () => {
             <img
               src="/FiveServ_Logo_2_No_BG.png"
               alt="FiveServ"
-              style={{ height: '100px', width: 'auto', marginTop: '-28px', marginBottom: '-28px' }}
+              style={{ height: '56px', width: 'auto', marginTop: '-16px', marginBottom: '-16px' }}
             />
             <div className="flex-1 flex justify-end">
               {readOnly && (
@@ -453,7 +453,7 @@ const EstimatePortal = () => {
       <footer className="mt-12 bg-[#1A1A1A] text-white">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" className="h-8 w-auto mx-auto" />
+          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" style={{ height: '48px', width: 'auto', marginTop: '-13px', marginBottom: '-13px' }} className="mx-auto" />
           <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
           <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
           <p className="text-[11px] text-gray-300">
