@@ -158,12 +158,12 @@ const Dashboard = () => {
   }, [tickets]);
 
   const metricCards = [
-    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10',         border: 'border-l-primary' },
-    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40',           border: 'border-l-muted-foreground/40' },
-    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10',      border: 'border-l-orange-400' },
-    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10',      border: 'border-l-yellow-400' },
-    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10',     border: 'border-l-destructive' },
-    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10',      border: 'border-l-purple-400' },
+    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10' },
+    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40' },
+    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10' },
+    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10' },
+    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10' },
+    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10' },
   ];
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
@@ -173,14 +173,14 @@ const Dashboard = () => {
       {/* Metric cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {metricCards.map((m) => (
-          <div key={m.label} className={`fs-card border-l-2 ${m.border} p-3 flex flex-col gap-1.5`}>
-            <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full ${m.bg} flex items-center justify-center shrink-0`}>
-                <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
-              </div>
-              <span className="text-[10px] sm:text-xs text-muted-foreground truncate uppercase tracking-wide">{m.label}</span>
+          <div key={m.label} className="fs-card p-3 flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-md ${m.bg} flex items-center justify-center shrink-0`}>
+              <m.icon className={`w-4 h-4 ${m.color}`} />
             </div>
-            <span className={`text-2xl sm:text-3xl font-bold ${m.color} leading-none`}>{m.value}</span>
+            <div className="min-w-0 flex flex-col">
+              <span className={`text-2xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
+              <span className="fs-data-label mt-1 truncate">{m.label}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -205,11 +205,7 @@ const Dashboard = () => {
             <button
               key={f.key}
               onClick={() => setQuickFilter(f.key)}
-              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-all active:scale-95 ${
-                active
-                  ? 'bg-primary text-primary-foreground border-primary shadow-[var(--gold-glow)]'
-                  : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/40'
-              }`}
+              className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
             >
               {f.label}
             </button>
@@ -237,48 +233,51 @@ const Dashboard = () => {
               <button
                 key={ticket.id}
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
-                className={`w-full text-left fs-card border-l-4 ${leftBorder} p-3.5 active:scale-[0.99] transition-transform duration-100`}
+                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 active:scale-[0.99] transition-transform duration-100 space-y-1.5`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
-                      <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>
-                        {(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}
-                      </Badge>
-                      <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>
-                        {statusLabels[ticket.status ?? 'draft']}
-                      </Badge>
-                      {ticket.priority && ticket.priority !== 'normal' && (
-                        <Badge
-                          className={`text-[10px] ring-1 ring-current/20 ${
-                            ticket.priority === 'urgent'
-                              ? 'bg-destructive text-destructive-foreground'
-                              : ticket.priority === 'high'
-                              ? 'bg-orange-500 text-white'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {ticket.priority.toUpperCase()}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1.5 truncate">
-                      {ticket.property_id ? properties[ticket.property_id]?.name : ''}
-                      {ticket.unit ? ` · Unit ${ticket.unit}` : ''}
-                      {ticket.client_id ? ` · ${clients[ticket.client_id]}` : ''}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs text-muted-foreground">
-                      {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
-                    </p>
-                    {ticket.appointment_time && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                      </p>
-                    )}
-                  </div>
+                {/* Zone 1: identity + badges */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>
+                  <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>
+                    {(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}
+                  </Badge>
+                  <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>
+                    {statusLabels[ticket.status ?? 'draft']}
+                  </Badge>
+                  {ticket.priority && ticket.priority !== 'normal' && (
+                    <Badge
+                      className={`text-[10px] ring-1 ring-current/20 ${
+                        ticket.priority === 'urgent'
+                          ? 'bg-destructive text-destructive-foreground'
+                          : ticket.priority === 'high'
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {ticket.priority.toUpperCase()}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Zone 2: location */}
+                <p className="text-sm truncate">
+                  {ticket.property_id && (
+                    <span className="font-semibold text-foreground">{properties[ticket.property_id]?.name}</span>
+                  )}
+                  {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
+                  {ticket.client_id && <span className="text-muted-foreground"> · {clients[ticket.client_id]}</span>}
+                </p>
+
+                {/* Zone 3: technician + appointment */}
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
+                  </span>
+                  {ticket.appointment_time && (
+                    <span>
+                      {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  )}
                 </div>
               </button>
             );

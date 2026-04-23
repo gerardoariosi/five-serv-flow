@@ -8,23 +8,23 @@
   /* Dark mode (default) */
   :root,
   .dark {
-    --background: 0 0% 10%;
+    --background: 0 0% 7%;
     --foreground: 0 0% 100%;
 
-    --card: 0 0% 16%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 16%;
+    --popover: 0 0% 13%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 51 100% 50%;
     --primary-foreground: 0 0% 10%;
 
-    --secondary: 0 0% 18%;
+    --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 67%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 60%;
 
     --accent: 51 100% 50%;
     --accent-foreground: 0 0% 10%;
@@ -32,8 +32,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
     --ring: 51 100% 50%;
 
     --radius: 0.625rem;
@@ -126,12 +126,17 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv02","cv03","cv04","cv11";
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
   .fs-card {
-    @apply bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] transition-shadow hover:shadow-[var(--card-shadow-hover)];
+    @apply bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] transition-all hover:shadow-[var(--card-shadow-hover)] hover:border-primary/30;
   }
   .fs-section-title {
     @apply text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3;
@@ -139,8 +144,29 @@
   .fs-input-label {
     @apply text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
   }
+  .fs-data-value {
+    @apply text-base font-semibold text-foreground tracking-tight;
+  }
+  .fs-data-label {
+    @apply text-[11px] font-medium uppercase tracking-[0.07em] text-muted-foreground;
+  }
+  .fs-page-title {
+    @apply text-xl font-bold text-foreground tracking-tight;
+  }
+  .fs-section-divider {
+    @apply h-px bg-border my-5;
+  }
   .skeleton-pulse {
     @apply animate-pulse bg-muted rounded;
+  }
+  .fs-chip {
+    @apply shrink-0 text-[11px] font-medium px-3 py-1 rounded-full border transition-all active:scale-[0.97] duration-75;
+  }
+  .fs-chip-active {
+    @apply bg-primary text-primary-foreground border-primary shadow-[0_0_8px_rgba(255,215,0,0.3)];
+  }
+  .fs-chip-inactive {
+    @apply bg-card border-border text-muted-foreground hover:border-border/80 hover:text-foreground;
   }
 }
 
