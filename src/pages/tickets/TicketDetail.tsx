@@ -226,6 +226,209 @@ const TicketDetail = () => {
     fetchTicket();
   };
 
+  // Load saved estimate options when ticket has them
+  useEffect(() => {
+    if (!id) return;
+    if (['pending_estimate', 'estimate_sent', 'estimate_approved'].includes(ticket?.status ?? '')) {
+      supabase.from('ticket_estimate_options').select('*').eq('ticket_id', id).order('sort_order').then(({ data }) => {
+        setSavedEstimateOptions(data ?? []);
+      });
+    }
+  }, [id, ticket?.status]);
+
+  // Approve evaluation → in_progress
+  const handleApproveEvaluation = async () => {
+    if (!ticket || !user) return;
+    setChangingStatus(true);
+    await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
+    await supabase.from('ticket_timeline').insert({
+      ticket_id: id, from_status: ticket.status, to_status: 'in_progress',
+      changed_by: user.id, note: 'Evaluation approved — proceed with work',
+    });
+    // Notify technician
+    if (ticket.technician_id) {
+      await supabase.from('notifications').insert({
+        user_id: ticket.technician_id, type: 'ticket',
+        title: 'Evaluation Approved',
+        message: `${ticket.fs_number ?? 'Ticket'} — Proceed with work`,
+        link: `/my-work/${id}`,
+      });
+      const techEmail = users[ticket.technician_id]?.email;
+      if (techEmail) {
+        try {
+          await supabase.functions.invoke('send-business-email', {
+            body: {
+              template_name: 'technician_evaluation_approved',
+              to_email: techEmail,
+              variables: {
+                fs_number: ticket.fs_number ?? '',
+                technician_name: users[ticket.technician_id]?.name ?? '',
+                property_name: ticket.property_id ? properties[ticket.property_id]?.name ?? '' : '',
+              },
+            },
+          });
+        } catch { /* non-blocking */ }
+      }
+    }
+    toast.success('Evaluation approved');
+    await fetchTicket();
+    setChangingStatus(false);
+  };
+
+  // Open estimate builder (pre-fill from evaluation)
+  const openEstimateBuilder = () => {
+    setEstimateProblem(ticket?.estimate_problem_description || ticket?.evaluation_description || '');
+    setEstimatePmEmail(ticket?.client_id ? clients[ticket.client_id]?.email || '' : '');
+    setEstimatePmNote('');
+    if (savedEstimateOptions.length) {
+      setEstimateOptions(savedEstimateOptions.map((o: any) => ({ name: o.option_name, description: o.description ?? '', price: String(o.price) })));
+    } else {
+      setEstimateOptions([{ name: '', description: '', price: '' }]);
+    }
+    setShowEstimateBuilder(true);
+  };
+
+  const handleEstimateRequired = async () => {
+    if (!ticket || !user) return;
+    setChangingStatus(true);
+    await supabase.from('tickets').update({ status: 'pending_estimate' }).eq('id', id);
+    await supabase.from('ticket_timeline').insert({
+      ticket_id: id, from_status: ticket.status, to_status: 'pending_estimate',
+      changed_by: user.id, note: 'Estimate required',
+    });
+    await fetchTicket();
+    setChangingStatus(false);
+    openEstimateBuilder();
+  };
+
+  const addEstimateOption = () => {
+    if (estimateOptions.length >= 3) return;
+    setEstimateOptions([...estimateOptions, { name: '', description: '', price: '' }]);
+  };
+
+  const removeEstimateOption = (idx: number) => {
+    setEstimateOptions(estimateOptions.filter((_, i) => i !== idx));
+  };
+
+  const updateEstimateOption = (idx: number, field: 'name' | 'description' | 'price', value: string) => {
+    const next = [...estimateOptions];
+    next[idx] = { ...next[idx], [field]: value };
+    setEstimateOptions(next);
+  };
+
+  const handleSendEstimate = async () => {
+    if (!ticket || !user) return;
+    if (!estimateProblem.trim()) { toast.error('Problem description is required'); return; }
+    if (!estimatePmEmail.trim()) { toast.error('PM email is required'); return; }
+    const validOptions = estimateOptions.filter(o => o.name.trim() && o.price.trim());
+    if (!validOptions.length) { toast.error('Add at least one option with name and price'); return; }
+
+    setSendingEstimate(true);
+    try {
+      // Generate token + expiry (7 days)
+      const token = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Replace existing options
+      await supabase.from('ticket_estimate_options').delete().eq('ticket_id', id);
+      await supabase.from('ticket_estimate_options').insert(
+        validOptions.map((o, idx) => ({
+          ticket_id: id, option_name: o.name.trim(), description: o.description.trim() || null,
+          price: parseFloat(o.price), sort_order: idx,
+        }))
+      );
+
+      // Update ticket
+      await supabase.from('tickets').update({
+        status: 'estimate_sent',
+        estimate_problem_description: estimateProblem.trim(),
+        estimate_link_token: token,
+        estimate_expires_at: expiresAt,
+      }).eq('id', id);
+
+      await supabase.from('ticket_timeline').insert({
+        ticket_id: id, from_status: ticket.status, to_status: 'estimate_sent',
+        changed_by: user.id, note: 'Estimate sent to PM',
+      });
+
+      // Send email
+      const portalUrl = `${window.location.origin}/estimate/${token}`;
+      try {
+        await supabase.functions.invoke('send-business-email', {
+          body: {
+            template_name: 'estimate_sent_to_pm',
+            to_email: estimatePmEmail.trim(),
+            variables: {
+              fs_number: ticket.fs_number ?? '',
+              property_name: ticket.property_id ? properties[ticket.property_id]?.name ?? '' : '',
+              portal_url: portalUrl,
+              note: estimatePmNote.trim() || '',
+            },
+          },
+        });
+      } catch { /* non-blocking */ }
+
+      toast.success('Estimate sent to PM');
+      setShowEstimateBuilder(false);
+      await fetchTicket();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to send estimate');
+    } finally {
+      setSendingEstimate(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!ticket || !user) return;
+    if (!rescheduleTime) { toast.error('Pick an appointment time'); return; }
+    setChangingStatus(true);
+    await supabase.from('tickets').update({
+      status: 'open',
+      appointment_time: new Date(rescheduleTime).toISOString(),
+    }).eq('id', id);
+    await supabase.from('ticket_timeline').insert({
+      ticket_id: id, from_status: ticket.status, to_status: 'open',
+      changed_by: user.id, note: `Rescheduled to ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
+    });
+    if (ticket.technician_id) {
+      await supabase.from('notifications').insert({
+        user_id: ticket.technician_id, type: 'ticket',
+        title: 'Work Rescheduled',
+        message: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
+        link: `/my-work/${id}`,
+      });
+      const techEmail = users[ticket.technician_id]?.email;
+      if (techEmail) {
+        try {
+          await supabase.functions.invoke('send-business-email', {
+            body: {
+              template_name: 'technician_rescheduled',
+              to_email: techEmail,
+              variables: {
+                fs_number: ticket.fs_number ?? '',
+                technician_name: users[ticket.technician_id]?.name ?? '',
+                appointment_time: new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' }),
+                property_name: ticket.property_id ? properties[ticket.property_id]?.name ?? '' : '',
+              },
+            },
+          });
+        } catch { /* non-blocking */ }
+      }
+    }
+    setRescheduleTime('');
+    setShowReschedule(false);
+    toast.success('Ticket rescheduled');
+    await fetchTicket();
+    setChangingStatus(false);
+  };
+
+  const copyEstimateLink = () => {
+    if (!ticket?.estimate_link_token) return;
+    const url = `${window.location.origin}/estimate/${ticket.estimate_link_token}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Estimate link copied');
+  };
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !user) return;
     const file = e.target.files[0];
