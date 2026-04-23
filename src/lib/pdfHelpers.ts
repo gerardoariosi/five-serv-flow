@@ -53,6 +53,11 @@ export async function preloadPdfAssets(): Promise<void> {
   await loadLogoDataUrl();
 }
 
+// Auto-preload on module load (browser only)
+if (typeof window !== 'undefined') {
+  void loadLogoDataUrl();
+}
+
 // ============= Black header with gold accent =============
 export function addBlackHeader(doc: jsPDF, opts: HeaderOpts = {}) {
   // Black background
