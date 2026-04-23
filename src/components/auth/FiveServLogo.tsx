@@ -1,11 +1,9 @@
 const FiveServLogo = () => (
   <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-    <img
-      src="/FiveServ_Logo_2_No_BG.png"
-      alt="FiveServ"
-      className="mx-auto"
-      style={{ width: '200px', height: 'auto' }}
-    />
+    <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '3rem' }}>
+      <span style={{ color: '#FFD700' }}>F</span>
+      <span style={{ color: '#FFFFFF' }}>iveServ</span>
+    </span>
   </div>
 );
 

@@ -62,11 +62,10 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
       </div>
 
       <div className="flex-1 flex justify-center">
-        <img
-          src="/FiveServ_Logo_2_No_BG.png"
-          alt="FiveServ"
-          style={{ height: '36px', width: 'auto' }}
-        />
+        <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.6rem' }}>
+          <span style={{ color: '#FFD700' }}>F</span>
+          <span style={{ color: '#FFFFFF' }}>iveServ</span>
+        </span>
       </div>
 
       <div className="flex items-center gap-3">
