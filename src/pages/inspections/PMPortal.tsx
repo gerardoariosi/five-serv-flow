@@ -287,12 +287,14 @@ const PMPortal = () => {
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center">
-            <div className="inline-block bg-[#1A1A1A] px-6 py-4 rounded">
-              <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.6rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.8rem' }}>
                 <span style={{ color: '#FFD700' }}>F</span>
-                <span style={{ color: '#FFFFFF' }}>iveServ</span>
+                <span style={{ color: '#1A1A1A' }}>iveServ</span>
               </span>
-              <div className="text-[9px] tracking-[0.2em] mt-2" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
+              <div style={{ color: '#FFD700', fontSize: '0.6rem', letterSpacing: '0.18em', marginTop: '6px', fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>
+                ONE TEAM. ONE CALL. DONE.
+              </div>
             </div>
             <h1 className="text-xl font-bold text-gray-900 mt-4">Inspection Report</h1>
             <p className="text-sm text-gray-500 mt-1">Enter your access PIN to view this report.</p>
