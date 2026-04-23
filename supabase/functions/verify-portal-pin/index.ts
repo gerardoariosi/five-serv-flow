@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  let body: { token?: string; pin?: string }
+  let body: { token?: string; pin?: string; portal_type?: 'inspection' | 'estimate' }
   try {
     body = await req.json()
   } catch {
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { token, pin } = body
+  const { token, pin, portal_type = 'inspection' } = body
   if (!token || !pin) {
     return new Response(JSON.stringify({ error: 'token and pin are required' }), {
       status: 400,
@@ -49,14 +49,26 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   // Verify the token exists and is not expired
-  const { data: inspection } = await supabase
-    .from('inspections')
-    .select('id')
-    .eq('pm_link_token', token)
-    .gt('link_expires_at', new Date().toISOString())
-    .maybeSingle()
+  let resourceFound = false
+  if (portal_type === 'estimate') {
+    const { data: ticket } = await supabase
+      .from('tickets')
+      .select('id')
+      .eq('estimate_link_token', token)
+      .gt('estimate_expires_at', new Date().toISOString())
+      .maybeSingle()
+    resourceFound = !!ticket
+  } else {
+    const { data: inspection } = await supabase
+      .from('inspections')
+      .select('id')
+      .eq('pm_link_token', token)
+      .gt('link_expires_at', new Date().toISOString())
+      .maybeSingle()
+    resourceFound = !!inspection
+  }
 
-  if (!inspection) {
+  if (!resourceFound) {
     return new Response(JSON.stringify({ valid: false, reason: 'invalid_token' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
