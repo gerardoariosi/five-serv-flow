@@ -16,6 +16,7 @@ import Spinner from '@/components/ui/Spinner';
 const PMPortal = () => {
   const { token } = useParams();
   const [inspection, setInspection] = useState<any>(null);
+  const [property, setProperty] = useState<{ name: string | null; address: string | null } | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [photos, setPhotos] = useState<Record<string, any[]>>({});
   const [techNotes, setTechNotes] = useState<Record<string, string>>({});
@@ -64,6 +65,16 @@ const PMPortal = () => {
     }
 
     setInspection(ins);
+
+    // Fetch property info for hero card
+    if (ins.property_id) {
+      const { data: prop } = await supabase
+        .from('properties')
+        .select('name, address')
+        .eq('id', ins.property_id)
+        .single();
+      setProperty(prop ?? null);
+    }
 
     // Fetch items needing repair
     const { data: itemsData } = await supabase.from('inspection_items')
