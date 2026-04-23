@@ -346,16 +346,52 @@ const PMPortal = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-yellow-600">FS</span>
-            <span className="text-sm text-gray-500 ml-2">Inspection Report</span>
+      {/* Header — black bar with FiveServ wordmark */}
+      <div className="sticky top-0 z-10 shadow-sm">
+        <div className="bg-[#1A1A1A] px-4 py-4">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <div className="flex-1" />
+            <div className="text-2xl font-bold leading-none tracking-tight">
+              <span style={{ color: '#FFD700' }}>F</span>
+              <span className="text-white">iveServ</span>
+            </div>
+            <div className="flex-1 flex justify-end">
+              {readOnly && (
+                <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] uppercase tracking-wider">Submitted</Badge>
+              )}
+            </div>
           </div>
-          {readOnly && (
-            <Badge className="bg-green-100 text-green-700 text-xs">Submitted</Badge>
-          )}
+        </div>
+        {/* Gold 2px line */}
+        <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
+        {/* Property + INS subtitle */}
+        <div className="bg-white border-b border-gray-200 px-4 py-2">
+          <div className="max-w-2xl mx-auto flex items-center justify-between text-xs text-gray-500">
+            <span className="truncate">{property?.name || property?.address || 'Property'}</span>
+            <span className="font-medium text-gray-700">{inspection.ins_number || '—'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero card */}
+      <div className="max-w-2xl mx-auto px-4 pt-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Property</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5">{property?.name || '—'}</p>
+              {property?.address && <p className="text-xs text-gray-500 mt-0.5">{property.address}</p>}
+            </div>
+            <div className="sm:text-right">
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Visit Date</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5">
+                {inspection.visit_date
+                  ? new Date(inspection.visit_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  : '—'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Inspection {inspection.ins_number || ''}</p>
+            </div>
+          </div>
         </div>
       </div>
 
