@@ -441,79 +441,102 @@ const PMPortal = () => {
           const areaItems = itemsByArea[area] ?? [];
           if (areaItems.length === 0 && areaPhotos.length === 0 && !areaNote) return null;
           return (
-            <div key={area} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{area.replace(/_/g, ' ')}</h3>
+            <div key={area} className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+              {/* Area title bar */}
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-1 h-5 rounded-sm" style={{ backgroundColor: '#FFD700' }} />
+                <h3 className="text-xs font-bold text-gray-800 uppercase tracking-[0.15em]">{area.replace(/_/g, ' ')}</h3>
+              </div>
 
-              {/* Items */}
-              {areaItems.map((item: any) => (
-                <div key={item.id} className="border border-gray-100 rounded-lg p-3 space-y-2">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={selectedItems.has(item.id)}
-                      onCheckedChange={() => !readOnly && toggleItem(item.id)}
-                      disabled={readOnly}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">{item.item_name}</span>
-                        <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+              {/* Items — invoice style rows */}
+              <div className="divide-y divide-gray-100">
+                {areaItems.map((item: any) => {
+                  const subtotal = (item.quantity ?? 1) * (item.unit_price ?? 0);
+                  const isSelected = selectedItems.has(item.id);
+                  return (
+                    <div key={item.id} className={`px-5 py-3 transition-colors ${isSelected ? 'bg-yellow-50/40' : 'bg-white'}`}>
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => !readOnly && toggleItem(item.id)}
+                          disabled={readOnly}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 truncate">{item.item_name}</p>
+                          <p className="text-[11px] text-gray-500 mt-0.5">Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)}</p>
+                        </div>
+                        <Badge className={`text-[10px] font-medium ${item.status === 'urgent' ? 'bg-red-100 text-red-700 hover:bg-red-100' : 'bg-orange-100 text-orange-700 hover:bg-orange-100'}`}>
                           {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
                         </Badge>
+                        <span className="text-sm font-bold text-gray-900 tabular-nums w-20 text-right">${subtotal.toFixed(2)}</span>
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-700">
-                        <span>Qty: {item.quantity}</span>
-                        <span>Price: ${(item.unit_price ?? 0).toFixed(2)}</span>
-                        <span className="font-medium">Subtotal: ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
-                      </div>
-                      {/* Technician per-item note */}
                       {item.item_note && (
-                        <p className="text-xs text-gray-500 mt-1 italic bg-gray-50 rounded px-2 py-1">
-                          Tech note: {item.item_note}
-                        </p>
+                        <p className="text-xs text-gray-500 mt-2 ml-8 italic">→ {item.item_note}</p>
                       )}
+                      <div className="ml-8 mt-2">
+                        <Textarea
+                          placeholder="Add a note (optional)..."
+                          value={itemNotes[item.id] ?? ''}
+                          onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          rows={1}
+                          className="bg-gray-50 border-gray-100 text-gray-900 text-xs resize-none"
+                          disabled={readOnly}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <Textarea
-                    placeholder="Add a note (optional)..."
-                    value={itemNotes[item.id] ?? ''}
-                    onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-                    rows={1}
-                    className="bg-gray-50 border-gray-200 text-gray-900 text-sm"
-                    disabled={readOnly}
-                  />
-                </div>
-              ))}
+                  );
+                })}
+              </div>
 
               {/* Technician note */}
               {areaNote && (
-                <div className="bg-gray-50 rounded-md p-2 border border-gray-100">
-                  <p className="text-xs text-gray-500 font-medium mb-0.5">Technician Note</p>
+                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Technician Note</p>
                   <p className="text-sm text-gray-700">{areaNote}</p>
                 </div>
               )}
 
-              {/* Photos */}
+              {/* Photos — cleaner grid with captions */}
               {areaPhotos.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {areaPhotos.map((p: any, i: number) => (
-                    <div key={p.id ?? i} className="relative rounded-lg overflow-hidden border border-gray-200 group cursor-pointer" onClick={() => setLightboxUrl(p.displayUrl || p.url)}>
-                      <img src={p.displayUrl || p.url} alt="" className="w-full h-28 object-cover" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <ZoomIn className="w-6 h-6 text-white" />
+                <div className="px-5 py-4 border-t border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Photos</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {areaPhotos.map((p: any, i: number) => (
+                      <div
+                        key={p.id ?? i}
+                        className="cursor-pointer group"
+                        onClick={() => setLightboxUrl(p.displayUrl || p.url)}
+                      >
+                        <div className="relative rounded-lg overflow-hidden border border-gray-100 transition-all duration-200 group-hover:shadow-md group-hover:opacity-90">
+                          <img src={p.displayUrl || p.url} alt={`${area} photo ${i + 1}`} className="w-full h-28 object-cover" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                            <ZoomIn className="w-5 h-5 text-white drop-shadow-md" />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1 text-center capitalize">{area.replace(/_/g, ' ')}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           );
         })}
 
-        {/* Total */}
-        <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 flex items-center justify-between">
-          <span className="text-sm font-bold text-gray-900">Selected Total</span>
-          <span className="text-xl font-bold text-yellow-600">${total.toFixed(2)}</span>
+        {/* Total — invoice style */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4">
+            <div className="border-t border-gray-200 pt-4 flex items-end justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-semibold">Selected Total</p>
+                <p className="text-[10px] text-gray-400 mt-1">{selectedItems.size} item{selectedItems.size === 1 ? '' : 's'} approved</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-gray-900 tabular-nums leading-none">${total.toFixed(2)}</p>
+                <div className="h-0.5 mt-2" style={{ backgroundColor: '#FFD700' }} />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* General note */}
@@ -532,29 +555,33 @@ const PMPortal = () => {
 
         {/* Signature */}
         {!readOnly && (
-          <div>
-            <Label className="text-gray-700 mb-2 block">Digital Signature</Label>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <Label className="text-gray-700 mb-3 block font-semibold">Digital Signature</Label>
             <SignaturePad onSave={setSignatureData} disabled={readOnly} />
             {signatureData && (
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                 <Check className="w-3 h-3" /> Signature captured
               </p>
             )}
+            <p className="text-[11px] text-gray-500 mt-3 leading-relaxed border-t border-gray-100 pt-3">
+              By signing, you authorize <span className="font-semibold text-gray-700">FiveServ Property Solutions</span> to proceed with selected work.
+            </p>
           </div>
         )}
 
         {/* Read-only signature display */}
         {readOnly && inspection.pm_signature_data && (
-          <div>
-            <Label className="text-gray-700 mb-2 block">Signature</Label>
-            <div className="border border-gray-200 rounded-lg p-2 bg-white" dangerouslySetInnerHTML={{ __html: inspection.pm_signature_data }} />
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+            <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: inspection.pm_signature_data }} />
           </div>
         )}
 
         {/* Submit */}
         {!readOnly && (
           <Button
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
+            className="w-full bg-[#1A1A1A] hover:bg-black text-white font-bold border-b-2"
+            style={{ borderBottomColor: '#FFD700' }}
             size="lg"
             onClick={() => setShowConfirm(true)}
             disabled={!signatureData || selectedItems.size === 0}
@@ -563,6 +590,25 @@ const PMPortal = () => {
           </Button>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="mt-12 bg-[#1A1A1A] text-white">
+        <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
+        <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
+          <div className="text-lg font-bold leading-none">
+            <span style={{ color: '#FFD700' }}>F</span>
+            <span className="text-white">iveServ</span>
+          </div>
+          <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
+          <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
+          <p className="text-[11px] text-gray-300">
+            <a href="mailto:info@fiveserv.net" className="hover:text-white">info@fiveserv.net</a>
+            {' · '}
+            <a href="tel:+14078814942" className="hover:text-white">(407) 881-4942</a>
+          </p>
+          <p className="text-[10px] italic text-gray-500 pt-2">This document is confidential.</p>
+        </div>
+      </footer>
 
       {/* Image lightbox */}
       <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
