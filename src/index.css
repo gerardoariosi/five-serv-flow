@@ -132,15 +132,6 @@
   h1, h2, h3 {
     letter-spacing: -0.02em;
   }
-
-  img[alt="FiveServ"] {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
-    will-change: transform;
-  }
 }
 
 @layer components {
