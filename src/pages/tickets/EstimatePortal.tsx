@@ -192,7 +192,7 @@ const EstimatePortal = () => {
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center">
             <div className="inline-block bg-[#1A1A1A] px-6 py-4 rounded">
-              <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '2.4rem' }}>
+              <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.6rem' }}>
                 <span style={{ color: '#FFD700' }}>F</span>
                 <span style={{ color: '#FFFFFF' }}>iveServ</span>
               </span>
@@ -254,7 +254,7 @@ const EstimatePortal = () => {
         <div className="bg-[#1A1A1A] px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex-1" />
-            <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.5rem' }}>
+            <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.1rem' }}>
               <span style={{ color: '#FFD700' }}>F</span>
               <span style={{ color: '#FFFFFF' }}>iveServ</span>
             </span>
@@ -451,7 +451,7 @@ const EstimatePortal = () => {
       <footer className="mt-12 bg-[#1A1A1A] text-white">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <div><span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.6rem' }}><span style={{ color: '#FFD700' }}>F</span><span style={{ color: '#FFFFFF' }}>iveServ</span></span></div>
+          <div><span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}><span style={{ color: '#FFD700' }}>F</span><span style={{ color: '#FFFFFF' }}>iveServ</span></span></div>
           <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
           <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
           <p className="text-[11px] text-gray-300">
