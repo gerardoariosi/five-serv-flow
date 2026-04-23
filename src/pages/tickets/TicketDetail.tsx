@@ -51,6 +51,21 @@ const TicketDetail = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPMReport, setShowPMReport] = useState(false);
 
+  // Estimate builder
+  const [showEstimateBuilder, setShowEstimateBuilder] = useState(false);
+  const [estimateProblem, setEstimateProblem] = useState('');
+  const [estimateOptions, setEstimateOptions] = useState<Array<{ name: string; description: string; price: string }>>([
+    { name: '', description: '', price: '' },
+  ]);
+  const [estimatePmEmail, setEstimatePmEmail] = useState('');
+  const [estimatePmNote, setEstimatePmNote] = useState('');
+  const [savedEstimateOptions, setSavedEstimateOptions] = useState<any[]>([]);
+  const [sendingEstimate, setSendingEstimate] = useState(false);
+
+  // Reschedule
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleTime, setRescheduleTime] = useState('');
+
   // Lookup maps
   const [clients, setClients] = useState<Record<string, { name: string; email: string }>>({});
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
