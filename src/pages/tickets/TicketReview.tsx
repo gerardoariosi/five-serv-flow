@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Check, XCircle, Send, AlertTriangle, Clock } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
+import SendPMReportModal from '@/components/tickets/SendPMReportModal';
 
 const TicketReview = () => {
   const { id } = useParams();
@@ -20,6 +21,9 @@ const TicketReview = () => {
   const [photos, setPhotos] = useState<any[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState(false);
+  const [property, setProperty] = useState<{ name: string; address: string } | null>(null);
+  const [pmEmail, setPmEmail] = useState<string>('');
+  const [showPMReport, setShowPMReport] = useState(false);
 
   // Reject modal
   const [showReject, setShowReject] = useState(false);
@@ -42,6 +46,18 @@ const TicketReview = () => {
     (uRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
     setApproved(tRes.data?.status === 'closed');
+
+    if (tRes.data?.property_id) {
+      const { data: prop } = await supabase
+        .from('properties').select('name, address').eq('id', tRes.data.property_id).single();
+      if (prop) setProperty({ name: prop.name ?? '', address: prop.address ?? '' });
+    }
+    if (tRes.data?.client_id) {
+      const { data: cli } = await supabase
+        .from('clients').select('email').eq('id', tRes.data.client_id).single();
+      setPmEmail(cli?.email ?? '');
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -233,11 +249,22 @@ const TicketReview = () => {
           <p className="text-xs text-muted-foreground">
             Approved by {ticket.approved_by ? users[ticket.approved_by] : '—'} · {ticket.closed_at ? new Date(ticket.closed_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : ''}
           </p>
-          <Button variant="outline" onClick={() => toast.info('PM report sending will be available with email integration')}>
+          <Button variant="outline" onClick={() => setShowPMReport(true)}>
             <Send className="w-4 h-4 mr-2" /> Send Report to PM
           </Button>
         </div>
       )}
+
+      <SendPMReportModal
+        open={showPMReport}
+        onOpenChange={setShowPMReport}
+        ticket={ticket}
+        propertyName={property?.name}
+        propertyAddress={property?.address}
+        technicianName={ticket?.technician_id ? users[ticket.technician_id] : ''}
+        pmEmail={pmEmail}
+        photos={photos}
+      />
     </div>
   );
 };
