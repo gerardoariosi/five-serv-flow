@@ -79,12 +79,6 @@ const Login = () => {
 
       <div className="w-full max-w-md relative">
         <div className="relative">
-          {/* Gold glow behind logo */}
-          <div
-            aria-hidden
-            className="absolute inset-x-0 -top-4 h-32 pointer-events-none"
-            style={{ background: 'radial-gradient(circle at center, rgba(255,215,0,0.15), transparent 60%)' }}
-          />
           <FiveServLogo />
         </div>
 
