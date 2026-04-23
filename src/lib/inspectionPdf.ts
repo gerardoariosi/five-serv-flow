@@ -1,4 +1,28 @@
 import jsPDF from 'jspdf';
+import {
+  addBlackHeader,
+  addFooter,
+  addSectionTitle,
+  addInfoTableRow,
+  addSummaryBox,
+  drawItemTableHeader,
+  drawItemTableRow,
+  drawStatusPill,
+  statusColor,
+  checkPageBreak,
+  GOLD,
+  BLACK,
+  DARK_TEXT,
+  MUTED,
+  ORANGE,
+  WHITE,
+  ALT_ROW,
+  MARGIN_X,
+  CONTENT_W,
+  PAGE_W,
+  HEADER_H,
+  type ItemColumn,
+} from './pdfHelpers';
 
 interface InspectionData {
   inspection: any;
@@ -8,103 +32,37 @@ interface InspectionData {
   properties: Record<string, string>;
 }
 
-const GOLD: [number, number, number] = [255, 215, 0];
-const BLACK: [number, number, number] = [0, 0, 0];
-const DARK_TEXT: [number, number, number] = [33, 33, 33];
-const MUTED: [number, number, number] = [120, 120, 120];
-const LIGHT_BG: [number, number, number] = [245, 245, 245];
-const GREEN: [number, number, number] = [34, 150, 70];
-const RED: [number, number, number] = [200, 40, 40];
-const ORANGE: [number, number, number] = [210, 100, 20];
-const WHITE: [number, number, number] = [255, 255, 255];
+const ITEM_COLUMNS: ItemColumn[] = [
+  { key: 'name', label: 'Item', x: MARGIN_X + 3, align: 'left' },
+  { key: 'status', label: 'Status', x: MARGIN_X + 95, align: 'left' },
+  { key: 'qty', label: 'Qty', x: MARGIN_X + 130, align: 'center' },
+  { key: 'unit', label: 'Unit Price', x: MARGIN_X + 155, align: 'right' },
+  { key: 'total', label: 'Total', x: MARGIN_X + CONTENT_W - 3, align: 'right' },
+];
 
-function addHeader(doc: jsPDF, subtitle: string) {
-  // White header with gold accent line
-  doc.setFillColor(...WHITE);
-  doc.rect(0, 0, 210, 36, 'F');
-  doc.setFillColor(...GOLD);
-  doc.rect(0, 34, 210, 2, 'F');
-
-  // FiveServ wordmark: "F" in gold, "iveServ" in black
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...GOLD);
-  doc.text('F', 15, 18);
-  const fWidth = doc.getTextWidth('F');
-  doc.setTextColor(...BLACK);
-  doc.text('iveServ', 15 + fWidth, 18);
-
-  // Subtitle
-  doc.setTextColor(...MUTED);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(subtitle, 15, 27);
-}
-
-function addFooter(doc: jsPDF) {
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    // Tagline footer
-    doc.setFillColor(...GOLD);
-    doc.rect(0, 286, 210, 0.5, 'F');
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(7);
-    doc.text('One Team. One Call. Done.', 15, 292);
-    doc.text(`Page ${i} of ${pageCount}`, 180, 292);
-  }
-}
-
-function addSectionTitle(doc: jsPDF, y: number, text: string): number {
-  if (y > 260) { doc.addPage(); y = 20; }
-  doc.setFillColor(...GOLD);
-  doc.rect(15, y, 3, 8, 'F');
-  doc.setTextColor(...DARK_TEXT);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(text, 22, y + 6);
-  return y + 14;
-}
-
-function addInfoRow(doc: jsPDF, y: number, label: string, value: string): number {
-  if (y > 270) { doc.addPage(); y = 20; }
-  doc.setTextColor(...MUTED);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(label, 20, y);
-  doc.setTextColor(...DARK_TEXT);
-  doc.setFontSize(10);
-  doc.text(value || '—', 65, y);
-  return y + 7;
-}
-
-function statusColor(status: string): [number, number, number] {
-  if (status === 'good') return GREEN;
-  if (status === 'urgent') return RED;
-  return ORANGE;
-}
-
-function checkPageBreak(doc: jsPDF, y: number, needed: number = 20): number {
-  if (y + needed > 280) { doc.addPage(); return 20; }
-  return y;
+function statusLabel(s: string): string {
+  if (s === 'good') return 'Good';
+  if (s === 'urgent') return 'Urgent';
+  return 'Needs Repair';
 }
 
 export function generateFiveServPdf(data: InspectionData): jsPDF {
   const { inspection, items, photos, clients, properties } = data;
   const doc = new jsPDF();
 
-  addHeader(doc, `${inspection.ins_number ?? 'No INS#'} — Full Internal Report`);
+  const propertyName = inspection.property_id ? properties[inspection.property_id] ?? '—' : '—';
+  addBlackHeader(doc, { propertyName, docType: `${inspection.ins_number ?? 'No INS#'} · Internal Report` });
 
-  let y = 44;
+  let y = HEADER_H + 8;
 
   // Info section
   y = addSectionTitle(doc, y, 'Inspection Details');
-  y = addInfoRow(doc, y, 'INS Number', inspection.ins_number ?? '—');
-  y = addInfoRow(doc, y, 'Property', inspection.property_id ? properties[inspection.property_id] ?? '—' : '—');
-  y = addInfoRow(doc, y, 'Client / PM', inspection.client_id ? clients[inspection.client_id] ?? '—' : '—');
-  y = addInfoRow(doc, y, 'Visit Date', inspection.visit_date ?? '—');
-  y = addInfoRow(doc, y, 'Status', inspection.status ?? '—');
-  y = addInfoRow(doc, y, 'Configuration',
+  y = addInfoTableRow(doc, y, 'INS Number', inspection.ins_number ?? '—');
+  y = addInfoTableRow(doc, y, 'Property', propertyName);
+  y = addInfoTableRow(doc, y, 'Client / PM', inspection.client_id ? clients[inspection.client_id] ?? '—' : '—');
+  y = addInfoTableRow(doc, y, 'Visit Date', inspection.visit_date ?? '—');
+  y = addInfoTableRow(doc, y, 'Status', inspection.status ?? '—');
+  y = addInfoTableRow(doc, y, 'Configuration',
     `${inspection.bedrooms ?? 0}BR · ${inspection.bathrooms ?? 0}BA · ${inspection.living_rooms ?? 0}LR` +
     (inspection.has_garage ? ' · Garage' : '') +
     (inspection.has_laundry ? ' · Laundry' : '') +
@@ -126,7 +84,6 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
     photosByArea[area].push(p);
   });
 
-  // All areas
   const allAreas = new Set([...Object.keys(itemsByArea), ...Object.keys(photosByArea)]);
 
   y = addSectionTitle(doc, y, 'Inspection Items');
@@ -135,100 +92,97 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
   let totalValue = 0;
 
   for (const area of allAreas) {
-    y = checkPageBreak(doc, y, 20);
+    y = checkPageBreak(doc, y, 24);
 
-    // Area header
-    doc.setFillColor(...LIGHT_BG);
-    doc.roundedRect(15, y, 180, 8, 2, 2, 'F');
+    // Area sub-header (gold accent)
     doc.setTextColor(...GOLD);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(area.replace(/_/g, ' ').toUpperCase(), 20, y + 6);
-    y += 12;
+    doc.text(area.replace(/_/g, ' ').toUpperCase(), MARGIN_X + 2, y + 4);
+    y += 8;
 
-    // Items for this area
+    // Column headers
+    y = drawItemTableHeader(doc, y, ITEM_COLUMNS);
+
+    // Items rows
     const areaItems = itemsByArea[area] ?? [];
-    for (const item of areaItems) {
-      y = checkPageBreak(doc, y, 12);
-
+    areaItems.forEach((item, idx) => {
+      y = checkPageBreak(doc, y, 10);
       const color = statusColor(item.status ?? 'needs_repair');
-      const price = (item.quantity ?? 1) * (item.unit_price ?? 0);
+      const qty = item.quantity ?? 1;
+      const unit = item.unit_price ?? 0;
+      const price = qty * unit;
       totalItems++;
       totalValue += price;
 
-      doc.setFillColor(...color);
-      doc.circle(20, y - 1, 1.5, 'F');
+      const rowH = 8;
+      y = drawItemTableRow(doc, y, idx, rowH, (rowY) => {
+        // Item name
+        doc.setTextColor(...DARK_TEXT);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const nameTrim = doc.splitTextToSize(item.item_name ?? '', 78)[0] ?? '';
+        doc.text(nameTrim, MARGIN_X + 3, rowY + 5.2);
+        // Status pill
+        drawStatusPill(doc, MARGIN_X + 95, rowY + 5.2, statusLabel(item.status ?? 'needs_repair'), color);
+        // Qty
+        doc.setTextColor(...DARK_TEXT);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(qty), MARGIN_X + 130, rowY + 5.2, { align: 'center' });
+        // Unit price
+        doc.text(`$${unit.toFixed(2)}`, MARGIN_X + 155, rowY + 5.2, { align: 'right' });
+        // Total
+        doc.setFont('helvetica', 'bold');
+        doc.text(`$${price.toFixed(2)}`, MARGIN_X + CONTENT_W - 3, rowY + 5.2, { align: 'right' });
+      });
 
-      doc.setTextColor(...DARK_TEXT);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.item_name ?? '', 25, y);
-
-      doc.setTextColor(...color);
-      doc.setFontSize(8);
-      const statusText = item.status === 'good' ? 'Good' : item.status === 'urgent' ? 'Urgent' : 'Needs Repair';
-      doc.text(statusText, 130, y);
-
-      doc.setTextColor(...DARK_TEXT);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`$${price.toFixed(2)}`, 170, y);
-
-      y += 5;
-
+      // Notes (below row)
       if (item.item_note) {
-        y = checkPageBreak(doc, y, 8);
+        y = checkPageBreak(doc, y, 6);
         doc.setTextColor(...ORANGE);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        const itemNoteLines = doc.splitTextToSize(`→ ${item.item_note}`, 160);
-        doc.text(itemNoteLines, 25, y);
-        y += itemNoteLines.length * 4;
+        const lines = doc.splitTextToSize(`→ ${item.item_note}`, CONTENT_W - 8);
+        doc.text(lines, MARGIN_X + 5, y + 3);
+        y += lines.length * 3.5 + 1;
       }
-
       if (item.note) {
-        y = checkPageBreak(doc, y, 8);
+        y = checkPageBreak(doc, y, 6);
         doc.setTextColor(...MUTED);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        const noteLines = doc.splitTextToSize(`Area note: ${item.note}`, 160);
-        doc.text(noteLines, 25, y);
-        y += noteLines.length * 4;
+        const lines = doc.splitTextToSize(`Area note: ${item.note}`, CONTENT_W - 8);
+        doc.text(lines, MARGIN_X + 5, y + 3);
+        y += lines.length * 3.5 + 1;
       }
-      y += 2;
-    }
+    });
 
-    // Photos for this area (as placeholders — we can't fetch images into jsPDF client-side easily)
+    // Photo count line
     const areaPhotos = photosByArea[area] ?? [];
     if (areaPhotos.length > 0) {
-      y = checkPageBreak(doc, y, 10);
+      y = checkPageBreak(doc, y, 8);
       doc.setTextColor(...MUTED);
       doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`📷 ${areaPhotos.length} photo${areaPhotos.length > 1 ? 's' : ''} captured for this area`, 25, y);
-      y += 6;
+      doc.setFont('helvetica', 'italic');
+      doc.text(`📷 ${areaPhotos.length} photo${areaPhotos.length > 1 ? 's' : ''} captured for this area`, MARGIN_X + 3, y + 4);
+      y += 7;
     }
-
-    y += 3;
+    y += 4;
   }
 
   // Summary
-  y += 5;
+  y += 4;
   y = checkPageBreak(doc, y, 30);
   y = addSectionTitle(doc, y, 'Summary');
-  doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(15, y, 180, 20, 3, 3, 'F');
+  // Items count line
   doc.setTextColor(...MUTED);
   doc.setFontSize(9);
-  doc.text('Total Items:', 20, y + 8);
-  doc.setTextColor(...DARK_TEXT);
-  doc.text(String(totalItems), 55, y + 8);
-  doc.setTextColor(...MUTED);
-  doc.text('Total Value:', 20, y + 16);
-  doc.setTextColor(...GOLD);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`$${totalValue.toFixed(2)}`, 55, y + 16);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Total Items: ${totalItems}`, MARGIN_X + 2, y + 4);
+  y += 9;
+  // Gold-bordered total box
+  y = addSummaryBox(doc, y, 18, 'Total Value', `$${totalValue.toFixed(2)}`);
 
   addFooter(doc);
   return doc;
@@ -238,16 +192,17 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
   const { inspection, items, clients, properties } = data;
   const doc = new jsPDF();
 
-  addHeader(doc, `${inspection.ins_number ?? 'No INS#'} — Property Manager Version`);
+  const propertyName = inspection.property_id ? properties[inspection.property_id] ?? '—' : '—';
+  addBlackHeader(doc, { propertyName, docType: `${inspection.ins_number ?? 'No INS#'} · PM Version` });
 
-  let y = 44;
+  let y = HEADER_H + 8;
 
   y = addSectionTitle(doc, y, 'Inspection Details');
-  y = addInfoRow(doc, y, 'INS Number', inspection.ins_number ?? '—');
-  y = addInfoRow(doc, y, 'Property', inspection.property_id ? properties[inspection.property_id] ?? '—' : '—');
-  y = addInfoRow(doc, y, 'Client / PM', inspection.client_id ? clients[inspection.client_id] ?? '—' : '—');
-  y = addInfoRow(doc, y, 'Visit Date', inspection.visit_date ?? '—');
-  y = addInfoRow(doc, y, 'Submitted', inspection.pm_submitted_at
+  y = addInfoTableRow(doc, y, 'INS Number', inspection.ins_number ?? '—');
+  y = addInfoTableRow(doc, y, 'Property', propertyName);
+  y = addInfoTableRow(doc, y, 'Client / PM', inspection.client_id ? clients[inspection.client_id] ?? '—' : '—');
+  y = addInfoTableRow(doc, y, 'Visit Date', inspection.visit_date ?? '—');
+  y = addInfoTableRow(doc, y, 'Submitted', inspection.pm_submitted_at
     ? new Date(inspection.pm_submitted_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })
     : '—');
   y += 5;
@@ -258,59 +213,62 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
   if (pmSelected.length === 0) {
     doc.setTextColor(...MUTED);
     doc.setFontSize(10);
-    doc.text('No items were selected by the PM.', 20, y);
+    doc.setFont('helvetica', 'italic');
+    doc.text('No items were selected by the PM.', MARGIN_X + 2, y + 2);
     y += 10;
   } else {
-    for (const item of pmSelected) {
-      const hasItemNote = !!item.item_note;
-      const hasPmNote = !!item.pm_note;
-      const noteHeight = 12 + (hasItemNote ? 6 : 0) + (hasPmNote ? 6 : 0);
-      y = checkPageBreak(doc, y, noteHeight + 4);
+    // Table header
+    y = drawItemTableHeader(doc, y, ITEM_COLUMNS);
 
-      const price = (item.quantity ?? 1) * (item.unit_price ?? 0);
-      doc.setFillColor(...LIGHT_BG);
-      doc.roundedRect(15, y, 180, noteHeight, 2, 2, 'F');
+    pmSelected.forEach((item, idx) => {
+      y = checkPageBreak(doc, y, 10);
+      const color = statusColor(item.status ?? 'needs_repair');
+      const qty = item.quantity ?? 1;
+      const unit = item.unit_price ?? 0;
+      const price = qty * unit;
 
-      doc.setTextColor(...DARK_TEXT);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.item_name ?? '', 20, y + 7);
+      const rowH = 8;
+      y = drawItemTableRow(doc, y, idx, rowH, (rowY) => {
+        doc.setTextColor(...DARK_TEXT);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const nameTrim = doc.splitTextToSize(item.item_name ?? '', 78)[0] ?? '';
+        doc.text(nameTrim, MARGIN_X + 3, rowY + 5.2);
+        drawStatusPill(doc, MARGIN_X + 95, rowY + 5.2, statusLabel(item.status ?? 'needs_repair'), color);
+        doc.setTextColor(...DARK_TEXT);
+        doc.setFontSize(9);
+        doc.text(String(qty), MARGIN_X + 130, rowY + 5.2, { align: 'center' });
+        doc.text(`$${unit.toFixed(2)}`, MARGIN_X + 155, rowY + 5.2, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(`$${price.toFixed(2)}`, MARGIN_X + CONTENT_W - 3, rowY + 5.2, { align: 'right' });
+      });
 
-      doc.setTextColor(...GOLD);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`$${price.toFixed(2)}`, 170, y + 7);
-
-      let noteY = y + 12;
-      if (hasItemNote) {
+      // Notes
+      if (item.item_note) {
+        y = checkPageBreak(doc, y, 6);
         doc.setTextColor(...ORANGE);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        doc.text(`Tech: ${item.item_note}`, 20, noteY);
-        noteY += 5;
+        const lines = doc.splitTextToSize(`Tech: ${item.item_note}`, CONTENT_W - 8);
+        doc.text(lines, MARGIN_X + 5, y + 3);
+        y += lines.length * 3.5 + 1;
       }
-      if (hasPmNote) {
+      if (item.pm_note) {
+        y = checkPageBreak(doc, y, 6);
         doc.setTextColor(...MUTED);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
-        doc.text(`PM: "${item.pm_note}"`, 20, noteY);
+        const lines = doc.splitTextToSize(`PM: "${item.pm_note}"`, CONTENT_W - 8);
+        doc.text(lines, MARGIN_X + 5, y + 3);
+        y += lines.length * 3.5 + 1;
       }
-
-      y += noteHeight + 4;
-    }
+    });
   }
 
   // Approved total
   y += 5;
   y = checkPageBreak(doc, y, 25);
-  y = addSectionTitle(doc, y, 'Approved Total');
-  doc.setFillColor(...LIGHT_BG);
-  doc.roundedRect(15, y, 180, 14, 3, 3, 'F');
-  doc.setTextColor(...GOLD);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`$${(inspection.pm_total_selected ?? 0).toFixed(2)}`, 20, y + 10);
-  y += 20;
+  y = addSummaryBox(doc, y, 20, 'Approved Total', `$${(inspection.pm_total_selected ?? 0).toFixed(2)}`);
 
   // PM general note
   if (inspection.pm_general_note) {
@@ -319,8 +277,8 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'italic');
-    const noteLines = doc.splitTextToSize(`"${inspection.pm_general_note}"`, 170);
-    doc.text(noteLines, 20, y);
+    const noteLines = doc.splitTextToSize(`"${inspection.pm_general_note}"`, CONTENT_W - 4);
+    doc.text(noteLines, MARGIN_X + 2, y + 2);
     y += noteLines.length * 5 + 5;
   }
 
@@ -330,17 +288,13 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     y = addSectionTitle(doc, y, 'PM Signature');
     doc.setTextColor(...MUTED);
     doc.setFontSize(8);
-    doc.text('Digital signature captured and stored on file.', 20, y);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Digital signature captured and stored on file.', MARGIN_X + 2, y + 2);
   }
 
   addFooter(doc);
   return doc;
 }
 
-export function downloadPdf(doc: jsPDF, filename: string) {
-  doc.save(filename);
-}
-
-export function pdfToBase64(doc: jsPDF): string {
-  return doc.output('datauristring').split(',')[1];
-}
+// Re-export helpers for backward compatibility
+export { downloadPdf, pdfToBase64 } from './pdfHelpers';

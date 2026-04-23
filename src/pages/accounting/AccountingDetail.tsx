@@ -13,6 +13,7 @@ import { ArrowLeft, Save, FileDown, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 import { format } from 'date-fns';
+import { generateTicketAccountingPdf } from '@/lib/ticketPdf';
 
 const AccountingDetail = () => {
   const { id } = useParams();
@@ -198,7 +199,24 @@ const AccountingDetail = () => {
             <Button onClick={handleSave} disabled={saving} className="flex-1">
               <Save className="w-4 h-4 mr-2" /> {saving ? 'Saving...' : 'Save Billing Info'}
             </Button>
-            <Button variant="outline" onClick={() => toast.info('Exporting PDF...')}>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const doc = await generateTicketAccountingPdf({
+                    ticket,
+                    photos,
+                    technicianName: technician?.full_name ?? null,
+                    approverName: approver?.full_name ?? null,
+                  });
+                  doc.save(`${ticket.fs_number || 'ticket'}-billing.pdf`);
+                  toast.success('PDF downloaded');
+                } catch (err) {
+                  console.error(err);
+                  toast.error('Failed to generate PDF');
+                }
+              }}
+            >
               <FileDown className="w-4 h-4" />
             </Button>
           </div>
