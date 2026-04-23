@@ -1,9 +1,10 @@
 const FiveServLogo = () => (
-  <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+  <div style={{ textAlign: 'center', marginBottom: '24px', overflow: 'hidden' }}>
     <img
       src="/FiveServ_Logo_2_No_BG.png"
       alt="FiveServ"
-      className="h-16 w-auto mx-auto"
+      className="mx-auto"
+      style={{ height: '220px', width: 'auto', marginTop: '-60px', marginBottom: '-60px' }}
     />
   </div>
 );
