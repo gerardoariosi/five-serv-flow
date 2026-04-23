@@ -291,8 +291,6 @@ const PMPortal = () => {
               <img
                 src="/FiveServ_Logo_2_No_BG.png"
                 alt="FiveServ"
-                loading="eager"
-                decoding="sync"
                 style={{ height: '100px', width: 'auto', marginTop: '-28px', marginBottom: '-28px' }}
               />
               <div className="text-[9px] tracking-[0.2em] mt-2" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
