@@ -191,12 +191,9 @@ const EstimatePortal = () => {
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center">
-            <div className="inline-block bg-[#1A1A1A] px-6 py-3 rounded">
-              <div className="text-2xl font-bold leading-none">
-                <span style={{ color: '#FFD700' }}>F</span>
-                <span className="text-white">iveServ</span>
-              </div>
-              <div className="text-[9px] tracking-[0.2em] mt-1" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
+            <div className="inline-block bg-[#1A1A1A] px-6 py-4 rounded">
+              <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" className="h-10 w-auto" />
+              <div className="text-[9px] tracking-[0.2em] mt-2" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
             </div>
             <h1 className="text-xl font-bold text-gray-900 mt-4">Estimate</h1>
             <p className="text-sm text-gray-500 mt-1">Enter your access PIN to view this estimate.</p>
@@ -254,10 +251,7 @@ const EstimatePortal = () => {
         <div className="bg-[#1A1A1A] px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex-1" />
-            <div className="text-2xl font-bold leading-none tracking-tight">
-              <span style={{ color: '#FFD700' }}>F</span>
-              <span className="text-white">iveServ</span>
-            </div>
+            <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" className="h-10 w-auto" />
             <div className="flex-1 flex justify-end">
               {readOnly && (
                 <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] uppercase tracking-wider">Approved</Badge>
@@ -451,10 +445,7 @@ const EstimatePortal = () => {
       <footer className="mt-12 bg-[#1A1A1A] text-white">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <div className="text-lg font-bold leading-none">
-            <span style={{ color: '#FFD700' }}>F</span>
-            <span className="text-white">iveServ</span>
-          </div>
+          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" className="h-8 w-auto mx-auto" />
           <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
           <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
           <p className="text-[11px] text-gray-300">
