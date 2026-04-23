@@ -358,14 +358,57 @@ const TicketWork = () => {
 
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
-                  <span className="text-sm text-primary font-medium">Upload Start Photo {!hasStartPhoto && '(required)'}</span>
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('start')} />
+                  <span className="text-sm text-primary font-medium">Upload Evaluation Photo {!hasEvaluationPhoto && '(required)'}</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('evaluation')} />
                 </label>
 
-                <Button className="w-full" size="lg" onClick={() => advanceStep('working')} disabled={!hasStartPhoto}>
-                  <Wrench className="w-5 h-5 mr-2" /> Start Working
+                <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                  <Label>What did you find?</Label>
+                  <Textarea
+                    value={evaluationText}
+                    onChange={e => setEvaluationText(e.target.value)}
+                    rows={4}
+                    placeholder="Describe what you found at the property..."
+                  />
+                </div>
+
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={!hasEvaluationPhoto || !evaluationText.trim() || submittingEval}
+                  onClick={async () => {
+                    if (!user) return;
+                    setSubmittingEval(true);
+                    await supabase.from('tickets').update({
+                      status: 'pending_evaluation',
+                      evaluation_description: evaluationText.trim(),
+                      evaluation_submitted_at: new Date().toISOString(),
+                    } as any).eq('id', id);
+                    await supabase.from('ticket_timeline').insert({
+                      ticket_id: id, from_status: ticket.status, to_status: 'pending_evaluation',
+                      changed_by: user.id, note: `Evaluation submitted: ${evaluationText.trim().slice(0, 200)}`,
+                    });
+                    toast.success('Evaluation submitted');
+                    setSubmittingEval(false);
+                    fetchData();
+                  }}
+                >
+                  {submittingEval ? <Spinner size="sm" /> : <><Send className="w-5 h-5 mr-2" /> Submit to Admin</>}
                 </Button>
               </>
+            )}
+            {currentStep === 'evaluation' && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6 text-center space-y-3">
+                <CheckCircle className="w-10 h-10 text-yellow-500 mx-auto" />
+                <p className="text-foreground font-medium">Evaluation submitted</p>
+                <p className="text-sm text-muted-foreground">Waiting for admin decision.</p>
+                {ticket.evaluation_description && (
+                  <div className="text-left bg-background rounded p-3 mt-3 border border-border">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Your Evaluation</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.evaluation_description}</p>
+                  </div>
+                )}
+              </div>
             )}
             {currentStep === 'working' && (
               <>
