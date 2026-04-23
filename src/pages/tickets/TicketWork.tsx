@@ -338,33 +338,56 @@ const TicketWork = () => {
                 <Navigation className="w-5 h-5 mr-2" /> En Camino
               </Button>
             )}
-            {(currentStep === 'en_camino' || currentStep === 'start_work') && ticket.status === 'in_progress' && !ticket.work_started_at && (
+            {currentStep === 'llegue' && (
               <>
                 <Button className="w-full" size="lg" variant="outline" onClick={() => advanceStep('llegue')}>
                   <MapPin className="w-5 h-5 mr-2" /> Llegué
                 </Button>
 
-                {/* Photo upload for start */}
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
                   <span className="text-sm text-primary font-medium">Upload Start Photo {!hasStartPhoto && '(required)'}</span>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('start')} />
                 </label>
 
-                <Button className="w-full" size="lg" onClick={() => advanceStep('start_work')} disabled={!hasStartPhoto}>
-                  <Wrench className="w-5 h-5 mr-2" /> Start Work
+                <Button className="w-full" size="lg" onClick={() => advanceStep('working')} disabled={!hasStartPhoto}>
+                  <Wrench className="w-5 h-5 mr-2" /> Start Working
                 </Button>
               </>
             )}
-            {currentStep === 'in_progress' && (
+            {currentStep === 'working' && (
               <>
+                {/* Checklist */}
+                {(() => {
+                  const items = getChecklistFor(ticket.work_type);
+                  if (items.length === 0) return null;
+                  const progress = (ticket.checklist_progress ?? {}) as Record<string, boolean>;
+                  const done = items.filter(i => progress[i]).length;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-foreground">Checklist</h3>
+                        <span className="text-xs text-muted-foreground">{done} / {items.length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {items.map(item => (
+                          <label key={item} className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox checked={!!progress[item]} onCheckedChange={() => toggleChecklistItem(item)} />
+                            <span className={`text-sm ${progress[item] ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
                   <span className="text-sm text-muted-foreground">Upload Progress Photo</span>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('process')} />
                 </label>
 
-                <Button className="w-full" size="lg" onClick={() => advanceStep('mark_complete')}>
+                <Button className="w-full" size="lg" onClick={() => advanceStep('ready_for_review')}>
                   <CheckCircle className="w-5 h-5 mr-2" /> Mark Complete
                 </Button>
               </>
