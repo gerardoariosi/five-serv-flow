@@ -287,11 +287,15 @@ const PMPortal = () => {
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-yellow-600" />
+            <div className="inline-block bg-[#1A1A1A] px-6 py-3 rounded">
+              <div className="text-2xl font-bold leading-none">
+                <span style={{ color: '#FFD700' }}>F</span>
+                <span className="text-white">iveServ</span>
+              </div>
+              <div className="text-[9px] tracking-[0.2em] mt-1" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">FiveServ Inspection</h1>
-            <p className="text-sm text-gray-500 mt-1">Enter your access PIN to view the inspection report.</p>
+            <h1 className="text-xl font-bold text-gray-900 mt-4">Inspection Report</h1>
+            <p className="text-sm text-gray-500 mt-1">Enter your access PIN to view this report.</p>
           </div>
           <div className="space-y-3">
             <Input
