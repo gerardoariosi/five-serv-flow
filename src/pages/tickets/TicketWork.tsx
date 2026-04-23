@@ -47,6 +47,10 @@ const TicketWork = () => {
   const [closeNote, setCloseNote] = useState('');
   const [closePhoto, setClosePhoto] = useState<File | null>(null);
 
+  // Evaluation
+  const [evaluationText, setEvaluationText] = useState('');
+  const [submittingEval, setSubmittingEval] = useState(false);
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
