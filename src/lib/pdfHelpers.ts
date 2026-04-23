@@ -26,20 +26,65 @@ export interface HeaderOpts {
   docType?: string;
 }
 
+// ============= Logo loader (cached) =============
+let logoDataUrlCache: string | null | undefined;
+async function loadLogoDataUrl(): Promise<string | null> {
+  if (logoDataUrlCache !== undefined) return logoDataUrlCache;
+  try {
+    const res = await fetch('/FiveServ_Logo_2_No_BG.png');
+    if (!res.ok) throw new Error('logo fetch failed');
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    logoDataUrlCache = dataUrl;
+    return dataUrl;
+  } catch {
+    logoDataUrlCache = null;
+    return null;
+  }
+}
+
+// Pre-warm the logo cache so synchronous addBlackHeader can use it
+export async function preloadPdfAssets(): Promise<void> {
+  await loadLogoDataUrl();
+}
+
 // ============= Black header with gold accent =============
 export function addBlackHeader(doc: jsPDF, opts: HeaderOpts = {}) {
   // Black background
   doc.setFillColor(...BLACK);
   doc.rect(0, 0, PAGE_W, HEADER_H, 'F');
 
-  // FiveServ wordmark — F gold, iveServ white
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...GOLD);
-  doc.text('F', MARGIN_X, 22);
-  const fWidth = doc.getTextWidth('F');
-  doc.setTextColor(...WHITE);
-  doc.text('iveServ', MARGIN_X + fWidth, 22);
+  // Try image logo first (must be preloaded via preloadPdfAssets)
+  const logo = logoDataUrlCache;
+  if (logo) {
+    try {
+      // Logo height ~14mm, preserves aspect via auto width
+      doc.addImage(logo, 'PNG', MARGIN_X, 8, 0, 14);
+    } catch {
+      // fallback to text wordmark
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...GOLD);
+      doc.text('F', MARGIN_X, 22);
+      const fWidth = doc.getTextWidth('F');
+      doc.setTextColor(...WHITE);
+      doc.text('iveServ', MARGIN_X + fWidth, 22);
+    }
+  } else {
+    // Fallback wordmark
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...GOLD);
+    doc.text('F', MARGIN_X, 22);
+    const fWidth = doc.getTextWidth('F');
+    doc.setTextColor(...WHITE);
+    doc.text('iveServ', MARGIN_X + fWidth, 22);
+  }
 
   // Tagline below wordmark
   doc.setFontSize(7);
