@@ -368,9 +368,8 @@ const PMPortal = () => {
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         {/* Property + INS subtitle */}
         <div className="bg-white border-b border-gray-200 px-4 py-2">
-          <div className="max-w-2xl mx-auto flex items-center justify-between text-xs text-gray-500">
+          <div className="max-w-2xl mx-auto flex items-center text-xs text-gray-500">
             <span className="truncate">{property?.name || property?.address || 'Property'}</span>
-            <span className="font-medium text-gray-700">{inspection.ins_number || '—'}</span>
           </div>
         </div>
       </div>
@@ -391,7 +390,7 @@ const PMPortal = () => {
                   ? new Date(inspection.visit_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                   : '—'}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">Inspection {inspection.ins_number || ''}</p>
+              
             </div>
           </div>
         </div>
@@ -617,7 +616,7 @@ const PMPortal = () => {
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
           <div><span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}><span style={{ color: '#FFD700' }}>F</span><span style={{ color: '#FFFFFF' }}>iveServ</span></span></div>
-          <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
+          <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>One Team. One Call. Done.</p>
           <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
           <p className="text-[11px] text-gray-300">
             <a href="mailto:info@fiveserv.net" className="hover:text-white">info@fiveserv.net</a>
