@@ -864,6 +864,7 @@ export type Database = {
           appointment_time: string | null
           approved_by: string | null
           billing_status: string | null
+          checklist_progress: Json
           client_id: string | null
           closed_at: string | null
           created_at: string | null
@@ -891,6 +892,7 @@ export type Database = {
           appointment_time?: string | null
           approved_by?: string | null
           billing_status?: string | null
+          checklist_progress?: Json
           client_id?: string | null
           closed_at?: string | null
           created_at?: string | null
@@ -918,6 +920,7 @@ export type Database = {
           appointment_time?: string | null
           approved_by?: string | null
           billing_status?: string | null
+          checklist_progress?: Json
           client_id?: string | null
           closed_at?: string | null
           created_at?: string | null

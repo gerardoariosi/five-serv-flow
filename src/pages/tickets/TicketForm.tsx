@@ -292,6 +292,35 @@ const TicketForm = () => {
         }
       }
 
+      // Email the technician if newly assigned
+      if (!asDraft && form.technician_id) {
+        try {
+          const tech = technicians.find((t: any) => t.id === form.technician_id);
+          const { data: techUser } = await supabase
+            .from('users').select('email, full_name').eq('id', form.technician_id).single();
+          const prop = properties.find((p: any) => p.id === form.property_id);
+          if (techUser?.email) {
+            await supabase.functions.invoke('send-business-email', {
+              body: {
+                template_name: 'technician_assigned',
+                to_email: techUser.email,
+                variables: {
+                  fs_number: fsNumber ?? '',
+                  property_name: prop?.name ?? '',
+                  work_type: (form.work_type ?? '').replace('-', ' '),
+                  appointment_time: form.appointment_time
+                    ? new Date(form.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' })
+                    : 'Not scheduled',
+                  technician_name: techUser?.full_name ?? tech?.full_name ?? '',
+                },
+              },
+            });
+          }
+        } catch {
+          // non-blocking
+        }
+      }
+
       navigate('/tickets');
     } catch {
       toast.error('Error saving ticket');

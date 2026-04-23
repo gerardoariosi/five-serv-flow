@@ -12,16 +12,16 @@ import { toast } from 'sonner';
 import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wrench, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { getChecklistFor } from '@/lib/workChecklists';
 
-type WorkStep = 'en_camino' | 'llegue' | 'start_work' | 'in_progress' | 'mark_complete' | 'ready_for_review';
+type WorkStep = 'en_camino' | 'llegue' | 'working' | 'ready_for_review';
 
-const stepOrder: WorkStep[] = ['en_camino', 'llegue', 'start_work', 'in_progress', 'mark_complete', 'ready_for_review'];
+const stepOrder: WorkStep[] = ['en_camino', 'llegue', 'working', 'ready_for_review'];
 const stepLabels: Record<WorkStep, string> = {
   en_camino: 'En Camino',
   llegue: 'Llegué',
-  start_work: 'Start Work',
-  in_progress: 'In Progress',
-  mark_complete: 'Mark Complete',
+  working: 'Working',
   ready_for_review: 'Ready for Review',
 };
 
@@ -91,10 +91,9 @@ const TicketWork = () => {
     if (!ticket) return 'en_camino';
     const status = ticket.status;
     if (status === 'open') return 'en_camino';
-    if (status === 'in_progress' && !ticket.work_started_at) return 'start_work';
-    if (status === 'in_progress') return 'in_progress';
+    if (status === 'in_progress') return ticket.work_started_at ? 'working' : 'llegue';
+    if (status === 'paused') return 'working';
     if (status === 'ready_for_review') return 'ready_for_review';
-    if (status === 'paused') return 'in_progress';
     return 'en_camino';
   };
 
@@ -144,8 +143,8 @@ const TicketWork = () => {
   const advanceStep = async (step: WorkStep) => {
     if (!ticket || !user) return;
 
-    if (step === 'start_work' && !hasStartPhoto) {
-      toast.error('You must upload at least 1 photo before starting work');
+    if (step === 'working' && !hasStartPhoto) {
+      toast.error('Upload at least 1 photo before starting work');
       return;
     }
 
@@ -156,11 +155,10 @@ const TicketWork = () => {
       newStatus = 'in_progress';
     } else if (step === 'llegue') {
       newStatus = 'in_progress';
-    } else if (step === 'start_work') {
+    } else if (step === 'working') {
       newStatus = 'in_progress';
       updates.work_started_at = new Date().toISOString();
-    } else if (step === 'mark_complete') {
-      // Handled by complete modal
+    } else if (step === 'ready_for_review') {
       setShowComplete(true);
       return;
     }
@@ -173,6 +171,14 @@ const TicketWork = () => {
     });
     toast.success(stepLabels[step]);
     fetchData();
+  };
+
+  const toggleChecklistItem = async (item: string) => {
+    if (!ticket) return;
+    const current = (ticket.checklist_progress ?? {}) as Record<string, boolean>;
+    const next = { ...current, [item]: !current[item] };
+    await supabase.from('tickets').update({ checklist_progress: next }).eq('id', id);
+    setTicket({ ...ticket, checklist_progress: next });
   };
 
   const handlePause = async () => {
@@ -193,7 +199,6 @@ const TicketWork = () => {
     if (!closePhoto) { toast.error('Closing photo required'); return; }
     if (!closeNote.trim()) { toast.error('Closing note required'); return; }
 
-    // Upload closing photo
     await handleUploadPhoto('close', closePhoto);
 
     await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
@@ -205,6 +210,12 @@ const TicketWork = () => {
     setCloseNote('');
     setShowComplete(false);
     toast.success('Submitted for review');
+
+    // Fan-out emails to admins
+    try {
+      await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } });
+    } catch { /* non-blocking */ }
+
     fetchData();
   };
 
@@ -327,33 +338,56 @@ const TicketWork = () => {
                 <Navigation className="w-5 h-5 mr-2" /> En Camino
               </Button>
             )}
-            {(currentStep === 'en_camino' || currentStep === 'start_work') && ticket.status === 'in_progress' && !ticket.work_started_at && (
+            {currentStep === 'llegue' && (
               <>
                 <Button className="w-full" size="lg" variant="outline" onClick={() => advanceStep('llegue')}>
                   <MapPin className="w-5 h-5 mr-2" /> Llegué
                 </Button>
 
-                {/* Photo upload for start */}
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
                   <span className="text-sm text-primary font-medium">Upload Start Photo {!hasStartPhoto && '(required)'}</span>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('start')} />
                 </label>
 
-                <Button className="w-full" size="lg" onClick={() => advanceStep('start_work')} disabled={!hasStartPhoto}>
-                  <Wrench className="w-5 h-5 mr-2" /> Start Work
+                <Button className="w-full" size="lg" onClick={() => advanceStep('working')} disabled={!hasStartPhoto}>
+                  <Wrench className="w-5 h-5 mr-2" /> Start Working
                 </Button>
               </>
             )}
-            {currentStep === 'in_progress' && (
+            {currentStep === 'working' && (
               <>
+                {/* Checklist */}
+                {(() => {
+                  const items = getChecklistFor(ticket.work_type);
+                  if (items.length === 0) return null;
+                  const progress = (ticket.checklist_progress ?? {}) as Record<string, boolean>;
+                  const done = items.filter(i => progress[i]).length;
+                  return (
+                    <div className="bg-card border border-border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-foreground">Checklist</h3>
+                        <span className="text-xs text-muted-foreground">{done} / {items.length}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {items.map(item => (
+                          <label key={item} className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox checked={!!progress[item]} onCheckedChange={() => toggleChecklistItem(item)} />
+                            <span className={`text-sm ${progress[item] ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
                   <span className="text-sm text-muted-foreground">Upload Progress Photo</span>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('process')} />
                 </label>
 
-                <Button className="w-full" size="lg" onClick={() => advanceStep('mark_complete')}>
+                <Button className="w-full" size="lg" onClick={() => advanceStep('ready_for_review')}>
                   <CheckCircle className="w-5 h-5 mr-2" /> Mark Complete
                 </Button>
               </>
