@@ -95,7 +95,7 @@ export function addBlackHeader(doc: jsPDF, opts: HeaderOpts = {}) {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GOLD);
-  doc.text('FIVE DAYS. ONE CALL. DONE.', MARGIN_X, 30);
+  doc.text('ONE TEAM. ONE CALL. DONE.', MARGIN_X, 30);
 
   // Right-aligned: property name (top) + docType (bottom)
   if (opts.propertyName || opts.docType) {
@@ -132,7 +132,7 @@ export function addFooter(doc: jsPDF) {
     doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.text('Five Days. One Call. Done.', MARGIN_X, FOOTER_Y + 5);
+    doc.text('One Team. One Call. Done.', MARGIN_X, FOOTER_Y + 5);
 
     // Center: contact line
     doc.setFont('helvetica', 'normal');
