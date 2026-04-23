@@ -196,7 +196,7 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
                             : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                         }`}
                       >
-                        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : item.color}`} />
+                        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-foreground' : 'text-muted-foreground'}`} />
                         <span className="flex-1 text-left">{item.label}</span>
                         {item.shortcut && (
                           <span className="text-[10px] text-muted-foreground/50 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
