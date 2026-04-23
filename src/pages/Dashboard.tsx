@@ -1,12 +1,14 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
-import Spinner from '@/components/ui/Spinner';
+import SkeletonCard from '@/components/ui/SkeletonCard';
+import EmptyState from '@/components/ui/EmptyState';
 
 interface TicketRow {
   id: string;
@@ -25,32 +27,47 @@ interface TicketRow {
   internal_note: string | null;
 }
 
+const workTypeBorder: Record<string, string> = {
+  emergency: 'border-l-[#ef4444]',
+  'make-ready': 'border-l-[#f97316]',
+  make_ready: 'border-l-[#f97316]',
+  repair: 'border-l-[#3b82f6]',
+  capex: 'border-l-[#22c55e]',
+};
+
+const QUICK_FILTERS = [
+  { key: 'all',          label: 'All' },
+  { key: 'unassigned',   label: 'Unassigned' },
+  { key: 'emergencies',  label: 'Emergencies' },
+  { key: 'make-ready',   label: 'Make-Ready' },
+  { key: 'high',         label: 'High Priority' },
+] as const;
+
+type QuickFilter = typeof QUICK_FILTERS[number]['key'];
+
 const Dashboard = () => {
   const { activeRole } = useAuthStore();
   const navigate = useNavigate();
   const isTechnician = activeRole === 'technician';
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [clients, setClients] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
-  const [savedFilters, setSavedFilters] = useState<{ id: string; name: string; filters: any }[]>([]);
-  const [activeFilter, setActiveFilter] = useState<any>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [ticketRes, clientRes, propRes, zoneRes, userRes, filterRes] = await Promise.all([
+    const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
-      supabase.from('user_saved_filters').select('*'),
     ]);
-
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
     (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
@@ -64,37 +81,43 @@ const Dashboard = () => {
     const uMap: Record<string, string> = {};
     (userRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
-    setSavedFilters((filterRes.data ?? []).map((f: any) => ({ id: f.id, name: f.name, filters: f.filters })));
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchData();
-
     const channel = supabase
       .channel('tickets-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
-        fetchData();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchData())
       .subscribe();
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') fetchData();
-    };
+    const handleVisibility = () => { if (document.visibilityState === 'visible') fetchData(); };
     document.addEventListener('visibilitychange', handleVisibility);
-
     return () => {
       supabase.removeChannel(channel);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [fetchData]);
 
+  // Focus search via global '/' shortcut
+  useEffect(() => {
+    const handler = () => searchRef.current?.focus();
+    window.addEventListener('focus-search', handler);
+    return () => window.removeEventListener('focus-search', handler);
+  }, []);
+
   const filteredTickets = useMemo(() => {
     let result = tickets;
+    if (activeRole === 'accounting') result = result.filter(t => t.status !== 'draft');
 
-    // Accounting doesn't see drafts
-    if (activeRole === 'accounting') {
-      result = result.filter(t => t.status !== 'draft');
+    // Quick filters
+    if (quickFilter === 'unassigned') {
+      result = result.filter(t => !t.technician_id && !['closed', 'cancelled', 'draft'].includes(t.status ?? ''));
+    } else if (quickFilter === 'emergencies') {
+      result = result.filter(t => t.work_type === 'emergency');
+    } else if (quickFilter === 'make-ready') {
+      result = result.filter(t => t.work_type === 'make-ready' || t.work_type === 'make_ready');
+    } else if (quickFilter === 'high') {
+      result = result.filter(t => t.priority === 'high' || t.priority === 'urgent');
     }
 
     if (search.trim()) {
@@ -112,16 +135,15 @@ const Dashboard = () => {
       );
     }
 
-    // Emergencies first, then high-priority
     const priorityRank = (p: string | null) => (p === 'urgent' ? 0 : p === 'high' ? 1 : 2);
-    result.sort((a, b) => {
+    result = [...result].sort((a, b) => {
       if (a.work_type === 'emergency' && b.work_type !== 'emergency') return -1;
       if (b.work_type === 'emergency' && a.work_type !== 'emergency') return 1;
       return priorityRank(a.priority) - priorityRank(b.priority);
     });
 
     return result;
-  }, [tickets, search, activeRole, clients, properties, zones, users]);
+  }, [tickets, search, quickFilter, activeRole, clients, properties, zones, users]);
 
   const metrics = useMemo(() => {
     const active = tickets.filter(t => !['closed', 'cancelled', 'draft'].includes(t.status ?? ''));
@@ -136,37 +158,29 @@ const Dashboard = () => {
   }, [tickets]);
 
   const metricCards = [
-    { label: 'Active Tickets', value: metrics.active, icon: Ticket, color: 'text-primary' },
-    { label: 'Drafts', value: metrics.draft, icon: FileEdit, color: 'text-muted-foreground' },
-    { label: 'Unassigned', value: metrics.unassigned, icon: UserX, color: 'text-orange-400' },
-    { label: 'Paused', value: metrics.paused, icon: PauseCircle, color: 'text-yellow-400' },
-    { label: 'Emergencies', value: metrics.emergencies, icon: AlertTriangle, color: 'text-destructive' },
-    { label: 'PM Not Responding', value: metrics.pmNotResponding, icon: Clock, color: 'text-purple-400' },
+    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10',         border: 'border-l-primary' },
+    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40',           border: 'border-l-muted-foreground/40' },
+    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10',      border: 'border-l-orange-400' },
+    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10',      border: 'border-l-yellow-400' },
+    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10',     border: 'border-l-destructive' },
+    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10',      border: 'border-l-purple-400' },
   ];
 
-  if (isTechnician) {
-    return <Navigate to="/my-work" replace />;
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  if (isTechnician) return <Navigate to="/my-work" replace />;
 
   return (
     <div className="p-4 space-y-4">
       {/* Metric cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {metricCards.map((m) => (
-          <div key={m.label} className="bg-card border border-border rounded-lg p-2 sm:p-3 flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-              <m.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${m.color} shrink-0`} />
-              <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{m.label}</span>
+          <div key={m.label} className={`fs-card border-l-2 ${m.border} p-3 flex flex-col gap-1.5`}>
+            <div className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-full ${m.bg} flex items-center justify-center shrink-0`}>
+                <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
+              </div>
+              <span className="text-[10px] sm:text-xs text-muted-foreground truncate uppercase tracking-wide">{m.label}</span>
             </div>
-            <span className={`text-xl sm:text-2xl font-bold ${m.color}`}>{m.value}</span>
+            <span className={`text-2xl sm:text-3xl font-bold ${m.color} leading-none`}>{m.value}</span>
           </div>
         ))}
       </div>
@@ -175,57 +189,69 @@ const Dashboard = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search FS#, PM, property, zone, technician, notes..."
+          ref={searchRef}
+          placeholder="Search FS#, PM, property, zone, technician, notes…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Saved filter chips */}
-      {savedFilters.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          {savedFilters.map((f) => (
+      {/* Quick filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {QUICK_FILTERS.map((f) => {
+          const active = quickFilter === f.key;
+          return (
             <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.filters)}
-              className="px-3 py-1 text-xs rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+              key={f.key}
+              onClick={() => setQuickFilter(f.key)}
+              className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-all active:scale-95 ${
+                active
+                  ? 'bg-primary text-primary-foreground border-primary shadow-[var(--gold-glow)]'
+                  : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/40'
+              }`}
             >
-              {f.name}
+              {f.label}
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* Ticket list */}
       <div className="space-y-2">
-        {filteredTickets.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No tickets found</div>
+        {loading ? (
+          <SkeletonCard count={5} />
+        ) : filteredTickets.length === 0 ? (
+          <EmptyState
+            icon={Ticket}
+            title="No tickets found"
+            description={search || quickFilter !== 'all' ? 'Try clearing filters or searching for something else.' : 'Create your first ticket to get started.'}
+            actionLabel={(activeRole === 'admin' || activeRole === 'supervisor') ? 'Create Ticket' : undefined}
+            onAction={() => navigate('/tickets/new')}
+          />
         ) : (
           filteredTickets.map((ticket) => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
-            const isEmergency = ticket.work_type === 'emergency';
+            const leftBorder = workTypeBorder[ticket.work_type ?? 'repair'] ?? 'border-l-muted-foreground';
             return (
               <button
                 key={ticket.id}
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
-                className={`w-full text-left p-4 rounded-lg border ${isEmergency ? 'border-destructive bg-destructive/10' : colors.border + ' ' + colors.bg} transition-colors hover:opacity-90`}
+                className={`w-full text-left fs-card border-l-4 ${leftBorder} p-3.5 active:scale-[0.99] transition-transform duration-100`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-sm font-bold text-foreground">
-                        {ticket.fs_number ?? 'No FS#'}
-                      </span>
-                      <Badge className={`text-[10px] ${colors.badge}`}>
+                      <span className="font-mono text-sm font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
+                      <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>
                         {(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}
                       </Badge>
-                      <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'draft']}`}>
+                      <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>
                         {statusLabels[ticket.status ?? 'draft']}
                       </Badge>
                       {ticket.priority && ticket.priority !== 'normal' && (
                         <Badge
-                          className={`text-[10px] ${
+                          className={`text-[10px] ring-1 ring-current/20 ${
                             ticket.priority === 'urgent'
                               ? 'bg-destructive text-destructive-foreground'
                               : ticket.priority === 'high'
@@ -236,13 +262,8 @@ const Dashboard = () => {
                           {ticket.priority.toUpperCase()}
                         </Badge>
                       )}
-                      {ticket.status === 'draft' && (
-                        <Badge variant="outline" className="text-[10px] text-muted-foreground border-muted-foreground">
-                          DRAFT
-                        </Badge>
-                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1 truncate">
+                    <p className="text-sm text-muted-foreground mt-1.5 truncate">
                       {ticket.property_id ? properties[ticket.property_id]?.name : ''}
                       {ticket.unit ? ` · Unit ${ticket.unit}` : ''}
                       {ticket.client_id ? ` · ${clients[ticket.client_id]}` : ''}
@@ -250,9 +271,7 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs text-muted-foreground">
-                      {ticket.technician_id ? users[ticket.technician_id] : (
-                        <span className="text-destructive font-medium">Unassigned</span>
-                      )}
+                      {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
                     </p>
                     {ticket.appointment_time && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -266,6 +285,17 @@ const Dashboard = () => {
           })
         )}
       </div>
+
+      {/* Floating new-ticket FAB on mobile */}
+      {(activeRole === 'admin' || activeRole === 'supervisor') && (
+        <Button
+          onClick={() => navigate('/tickets/new')}
+          className="md:hidden fixed bottom-4 right-4 h-12 w-12 rounded-full p-0 shadow-lg z-20"
+          aria-label="New ticket"
+        >
+          <Plus className="w-5 h-5" />
+        </Button>
+      )}
     </div>
   );
 };

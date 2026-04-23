@@ -17,11 +17,11 @@ interface TopNavProps {
   onMenuClick: () => void;
 }
 
-const roleBadgeColors: Record<AppRole, string> = {
-  admin: 'text-[#FFD700] border-[#FFD700]',
-  supervisor: 'text-[#185FA5] border-[#185FA5]',
-  technician: 'text-[#3B6D11] border-[#3B6D11]',
-  accounting: 'text-[#534AB7] border-[#534AB7]',
+const roleBadgeStyles: Record<AppRole, { bg: string; text: string; abbr: string }> = {
+  admin:      { bg: 'bg-[#FFD700]/15', text: 'text-[#FFD700]', abbr: 'ADM' },
+  supervisor: { bg: 'bg-[#185FA5]/15', text: 'text-[#5B9BE0]', abbr: 'SUP' },
+  technician: { bg: 'bg-[#3B6D11]/20', text: 'text-[#7CC242]', abbr: 'TEC' },
+  accounting: { bg: 'bg-[#534AB7]/20', text: 'text-[#8B82E0]', abbr: 'ACC' },
 };
 
 const TopNav = ({ onMenuClick }: TopNavProps) => {
@@ -45,65 +45,59 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
   };
 
   const initials = (user?.full_name ?? 'U')
-    .split(' ')
-    .map(w => w.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+    .split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2);
+
+  const roleStyle = activeRole ? roleBadgeStyles[activeRole] : null;
 
   return (
-    <header className="h-14 bg-background border-b border-border flex items-center justify-between px-4 shrink-0">
-      {/* Left: Hamburger */}
+    <header className="h-16 bg-background/95 backdrop-blur-sm border-b-2 border-[#FFD700]/60 flex items-center justify-between px-4 shrink-0 sticky top-0 z-40">
       <div className="flex items-center">
         <button
           onClick={onMenuClick}
-          className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+          aria-label="Open menu"
         >
           <Menu className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Center: FiveServ wordmark */}
       <div className="flex-1 flex justify-center">
-        <div className="flex items-center">
-          <span className="text-xl font-bold" style={{ color: '#FFD700', fontFamily: 'Arial, sans-serif' }}>F</span>
-          <span className="text-xl font-bold text-foreground" style={{ fontFamily: 'Arial, sans-serif' }}>iveServ</span>
+        <div className="flex items-center" style={{ fontFamily: 'Arial, sans-serif' }}>
+          <span className="text-2xl font-bold" style={{ color: '#FFD700' }}>F</span>
+          <span className="text-2xl font-bold text-foreground">iveServ</span>
         </div>
       </div>
 
-      {/* Right: Role badge + theme toggle + bell + profile */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {activeRole && (
+      <div className="flex items-center gap-3">
+        {roleStyle && (
           <span
-            className={`hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-widest border rounded-full ${roleBadgeColors[activeRole]}`}
+            className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${roleStyle.bg} ${roleStyle.text}`}
           >
-            {activeRole}
+            <span className="hidden sm:inline">{activeRole}</span>
+            <span className="sm:hidden">{roleStyle.abbr}</span>
           </span>
         )}
         <button
           onClick={handleThemeToggle}
-          className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="p-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
           title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
         <NotificationDropdown />
 
-        {/* Profile avatar dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="focus:outline-none">
+            <button className="focus:outline-none active:scale-95 transition-transform">
               <Avatar className="w-8 h-8 cursor-pointer border border-border hover:border-primary transition-colors">
-                {user?.avatar_url ? (
-                  <AvatarImage src={user.avatar_url} alt={user.full_name} />
-                ) : null}
+                {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} /> : null}
                 <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                   {initials}
                 </AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <div className="px-3 py-2">
               <p className="text-sm font-medium text-foreground truncate">{user?.full_name}</p>
               <p className="text-xs text-muted-foreground truncate">{user?.email}</p>

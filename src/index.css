@@ -36,7 +36,7 @@
     --input: 0 0% 20%;
     --ring: 51 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 100%;
@@ -57,10 +57,12 @@
     --make-ready: 51 100% 50%;
     --repair: 217 91% 60%;
     --capex: 142 71% 45%;
-    --nav-height: 56px;
+    --nav-height: 64px;
+    --sidebar-width: 280px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+    --gold-glow: 0 0 12px rgba(255,215,0,0.15);
   }
-
-  /* Light mode */
   .light {
     --background: 0 0% 96%;
     --foreground: 0 0% 10%;
@@ -109,7 +111,11 @@
     --make-ready: 51 100% 50%;
     --repair: 217 91% 60%;
     --capex: 142 71% 45%;
-    --nav-height: 56px;
+    --nav-height: 64px;
+    --sidebar-width: 280px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+    --gold-glow: 0 0 12px rgba(255,215,0,0.15);
   }
 }
 
@@ -123,17 +129,33 @@
   }
 }
 
+@layer components {
+  .fs-card {
+    @apply bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] transition-shadow hover:shadow-[var(--card-shadow-hover)];
+  }
+  .fs-section-title {
+    @apply text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3;
+  }
+  .fs-input-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground;
+  }
+  .skeleton-pulse {
+    @apply animate-pulse bg-muted rounded;
+  }
+}
+
 @layer utilities {
   .gold-gradient {
     background: linear-gradient(135deg, hsl(51, 100%, 50%), hsl(45, 100%, 42%));
   }
-
   .gold-text {
     color: hsl(51, 100%, 50%);
   }
-
   .spinner-gold {
     border-color: hsl(0, 0%, 22%);
     border-top-color: hsl(51, 100%, 50%);
+  }
+  .drawer-spring {
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
   }
 }

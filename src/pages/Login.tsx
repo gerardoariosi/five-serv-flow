@@ -66,11 +66,29 @@ const Login = () => {
   };
 
   return (
-    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <FiveServLogo />
+    <div className="dark min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Subtle gold glow background */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse 600px 400px at 50% 25%, rgba(255,215,0,0.08), transparent 70%)',
+        }}
+      />
 
-        <div className="bg-card border border-border rounded-lg p-6">
+      <div className="w-full max-w-md relative">
+        <div className="relative">
+          {/* Gold glow behind logo */}
+          <div
+            aria-hidden
+            className="absolute inset-x-0 -top-4 h-32 pointer-events-none"
+            style={{ background: 'radial-gradient(circle at center, rgba(255,215,0,0.15), transparent 60%)' }}
+          />
+          <FiveServLogo />
+        </div>
+
+        <div className="bg-card border border-border/50 rounded-[0.625rem] p-8 shadow-[var(--card-shadow)]">
           <h2 className="text-lg font-bold text-foreground mb-6">Sign In</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -83,7 +101,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value.toLowerCase())}
                 placeholder="you@company.com"
                 required
-                className="bg-secondary border-border text-foreground"
+                className="bg-secondary border-border text-foreground focus-visible:border-primary"
               />
             </div>
 
@@ -97,7 +115,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="bg-secondary border-border text-foreground pr-10"
+                  className="bg-secondary border-border text-foreground pr-10 focus-visible:border-primary"
                 />
                 <button
                   type="button"
@@ -110,11 +128,7 @@ const Login = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(c) => setRememberMe(c === true)}
-              />
+              <Checkbox id="remember" checked={rememberMe} onCheckedChange={(c) => setRememberMe(c === true)} />
               <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
                 Remember Me
               </Label>
@@ -122,11 +136,7 @@ const Login = () => {
 
             {isFirstAccess && (
               <div className="flex items-start gap-2">
-                <Checkbox
-                  id="terms"
-                  checked={acceptedTerms}
-                  onCheckedChange={(c) => setAcceptedTerms(c === true)}
-                />
+                <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(c) => setAcceptedTerms(c === true)} />
                 <Label htmlFor="terms" className="text-xs text-muted-foreground cursor-pointer leading-relaxed">
                   I accept the{' '}
                   <span className="text-primary underline">Terms of Service</span> and{' '}
@@ -135,20 +145,18 @@ const Login = () => {
               </div>
             )}
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold active:scale-95 transition-transform"
             >
               {loading ? <Spinner size="sm" /> : 'Sign In'}
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <Link to="/forgot-password" className="text-sm text-primary hover:underline">
               Forgot Password?
             </Link>

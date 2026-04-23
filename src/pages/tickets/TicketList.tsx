@@ -1,21 +1,50 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Plus, Filter, MoreVertical, Trash2 } from 'lucide-react';
+import { Search, Plus, MoreVertical, Trash2, Ticket as TicketIcon } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
-import Spinner from '@/components/ui/Spinner';
+import SkeletonCard from '@/components/ui/SkeletonCard';
+import EmptyState from '@/components/ui/EmptyState';
 import { toast } from 'sonner';
+
+const workTypeBorder: Record<string, string> = {
+  emergency: 'border-l-[#ef4444]',
+  'make-ready': 'border-l-[#f97316]',
+  make_ready: 'border-l-[#f97316]',
+  repair: 'border-l-[#3b82f6]',
+  capex: 'border-l-[#22c55e]',
+};
+
+const STATUS_CHIPS = [
+  { key: 'all', label: 'All' },
+  { key: 'open', label: 'Open' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'paused', label: 'Paused' },
+  { key: 'ready_for_review', label: 'For Review' },
+  { key: 'pending_evaluation', label: 'Pending Eval' },
+  { key: 'estimate_sent', label: 'Estimate Sent' },
+  { key: 'closed', label: 'Closed' },
+];
+
+const TYPE_CHIPS = [
+  { key: 'all', label: 'All Types' },
+  { key: 'make-ready', label: 'Make-Ready' },
+  { key: 'emergency', label: 'Emergency' },
+  { key: 'repair', label: 'Repair' },
+  { key: 'capex', label: 'CapEx' },
+];
 
 const TicketList = () => {
   const { activeRole } = useAuthStore();
   const navigate = useNavigate();
+  const searchRef = useRef<HTMLInputElement>(null);
+
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -25,13 +54,10 @@ const TicketList = () => {
   const [clients, setClients] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
   const [zones, setZones] = useState<{ id: string; name: string }[]>([]);
-  const [zoneMap, setZoneMap] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
-  const [showFilters, setShowFilters] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
     const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
@@ -47,9 +73,6 @@ const TicketList = () => {
     (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
     setProperties(pMap);
     setZones(zoneRes.data ?? []);
-    const zMap: Record<string, string> = {};
-    (zoneRes.data ?? []).forEach((z: any) => { zMap[z.id] = z.name ?? ''; });
-    setZoneMap(zMap);
     const uMap: Record<string, string> = {};
     (userRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
@@ -65,12 +88,15 @@ const TicketList = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
+  useEffect(() => {
+    const handler = () => searchRef.current?.focus();
+    window.addEventListener('focus-search', handler);
+    return () => window.removeEventListener('focus-search', handler);
+  }, []);
+
   const filtered = useMemo(() => {
     let result = tickets;
-    // Accounting doesn't see drafts
-    if (activeRole === 'accounting') {
-      result = result.filter((t: any) => t.status !== 'draft');
-    }
+    if (activeRole === 'accounting') result = result.filter((t: any) => t.status !== 'draft');
     if (filterStatus !== 'all') result = result.filter((t: any) => t.status === filterStatus);
     if (filterType !== 'all') result = result.filter((t: any) => t.work_type === filterType);
     if (filterZone !== 'all') result = result.filter((t: any) => t.zone_id === filterZone);
@@ -84,13 +110,11 @@ const TicketList = () => {
         (t.technician_id && users[t.technician_id]?.toLowerCase().includes(q))
       );
     }
-    // Emergencies first
-    result.sort((a: any, b: any) => {
+    return [...result].sort((a: any, b: any) => {
       if (a.work_type === 'emergency' && b.work_type !== 'emergency') return -1;
       if (b.work_type === 'emergency' && a.work_type !== 'emergency') return 1;
       return 0;
     });
-    return result;
   }, [tickets, search, filterStatus, filterType, filterZone, activeRole, clients, properties, users]);
 
   const handleDeleteTicket = async (ticket: any) => {
@@ -102,11 +126,8 @@ const TicketList = () => {
     fetchData();
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
-
   return (
     <div className="p-4 space-y-4">
-      {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Permanently Delete Ticket?</DialogTitle></DialogHeader>
@@ -117,77 +138,118 @@ const TicketList = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Tickets</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)}>
-            <Filter className="w-4 h-4 mr-1" /> Filters
-          </Button>
+
+      {/* Sticky search + filter bar */}
+      <div className="sticky top-16 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-sm z-20 -mt-4 mb-0 space-y-3 border-b border-border">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-xl font-bold text-foreground">Tickets</h1>
+            <span className="text-sm font-medium text-muted-foreground">({filtered.length})</span>
+          </div>
           {(activeRole === 'admin' || activeRole === 'supervisor') && (
             <Button size="sm" onClick={() => navigate('/tickets/new')}>
               <Plus className="w-4 h-4 mr-1" /> New Ticket
             </Button>
           )}
         </div>
-      </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Search tickets..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
-      </div>
-
-      {showFilters && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {Object.entries(statusLabels).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="make-ready">Make-Ready</SelectItem>
-              <SelectItem value="emergency">Emergency</SelectItem>
-              <SelectItem value="repair">Repair</SelectItem>
-              <SelectItem value="capex">CapEx</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterZone} onValueChange={setFilterZone}>
-            <SelectTrigger><SelectValue placeholder="Zone" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Zones</SelectItem>
-              {zones.map(z => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input ref={searchRef} placeholder="Search tickets…" value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
-      )}
+
+        {/* Chip filter rows */}
+        <div className="space-y-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+            {STATUS_CHIPS.map(c => {
+              const active = filterStatus === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setFilterStatus(c.key)}
+                  className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
+                    active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+            {TYPE_CHIPS.map(c => {
+              const active = filterType === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setFilterType(c.key)}
+                  className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
+                    active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+            {zones.length > 0 && (
+              <>
+                <button
+                  onClick={() => setFilterZone('all')}
+                  className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
+                    filterZone === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
+                  }`}
+                >
+                  All Zones
+                </button>
+                {zones.map(z => {
+                  const active = filterZone === z.id;
+                  return (
+                    <button
+                      key={z.id}
+                      onClick={() => setFilterZone(z.id)}
+                      className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
+                        active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
+                      }`}
+                    >
+                      {z.name}
+                    </button>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No tickets found</div>
+        {loading ? (
+          <SkeletonCard count={6} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={TicketIcon}
+            title="No tickets found"
+            description="Try clearing filters or create a new ticket."
+            actionLabel={(activeRole === 'admin' || activeRole === 'supervisor') ? 'New Ticket' : undefined}
+            onAction={() => navigate('/tickets/new')}
+          />
         ) : (
           filtered.map((ticket: any) => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
-            const isEmergency = ticket.work_type === 'emergency';
+            const leftBorder = workTypeBorder[ticket.work_type ?? 'repair'] ?? 'border-l-muted-foreground';
             return (
-              <div key={ticket.id} className="flex items-start gap-0">
+              <div key={ticket.id} className="flex items-start gap-1">
                 <button
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
-                  className={`flex-1 text-left p-4 rounded-lg border ${isEmergency ? 'border-destructive bg-destructive/10' : colors.border + ' ' + colors.bg} transition-colors hover:opacity-90`}
+                  className={`flex-1 text-left fs-card border-l-4 ${leftBorder} p-3.5 active:scale-[0.99] transition-transform duration-100`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-sm font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
-                        <Badge className={`text-[10px] ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-                        <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
+                        <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
+                        <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1 truncate">
+                      <p className="text-sm text-muted-foreground mt-1.5 truncate">
                         {ticket.property_id ? properties[ticket.property_id]?.name : ''}
                         {ticket.unit ? ` · Unit ${ticket.unit}` : ''}
                         {ticket.client_id ? ` · ${clients[ticket.client_id]}` : ''}
@@ -208,7 +270,7 @@ const TicketList = () => {
                 {activeRole === 'admin' && (ticket.status === 'draft' || ticket.status === 'cancelled') && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="shrink-0 mt-3 ml-1">
+                      <Button variant="ghost" size="icon" className="shrink-0 mt-1">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
