@@ -12,16 +12,16 @@ import { toast } from 'sonner';
 import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wrench, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { getChecklistFor } from '@/lib/workChecklists';
 
-type WorkStep = 'en_camino' | 'llegue' | 'start_work' | 'in_progress' | 'mark_complete' | 'ready_for_review';
+type WorkStep = 'en_camino' | 'llegue' | 'working' | 'ready_for_review';
 
-const stepOrder: WorkStep[] = ['en_camino', 'llegue', 'start_work', 'in_progress', 'mark_complete', 'ready_for_review'];
+const stepOrder: WorkStep[] = ['en_camino', 'llegue', 'working', 'ready_for_review'];
 const stepLabels: Record<WorkStep, string> = {
   en_camino: 'En Camino',
   llegue: 'Llegué',
-  start_work: 'Start Work',
-  in_progress: 'In Progress',
-  mark_complete: 'Mark Complete',
+  working: 'Working',
   ready_for_review: 'Ready for Review',
 };
 
@@ -91,10 +91,9 @@ const TicketWork = () => {
     if (!ticket) return 'en_camino';
     const status = ticket.status;
     if (status === 'open') return 'en_camino';
-    if (status === 'in_progress' && !ticket.work_started_at) return 'start_work';
-    if (status === 'in_progress') return 'in_progress';
+    if (status === 'in_progress') return ticket.work_started_at ? 'working' : 'llegue';
+    if (status === 'paused') return 'working';
     if (status === 'ready_for_review') return 'ready_for_review';
-    if (status === 'paused') return 'in_progress';
     return 'en_camino';
   };
 
@@ -144,8 +143,8 @@ const TicketWork = () => {
   const advanceStep = async (step: WorkStep) => {
     if (!ticket || !user) return;
 
-    if (step === 'start_work' && !hasStartPhoto) {
-      toast.error('You must upload at least 1 photo before starting work');
+    if (step === 'working' && !hasStartPhoto) {
+      toast.error('Upload at least 1 photo before starting work');
       return;
     }
 
@@ -156,11 +155,10 @@ const TicketWork = () => {
       newStatus = 'in_progress';
     } else if (step === 'llegue') {
       newStatus = 'in_progress';
-    } else if (step === 'start_work') {
+    } else if (step === 'working') {
       newStatus = 'in_progress';
       updates.work_started_at = new Date().toISOString();
-    } else if (step === 'mark_complete') {
-      // Handled by complete modal
+    } else if (step === 'ready_for_review') {
       setShowComplete(true);
       return;
     }
@@ -173,6 +171,14 @@ const TicketWork = () => {
     });
     toast.success(stepLabels[step]);
     fetchData();
+  };
+
+  const toggleChecklistItem = async (item: string) => {
+    if (!ticket) return;
+    const current = (ticket.checklist_progress ?? {}) as Record<string, boolean>;
+    const next = { ...current, [item]: !current[item] };
+    await supabase.from('tickets').update({ checklist_progress: next }).eq('id', id);
+    setTicket({ ...ticket, checklist_progress: next });
   };
 
   const handlePause = async () => {
@@ -193,7 +199,6 @@ const TicketWork = () => {
     if (!closePhoto) { toast.error('Closing photo required'); return; }
     if (!closeNote.trim()) { toast.error('Closing note required'); return; }
 
-    // Upload closing photo
     await handleUploadPhoto('close', closePhoto);
 
     await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
@@ -205,6 +210,12 @@ const TicketWork = () => {
     setCloseNote('');
     setShowComplete(false);
     toast.success('Submitted for review');
+
+    // Fan-out emails to admins
+    try {
+      await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } });
+    } catch { /* non-blocking */ }
+
     fetchData();
   };
 
