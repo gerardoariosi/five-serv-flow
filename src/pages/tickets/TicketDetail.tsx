@@ -15,6 +15,7 @@ import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, Aler
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import { getBusinessDaysElapsed, getCountdownDaysRemaining, getCountdownColor } from '@/lib/businessDays';
 import Spinner from '@/components/ui/Spinner';
+import SendPMReportModal from '@/components/tickets/SendPMReportModal';
 
 const statusTransitions: Record<string, { next: string[]; roles: string[] }> = {
   draft: { next: ['open', 'cancelled'], roles: ['admin', 'supervisor'] },
@@ -48,12 +49,13 @@ const TicketDetail = () => {
   const [assignTechId, setAssignTechId] = useState('');
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPMReport, setShowPMReport] = useState(false);
 
   // Lookup maps
-  const [clients, setClients] = useState<Record<string, string>>({});
+  const [clients, setClients] = useState<Record<string, { name: string; email: string }>>({});
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
   const [zones, setZones] = useState<Record<string, string>>({});
-  const [users, setUsers] = useState<Record<string, string>>({});
+  const [users, setUsers] = useState<Record<string, { name: string; email: string }>>({});
 
   const fetchTicket = useCallback(async () => {
     if (!id) return;
@@ -61,11 +63,11 @@ const TicketDetail = () => {
       supabase.from('tickets').select('*').eq('id', id).single(),
       supabase.from('ticket_timeline').select('*').eq('ticket_id', id).order('created_at', { ascending: false }),
       supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: false }),
-      supabase.from('clients').select('id, company_name'),
+      supabase.from('clients').select('id, company_name, email'),
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
-      supabase.from('users').select('id, full_name'),
-      supabase.from('users').select('id, full_name, roles').filter('roles', 'cs', '{"technician"}'),
+      supabase.from('users').select('id, full_name, email'),
+      supabase.from('users').select('id, full_name, email, roles').filter('roles', 'cs', '{"technician"}'),
     ]);
 
     setTicket(tRes.data);
@@ -73,8 +75,8 @@ const TicketDetail = () => {
     setPhotos(phRes.data ?? []);
     setTechnicians(techRes.data ?? []);
 
-    const cMap: Record<string, string> = {};
-    (cRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
+    const cMap: Record<string, { name: string; email: string }> = {};
+    (cRes.data ?? []).forEach((c: any) => { cMap[c.id] = { name: c.company_name ?? '', email: c.email ?? '' }; });
     setClients(cMap);
     const pMap: Record<string, { name: string; address: string }> = {};
     (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
@@ -82,8 +84,8 @@ const TicketDetail = () => {
     const zMap: Record<string, string> = {};
     (zRes.data ?? []).forEach((z: any) => { zMap[z.id] = z.name ?? ''; });
     setZones(zMap);
-    const uMap: Record<string, string> = {};
-    (uRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
+    const uMap: Record<string, { name: string; email: string }> = {};
+    (uRes.data ?? []).forEach((u: any) => { uMap[u.id] = { name: u.full_name ?? '', email: u.email ?? '' }; });
     setUsers(uMap);
 
     if (['make-ready', 'make_ready'].includes(tRes.data?.work_type ?? '') && tRes.data?.work_started_at && (activeRole === 'admin' || activeRole === 'supervisor')) {
@@ -95,6 +97,18 @@ const TicketDetail = () => {
   }, [id, activeRole]);
 
   useEffect(() => { fetchTicket(); }, [fetchTicket]);
+
+  // Realtime: refresh on ticket / timeline / photo changes
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`ticket-detail-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets', filter: `id=eq.${id}` }, () => fetchTicket())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_timeline', filter: `ticket_id=eq.${id}` }, () => fetchTicket())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_photos', filter: `ticket_id=eq.${id}` }, () => fetchTicket())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, fetchTicket]);
 
   const changeStatus = async (newStatus: string) => {
     if (!ticket || !user) return;
@@ -168,8 +182,29 @@ const TicketDetail = () => {
       from_status: ticket.status,
       to_status: ticket.status,
       changed_by: user?.id,
-      note: `Technician assigned: ${users[assignTechId] || assignTechId}`,
+      note: `Technician assigned: ${users[assignTechId]?.name || assignTechId}`,
     });
+    // Email technician
+    try {
+      const techEmail = users[assignTechId]?.email;
+      if (techEmail) {
+        await supabase.functions.invoke('send-business-email', {
+          body: {
+            template_name: 'technician_assigned',
+            to_email: techEmail,
+            variables: {
+              fs_number: ticket.fs_number ?? '',
+              property_name: ticket.property_id ? properties[ticket.property_id]?.name ?? '' : '',
+              work_type: (ticket.work_type ?? '').replace('-', ' '),
+              appointment_time: ticket.appointment_time
+                ? new Date(ticket.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' })
+                : 'Not scheduled',
+              technician_name: users[assignTechId]?.name ?? '',
+            },
+          },
+        });
+      }
+    } catch { /* non-blocking */ }
     setAssignTechId('');
     setShowAssignModal(false);
     toast.success('Technician assigned');
