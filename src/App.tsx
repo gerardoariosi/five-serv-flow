@@ -33,6 +33,7 @@ import AreaInspection from "./pages/inspections/AreaInspection";
 import PricingReview from "./pages/inspections/PricingReview";
 import InspectionDetail from "./pages/inspections/InspectionDetail";
 import PMPortal from "./pages/inspections/PMPortal";
+import EstimatePortal from "./pages/tickets/EstimatePortal";
 import TechnicianList from "./pages/team/TechnicianList";
 import TechnicianDetail from "./pages/team/TechnicianDetail";
 import VendorDetail from "./pages/team/VendorDetail";
@@ -117,6 +118,7 @@ const App = () => {
 
           {/* Public PM portal */}
           <Route path="/portal/:token" element={<PMPortal />} />
+          <Route path="/estimate/:token" element={<EstimatePortal />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
 
           <Route path="*" element={<NotFound />} />

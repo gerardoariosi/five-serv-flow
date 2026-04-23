@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, AlertTriangle, DollarSign, Send, UserPlus, Check, XCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, AlertTriangle, DollarSign, Send, UserPlus, Check, XCircle, RotateCcw, Trash2, FileText, Plus, X, Copy } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import { getBusinessDaysElapsed, getCountdownDaysRemaining, getCountdownColor } from '@/lib/businessDays';
 import Spinner from '@/components/ui/Spinner';
@@ -50,6 +50,21 @@ const TicketDetail = () => {
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPMReport, setShowPMReport] = useState(false);
+
+  // Estimate builder
+  const [showEstimateBuilder, setShowEstimateBuilder] = useState(false);
+  const [estimateProblem, setEstimateProblem] = useState('');
+  const [estimateOptions, setEstimateOptions] = useState<Array<{ name: string; description: string; price: string }>>([
+    { name: '', description: '', price: '' },
+  ]);
+  const [estimatePmEmail, setEstimatePmEmail] = useState('');
+  const [estimatePmNote, setEstimatePmNote] = useState('');
+  const [savedEstimateOptions, setSavedEstimateOptions] = useState<any[]>([]);
+  const [sendingEstimate, setSendingEstimate] = useState(false);
+
+  // Reschedule
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleTime, setRescheduleTime] = useState('');
 
   // Lookup maps
   const [clients, setClients] = useState<Record<string, { name: string; email: string }>>({});

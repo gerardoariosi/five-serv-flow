@@ -744,6 +744,44 @@ export type Database = {
           },
         ]
       }
+      ticket_estimate_options: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          option_name: string
+          price: number
+          sort_order: number | null
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          option_name: string
+          price: number
+          sort_order?: number | null
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          option_name?: string
+          price?: number
+          sort_order?: number | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_estimate_options_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_photos: {
         Row: {
           id: string
@@ -863,12 +901,24 @@ export type Database = {
           accounting_notes: string | null
           appointment_time: string | null
           approved_by: string | null
+          billing_flow: string | null
           billing_status: string | null
           checklist_progress: Json
           client_id: string | null
           closed_at: string | null
           created_at: string | null
           description: string | null
+          estimate_expires_at: string | null
+          estimate_link_opened_count: number | null
+          estimate_link_token: string | null
+          estimate_pm_note: string | null
+          estimate_pm_signature: string | null
+          estimate_problem_description: string | null
+          estimate_selected_option: string | null
+          estimate_selected_price: number | null
+          estimate_submitted_at: string | null
+          evaluation_description: string | null
+          evaluation_submitted_at: string | null
           fs_number: string | null
           id: string
           internal_note: string | null
@@ -891,12 +941,24 @@ export type Database = {
           accounting_notes?: string | null
           appointment_time?: string | null
           approved_by?: string | null
+          billing_flow?: string | null
           billing_status?: string | null
           checklist_progress?: Json
           client_id?: string | null
           closed_at?: string | null
           created_at?: string | null
           description?: string | null
+          estimate_expires_at?: string | null
+          estimate_link_opened_count?: number | null
+          estimate_link_token?: string | null
+          estimate_pm_note?: string | null
+          estimate_pm_signature?: string | null
+          estimate_problem_description?: string | null
+          estimate_selected_option?: string | null
+          estimate_selected_price?: number | null
+          estimate_submitted_at?: string | null
+          evaluation_description?: string | null
+          evaluation_submitted_at?: string | null
           fs_number?: string | null
           id?: string
           internal_note?: string | null
@@ -919,12 +981,24 @@ export type Database = {
           accounting_notes?: string | null
           appointment_time?: string | null
           approved_by?: string | null
+          billing_flow?: string | null
           billing_status?: string | null
           checklist_progress?: Json
           client_id?: string | null
           closed_at?: string | null
           created_at?: string | null
           description?: string | null
+          estimate_expires_at?: string | null
+          estimate_link_opened_count?: number | null
+          estimate_link_token?: string | null
+          estimate_pm_note?: string | null
+          estimate_pm_signature?: string | null
+          estimate_problem_description?: string | null
+          estimate_selected_option?: string | null
+          estimate_selected_price?: number | null
+          estimate_submitted_at?: string | null
+          evaluation_description?: string | null
+          evaluation_submitted_at?: string | null
           fs_number?: string | null
           id?: string
           internal_note?: string | null
