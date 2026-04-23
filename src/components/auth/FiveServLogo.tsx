@@ -4,6 +4,9 @@ const FiveServLogo = () => (
       <span style={{ color: '#FFD700' }}>F</span>
       <span style={{ color: '#FFFFFF' }}>iveServ</span>
     </span>
+    <div style={{ color: '#FFD700', fontSize: '0.6rem', letterSpacing: '0.18em', marginTop: '6px', fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>
+      ONE TEAM · ONE CALL · DONE
+    </div>
   </div>
 );
 
