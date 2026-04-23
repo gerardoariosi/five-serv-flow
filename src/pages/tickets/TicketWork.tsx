@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wrench, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wrench, AlertTriangle, Wifi, WifiOff, Send } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
 import { Checkbox } from '@/components/ui/checkbox';
