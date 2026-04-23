@@ -95,7 +95,14 @@ const TicketWork = () => {
     if (!ticket) return 'en_camino';
     const status = ticket.status;
     if (status === 'open') return 'en_camino';
-    if (status === 'in_progress') return ticket.work_started_at ? 'working' : 'llegue';
+    if (status === 'pending_evaluation') return 'evaluation';
+    if (status === 'in_progress') {
+      // After admin approves evaluation, tech proceeds. If no evaluation done yet & no work_started, show llegue
+      if (ticket.evaluation_submitted_at) {
+        return ticket.work_started_at ? 'working' : 'working';
+      }
+      return ticket.work_started_at ? 'working' : 'llegue';
+    }
     if (status === 'paused') return 'working';
     if (status === 'ready_for_review') return 'ready_for_review';
     return 'en_camino';
@@ -103,7 +110,8 @@ const TicketWork = () => {
 
   const currentStep = getCurrentStep();
   const currentPhotos = photos.filter((p: any) => p.ticket_id === id);
-  const hasStartPhoto = currentPhotos.some((p: any) => p.stage === 'start' || p.stage === 'open' || p.stage === 'in_progress');
+  const hasStartPhoto = currentPhotos.some((p: any) => p.stage === 'start' || p.stage === 'open' || p.stage === 'in_progress' || p.stage === 'evaluation');
+  const hasEvaluationPhoto = currentPhotos.some((p: any) => p.stage === 'evaluation');
   const pendingSyncPhotos = currentPhotos.filter((p: any) => p.is_pending_sync);
 
   const handleUploadPhoto = async (stage: string, file?: File) => {
