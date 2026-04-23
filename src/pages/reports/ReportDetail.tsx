@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, FileDown, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInDays, differenceInHours } from 'date-fns';
+import { generateReportPdf } from '@/lib/reportPdf';
 
 const REPORT_TITLES: Record<string, string> = {
   'operational-summary': 'Operational Summary',
@@ -270,7 +271,36 @@ const ReportDetail = () => {
         <div className="flex gap-2">
           <Button size="sm" onClick={() => setApplied(true)}>Apply</Button>
           <Button size="sm" variant="outline" onClick={resetFilters}><RotateCcw className="w-3 h-3 mr-1" /> Reset</Button>
-          <Button size="sm" variant="outline" className="ml-auto" onClick={() => toast.info('Exporting PDF...')}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            onClick={() => {
+              try {
+                const pmName = pmFilter === 'all' ? 'All' : (clients.find((c: any) => c.id === pmFilter) as any)?.company_name ?? pmFilter;
+                const zoneName = zoneFilter === 'all' ? 'All' : (zones.find((z: any) => z.id === zoneFilter) as any)?.name ?? zoneFilter;
+                const techName = techFilter === 'all' ? 'All' : userMap[techFilter] ?? techFilter;
+                const doc = generateReportPdf({
+                  title,
+                  filters: {
+                    dateFrom,
+                    dateTo,
+                    pm: pmName,
+                    zone: zoneName,
+                    technician: techName,
+                    workType: typeFilter === 'all' ? 'All' : typeFilter,
+                  },
+                  kpis: kpis.map((k: any) => ({ label: k.label, value: k.value })),
+                  table: tableData,
+                });
+                doc.save(`${(slug || 'report')}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+                toast.success('PDF downloaded');
+              } catch (err) {
+                console.error(err);
+                toast.error('Failed to generate PDF');
+              }
+            }}
+          >
             <FileDown className="w-3 h-3 mr-1" /> Export PDF
           </Button>
         </div>
