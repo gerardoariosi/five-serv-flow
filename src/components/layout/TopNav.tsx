@@ -62,7 +62,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
       </div>
 
       <div className="flex-1 flex justify-center">
-        <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.6rem' }}>
+        <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}>
           <span style={{ color: '#FFD700' }}>F</span>
           <span style={{ color: '#FFFFFF' }}>iveServ</span>
         </span>
