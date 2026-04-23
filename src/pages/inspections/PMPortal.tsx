@@ -291,6 +291,8 @@ const PMPortal = () => {
               <img
                 src="/FiveServ_Logo_2_No_BG.png"
                 alt="FiveServ"
+                loading="eager"
+                decoding="sync"
                 style={{ height: '100px', width: 'auto', marginTop: '-28px', marginBottom: '-28px' }}
               />
               <div className="text-[9px] tracking-[0.2em] mt-2" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
@@ -355,6 +357,8 @@ const PMPortal = () => {
             <img
               src="/FiveServ_Logo_2_No_BG.png"
               alt="FiveServ"
+              loading="eager"
+              decoding="sync"
               style={{ height: '100px', width: 'auto', marginTop: '-28px', marginBottom: '-28px' }}
             />
             <div className="flex-1 flex justify-end">
@@ -616,7 +620,7 @@ const PMPortal = () => {
       <footer className="mt-12 bg-[#1A1A1A] text-white">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" className="h-8 w-auto mx-auto" />
+          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" loading="eager" decoding="sync" className="h-8 w-auto mx-auto" />
           <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
           <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
           <p className="text-[11px] text-gray-300">
