@@ -287,11 +287,11 @@ const PMPortal = () => {
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center">
-            <div className="inline-block bg-[#1A1A1A] px-6 py-4 rounded overflow-hidden">
+            <div className="inline-block bg-[#1A1A1A] px-6 py-4 rounded">
               <img
                 src="/FiveServ_Logo_2_No_BG.png"
                 alt="FiveServ"
-                style={{ height: '100px', width: 'auto', marginTop: '-28px', marginBottom: '-28px' }}
+                style={{ width: '180px', height: 'auto' }}
               />
               <div className="text-[9px] tracking-[0.2em] mt-2" style={{ color: '#FFD700' }}>FIVE DAYS. ONE CALL. DONE.</div>
             </div>
@@ -355,7 +355,7 @@ const PMPortal = () => {
             <img
               src="/FiveServ_Logo_2_No_BG.png"
               alt="FiveServ"
-              style={{ height: '56px', width: 'auto', marginTop: '-16px', marginBottom: '-16px' }}
+              style={{ height: '28px', width: 'auto' }}
             />
             <div className="flex-1 flex justify-end">
               {readOnly && (
@@ -616,7 +616,7 @@ const PMPortal = () => {
       <footer className="mt-12 bg-[#1A1A1A] text-white">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" style={{ height: '48px', width: 'auto', marginTop: '-13px', marginBottom: '-13px' }} className="mx-auto" />
+          <img src="/FiveServ_Logo_2_No_BG.png" alt="FiveServ" style={{ width: '120px', height: 'auto' }} className="mx-auto" />
           <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>Five Days. One Call. Done.</p>
           <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
           <p className="text-[11px] text-gray-300">

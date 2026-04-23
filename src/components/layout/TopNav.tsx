@@ -61,11 +61,11 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         </button>
       </div>
 
-      <div className="flex-1 flex justify-center overflow-hidden">
+      <div className="flex-1 flex justify-center">
         <img
           src="/FiveServ_Logo_2_No_BG.png"
           alt="FiveServ"
-          style={{ height: '80px', width: 'auto', marginTop: '-22px', marginBottom: '-22px' }}
+          style={{ height: '32px', width: 'auto' }}
         />
       </div>
 
