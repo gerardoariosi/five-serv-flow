@@ -65,6 +65,8 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         <img
           src="/FiveServ_Logo_2_No_BG.png"
           alt="FiveServ"
+          loading="eager"
+          decoding="sync"
           style={{ height: '80px', width: 'auto', marginTop: '-22px', marginBottom: '-22px' }}
         />
       </div>
