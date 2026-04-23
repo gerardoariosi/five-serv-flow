@@ -441,47 +441,73 @@ const PMPortal = () => {
           const areaItems = itemsByArea[area] ?? [];
           if (areaItems.length === 0 && areaPhotos.length === 0 && !areaNote) return null;
           return (
-            <div key={area} className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-              {/* Area title bar */}
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
+            <div key={area} className="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden">
+              {/* Area title bar — dark header */}
+              <div className="px-5 py-3 bg-gray-900 flex items-center gap-3">
                 <div className="w-1 h-5 rounded-sm" style={{ backgroundColor: '#FFD700' }} />
-                <h3 className="text-xs font-bold text-gray-800 uppercase tracking-[0.15em]">{area.replace(/_/g, ' ')}</h3>
+                <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em]">{area.replace(/_/g, ' ')}</h3>
               </div>
 
               {/* Items — invoice style rows */}
-              <div className="divide-y divide-gray-100">
+              <div>
                 {areaItems.map((item: any) => {
                   const subtotal = (item.quantity ?? 1) * (item.unit_price ?? 0);
                   const isSelected = selectedItems.has(item.id);
                   return (
-                    <div key={item.id} className={`px-5 py-3 transition-colors ${isSelected ? 'bg-yellow-50/40' : 'bg-white'}`}>
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => !readOnly && toggleItem(item.id)}
+                    <div
+                      key={item.id}
+                      className={`px-5 py-4 border-b border-gray-100 last:border-0 transition-all duration-150 ${
+                        isSelected
+                          ? 'bg-[#FFFBEB] border-l-4 border-l-[#FFD700]'
+                          : 'bg-white border-l-4 border-l-transparent hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => !readOnly && toggleItem(item.id)}
                           disabled={readOnly}
-                        />
+                          className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors mt-0.5 ${
+                            isSelected ? 'bg-[#FFD700] border-[#FFD700]' : 'border-gray-300 bg-white'
+                          } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                          aria-label={isSelected ? 'Deselect item' : 'Select item'}
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-black" />}
+                        </button>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate">{item.item_name}</p>
-                          <p className="text-[11px] text-gray-500 mt-0.5">Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)}</p>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-900">{item.item_name}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-bold text-gray-900 tabular-nums">${subtotal.toFixed(2)}</p>
+                              <Badge className={`text-[10px] mt-1 ${item.status === 'urgent' ? 'bg-red-100 text-red-700 hover:bg-red-100' : 'bg-orange-100 text-orange-700 hover:bg-orange-100'}`}>
+                                {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {item.item_note && (
+                            <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md">
+                              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-0.5">Technician Note</p>
+                              <p className="text-xs text-amber-800">{item.item_note}</p>
+                            </div>
+                          )}
+
+                          {!readOnly && (
+                            <div className="mt-2">
+                              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Your Note (optional)</p>
+                              <Textarea
+                                placeholder="Add a note for this item..."
+                                value={itemNotes[item.id] ?? ''}
+                                onChange={e => setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                rows={1}
+                                className="text-xs bg-gray-50 border-gray-200 text-gray-900 resize-none focus:ring-1 focus:ring-yellow-400"
+                              />
+                            </div>
+                          )}
                         </div>
-                        <Badge className={`text-[10px] font-medium ${item.status === 'urgent' ? 'bg-red-100 text-red-700 hover:bg-red-100' : 'bg-orange-100 text-orange-700 hover:bg-orange-100'}`}>
-                          {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                        </Badge>
-                        <span className="text-sm font-bold text-gray-900 tabular-nums w-20 text-right">${subtotal.toFixed(2)}</span>
-                      </div>
-                      {item.item_note && (
-                        <p className="text-xs text-gray-500 mt-2 ml-8 italic">→ {item.item_note}</p>
-                      )}
-                      <div className="ml-8 mt-2">
-                        <Textarea
-                          placeholder="Add a note (optional)..."
-                          value={itemNotes[item.id] ?? ''}
-                          onChange={e => !readOnly && setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-                          rows={1}
-                          className="bg-gray-50 border-gray-100 text-gray-900 text-xs resize-none"
-                          disabled={readOnly}
-                        />
                       </div>
                     </div>
                   );
@@ -523,20 +549,13 @@ const PMPortal = () => {
           );
         })}
 
-        {/* Total — invoice style */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4">
-            <div className="border-t border-gray-200 pt-4 flex items-end justify-between">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-semibold">Selected Total</p>
-                <p className="text-[10px] text-gray-400 mt-1">{selectedItems.size} item{selectedItems.size === 1 ? '' : 's'} approved</p>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold text-gray-900 tabular-nums leading-none">${total.toFixed(2)}</p>
-                <div className="h-0.5 mt-2" style={{ backgroundColor: '#FFD700' }} />
-              </div>
-            </div>
+        {/* Total — prominent dark bar */}
+        <div className="bg-gray-900 rounded-xl p-5 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Total</p>
+            <p className="text-xs text-gray-500 mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
           </div>
+          <p className="text-3xl font-bold tabular-nums" style={{ color: '#FFD700' }}>${total.toFixed(2)}</p>
         </div>
 
         {/* General note */}
