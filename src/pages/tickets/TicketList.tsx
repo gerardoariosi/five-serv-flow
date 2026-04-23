@@ -127,7 +127,7 @@ const TicketList = () => {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="flex flex-col h-full">
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Permanently Delete Ticket?</DialogTitle></DialogHeader>
@@ -139,8 +139,8 @@ const TicketList = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Sticky search + filter bar */}
-      <div className="sticky top-16 -mx-4 px-4 py-3 bg-background/95 backdrop-blur-sm z-20 -mt-4 mb-0 space-y-3 border-b border-border">
+      {/* Fixed search + filter bar at top of page area */}
+      <div className="px-4 pt-4 pb-3 bg-background/95 backdrop-blur-sm space-y-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <h1 className="text-xl font-bold text-foreground">Tickets</h1>
@@ -221,7 +221,7 @@ const TicketList = () => {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {loading ? (
           <SkeletonCard count={6} />
         ) : filtered.length === 0 ? (
