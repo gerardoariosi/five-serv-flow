@@ -15,12 +15,12 @@ import Spinner from '@/components/ui/Spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getChecklistFor } from '@/lib/workChecklists';
 
-type WorkStep = 'en_camino' | 'llegue' | 'working' | 'ready_for_review';
+type WorkStep = 'en_camino' | 'llegue' | 'evaluation' | 'working' | 'ready_for_review';
 
-const stepOrder: WorkStep[] = ['en_camino', 'llegue', 'working', 'ready_for_review'];
 const stepLabels: Record<WorkStep, string> = {
   en_camino: 'En Camino',
   llegue: 'Llegué',
+  evaluation: 'Submit Evaluation',
   working: 'Working',
   ready_for_review: 'Ready for Review',
 };
