@@ -143,7 +143,7 @@ const TicketList = () => {
       <div className="px-4 pt-4 pb-3 bg-background/95 backdrop-blur-sm space-y-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-baseline gap-2">
-            <h1 className="text-xl font-bold text-foreground">Tickets</h1>
+            <h1 className="fs-page-title">Tickets</h1>
             <span className="text-sm font-medium text-muted-foreground">({filtered.length})</span>
           </div>
           {(activeRole === 'admin' || activeRole === 'supervisor') && (
@@ -167,9 +167,7 @@ const TicketList = () => {
                 <button
                   key={c.key}
                   onClick={() => setFilterStatus(c.key)}
-                  className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
-                    active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                  }`}
+                  className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
                 >
                   {c.label}
                 </button>
@@ -183,9 +181,7 @@ const TicketList = () => {
                 <button
                   key={c.key}
                   onClick={() => setFilterType(c.key)}
-                  className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
-                    active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                  }`}
+                  className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
                 >
                   {c.label}
                 </button>
@@ -195,9 +191,7 @@ const TicketList = () => {
               <>
                 <button
                   onClick={() => setFilterZone('all')}
-                  className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
-                    filterZone === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                  }`}
+                  className={`fs-chip ${filterZone === 'all' ? 'fs-chip-active' : 'fs-chip-inactive'}`}
                 >
                   All Zones
                 </button>
@@ -207,9 +201,7 @@ const TicketList = () => {
                     <button
                       key={z.id}
                       onClick={() => setFilterZone(z.id)}
-                      className={`shrink-0 px-2.5 py-1 text-[11px] font-medium rounded-full border transition-all active:scale-95 ${
-                        active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:text-foreground'
-                      }`}
+                      className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
                     >
                       {z.name}
                     </button>
@@ -240,31 +232,43 @@ const TicketList = () => {
               <div key={ticket.id} className="flex items-start gap-1">
                 <button
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
-                  className={`flex-1 text-left fs-card border-l-4 ${leftBorder} p-3.5 active:scale-[0.99] transition-transform duration-100`}
+                  className={`flex-1 text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 active:scale-[0.99] transition-transform duration-100 space-y-1.5`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-sm font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
-                        <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-                        <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1.5 truncate">
-                        {ticket.property_id ? properties[ticket.property_id]?.name : ''}
-                        {ticket.unit ? ` · Unit ${ticket.unit}` : ''}
-                        {ticket.client_id ? ` · ${clients[ticket.client_id]}` : ''}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs text-muted-foreground">
-                        {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
-                      </p>
-                      {ticket.appointment_time && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                        </p>
-                      )}
-                    </div>
+                  {/* Zone 1 */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>
+                    <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
+                    <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
+                    {ticket.priority && ticket.priority !== 'normal' && (
+                      <Badge className={`text-[10px] ring-1 ring-current/20 ${
+                        ticket.priority === 'urgent' ? 'bg-destructive text-destructive-foreground'
+                        : ticket.priority === 'high' ? 'bg-orange-500 text-white'
+                        : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {ticket.priority.toUpperCase()}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Zone 2 */}
+                  <p className="text-sm truncate">
+                    {ticket.property_id && (
+                      <span className="font-semibold text-foreground">{properties[ticket.property_id]?.name}</span>
+                    )}
+                    {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
+                    {ticket.client_id && <span className="text-muted-foreground"> · {clients[ticket.client_id]}</span>}
+                  </p>
+
+                  {/* Zone 3 */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
+                    </span>
+                    {ticket.appointment_time && (
+                      <span>
+                        {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    )}
                   </div>
                 </button>
                 {activeRole === 'admin' && (ticket.status === 'draft' || ticket.status === 'cancelled') && (
