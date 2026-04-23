@@ -357,21 +357,30 @@ const EstimatePortal = () => {
                     <label
                       key={opt.id}
                       htmlFor={`opt-${opt.id}`}
-                      className={`block border rounded-lg p-4 cursor-pointer transition-all ${
-                        isSelected ? 'border-yellow-500 bg-yellow-50/40 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+                      className={`block rounded-xl border-2 p-5 cursor-pointer transition-all duration-150 ${
+                        isSelected
+                          ? 'border-[#FFD700] bg-[#FFFBEB] shadow-md'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
                       } ${readOnly ? 'cursor-default' : ''}`}
                     >
-                      <div className="flex items-start gap-3">
-                        <RadioGroupItem value={opt.id} id={`opt-${opt.id}`} className="mt-1" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="text-sm font-bold text-gray-900">{opt.option_name}</p>
-                            <p className="text-base font-bold text-gray-900 tabular-nums whitespace-nowrap">${Number(opt.price).toFixed(2)}</p>
+                      <RadioGroupItem value={opt.id} id={`opt-${opt.id}`} className="sr-only" />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                              isSelected ? 'border-[#FFD700] bg-[#FFD700]' : 'border-gray-300 bg-white'
+                            }`}
+                          >
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-black" />}
                           </div>
-                          {opt.description && (
-                            <p className="text-xs text-gray-600 mt-1.5 leading-relaxed whitespace-pre-wrap">{opt.description}</p>
-                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900">{opt.option_name}</p>
+                            {opt.description && (
+                              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed whitespace-pre-wrap">{opt.description}</p>
+                            )}
+                          </div>
                         </div>
+                        <p className="text-xl font-bold text-gray-900 tabular-nums shrink-0">${Number(opt.price).toFixed(2)}</p>
                       </div>
                     </label>
                   );
