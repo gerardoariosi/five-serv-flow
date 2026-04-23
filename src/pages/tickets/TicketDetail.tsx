@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, AlertTriangle, DollarSign, Send, UserPlus, Check, XCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Clock, Camera, MessageSquare, MapPin, StickyNote, AlertTriangle, DollarSign, Send, UserPlus, Check, XCircle, RotateCcw, Trash2, FileText, Plus, X, Copy } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import { getBusinessDaysElapsed, getCountdownDaysRemaining, getCountdownColor } from '@/lib/businessDays';
 import Spinner from '@/components/ui/Spinner';
