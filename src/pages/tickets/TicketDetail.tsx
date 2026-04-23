@@ -582,6 +582,19 @@ const TicketDetail = () => {
           ))}
         </TabsContent>
       </Tabs>
+
+      {/* Send PM Report Modal */}
+      <SendPMReportModal
+        open={showPMReport}
+        onOpenChange={setShowPMReport}
+        ticket={ticket}
+        propertyName={ticket?.property_id ? properties[ticket.property_id]?.name : ''}
+        propertyAddress={ticket?.property_id ? properties[ticket.property_id]?.address : ''}
+        technicianName={ticket?.technician_id ? users[ticket.technician_id]?.name : ''}
+        pmEmail={ticket?.client_id ? clients[ticket.client_id]?.email : ''}
+        photos={photos}
+        lastTimelineNote={timeline.find((t: any) => t.note)?.note}
+      />
     </div>
   );
 };
