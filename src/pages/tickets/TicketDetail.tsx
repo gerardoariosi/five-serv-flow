@@ -337,7 +337,7 @@ const TicketDetail = () => {
           {isAdminOrSupervisor && (
             <div>
               <span className="text-muted-foreground">Client / PM</span>
-              <p className="text-foreground font-medium">{ticket.client_id ? clients[ticket.client_id] : '—'}</p>
+              <p className="text-foreground font-medium">{ticket.client_id ? clients[ticket.client_id]?.name : '—'}</p>
             </div>
           )}
           <div>
@@ -368,7 +368,7 @@ const TicketDetail = () => {
           <div>
             <span className="text-muted-foreground">Technician</span>
             <p className="text-foreground font-medium">
-              {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive">Unassigned</span>}
+              {ticket.technician_id ? users[ticket.technician_id]?.name : <span className="text-destructive">Unassigned</span>}
             </p>
           </div>
           <div>
@@ -498,7 +498,7 @@ const TicketDetail = () => {
 
         {/* Send Report to PM — after close */}
         {isAdminOrSupervisor && ticket.status === 'closed' && (
-          <Button size="sm" variant="outline" onClick={() => toast.info('PM report sending will be available with email integration')}>
+          <Button size="sm" variant="outline" onClick={() => setShowPMReport(true)}>
             <Send className="w-4 h-4 mr-1" /> Send Report to PM
           </Button>
         )}
@@ -545,7 +545,7 @@ const TicketDetail = () => {
                   </div>
                   {entry.note && <p className="text-sm text-foreground mt-1">{entry.note}</p>}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {entry.changed_by ? users[entry.changed_by] : 'System'} · {new Date(entry.created_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
+                    {entry.changed_by ? users[entry.changed_by]?.name : 'System'} · {new Date(entry.created_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
                   </p>
                 </div>
               </div>
@@ -572,7 +572,7 @@ const TicketDetail = () => {
                     )}
                     <div className="p-2">
                       <p className="text-[10px] text-muted-foreground">
-                        {photo.technician_id ? users[photo.technician_id] : ''} · {new Date(photo.uploaded_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
+                        {photo.technician_id ? users[photo.technician_id]?.name : ''} · {new Date(photo.uploaded_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
                       </p>
                     </div>
                   </div>
