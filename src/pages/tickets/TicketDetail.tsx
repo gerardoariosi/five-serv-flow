@@ -654,6 +654,209 @@ const TicketDetail = () => {
         </div>
       )}
 
+      {/* === EVALUATION SUBMITTED === */}
+      {isAdminOrSupervisor && ticket.status === 'pending_evaluation' && (
+        <div className="bg-yellow-500/10 border border-yellow-500/40 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-500" />
+            <span className="text-sm font-semibold text-yellow-500 uppercase tracking-wide">Evaluation Submitted</span>
+          </div>
+          {ticket.evaluation_description && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Technician's findings</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.evaluation_description}</p>
+            </div>
+          )}
+          {photosByStage.evaluation?.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Evaluation photos</p>
+              <div className="grid grid-cols-3 gap-2">
+                {photosByStage.evaluation.map((p: any) => (
+                  <img key={p.id} src={p.url} alt="" className="w-full h-24 object-cover rounded" />
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2 flex-wrap pt-2">
+            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleApproveEvaluation} disabled={changingStatus}>
+              <Check className="w-4 h-4 mr-1" /> Approve to Work
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleEstimateRequired} disabled={changingStatus}>
+              <DollarSign className="w-4 h-4 mr-1" /> Estimate Required
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* === PENDING ESTIMATE — Create button === */}
+      {isAdminOrSupervisor && ticket.status === 'pending_estimate' && (
+        <div className="bg-amber-500/10 border border-amber-500/40 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-amber-500" />
+            <span className="text-sm font-semibold text-amber-500 uppercase tracking-wide">Estimate Required</span>
+          </div>
+          <p className="text-sm text-muted-foreground">Build the estimate to send to the property manager.</p>
+          <Button size="sm" onClick={openEstimateBuilder}>
+            <Plus className="w-4 h-4 mr-1" /> Create Estimate
+          </Button>
+        </div>
+      )}
+
+      {/* === ESTIMATE SENT === */}
+      {isAdminOrSupervisor && ticket.status === 'estimate_sent' && (
+        <div className="bg-indigo-500/10 border border-indigo-500/40 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Send className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm font-semibold text-indigo-400 uppercase tracking-wide">Estimate Sent — Waiting PM Approval</span>
+            </div>
+            <Badge variant="outline" className="text-xs">Opened {ticket.estimate_link_opened_count ?? 0}×</Badge>
+          </div>
+          {ticket.estimate_problem_description && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Problem description</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.estimate_problem_description}</p>
+            </div>
+          )}
+          {savedEstimateOptions.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Options sent</p>
+              {savedEstimateOptions.map((o: any) => (
+                <div key={o.id} className="flex items-center justify-between text-sm border-b border-border/50 pb-1.5">
+                  <span className="text-foreground font-medium">{o.option_name}</span>
+                  <span className="text-foreground font-mono">${Number(o.price).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 flex-wrap pt-1">
+            <Button size="sm" variant="outline" onClick={copyEstimateLink}>
+              <Copy className="w-4 h-4 mr-1" /> Copy Link
+            </Button>
+            <Button size="sm" variant="outline" onClick={openEstimateBuilder}>
+              <Edit className="w-4 h-4 mr-1" /> Edit & Resend
+            </Button>
+          </div>
+          {ticket.estimate_expires_at && (
+            <p className="text-xs text-muted-foreground">
+              Expires {new Date(ticket.estimate_expires_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* === ESTIMATE APPROVED === */}
+      {isAdminOrSupervisor && ticket.status === 'estimate_approved' && (
+        <div className="bg-emerald-500/10 border border-emerald-500/40 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wide">Estimate Approved by PM</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Selected option</p>
+              <p className="text-foreground font-medium">{ticket.estimate_selected_option || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Approved price</p>
+              <p className="text-foreground font-mono font-bold">${Number(ticket.estimate_selected_price ?? 0).toFixed(2)}</p>
+            </div>
+          </div>
+          {ticket.estimate_pm_note && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">PM note</p>
+              <p className="text-sm text-foreground italic whitespace-pre-wrap">{ticket.estimate_pm_note}</p>
+            </div>
+          )}
+          {ticket.estimate_pm_signature && (
+            <p className="text-xs text-emerald-400 flex items-center gap-1">
+              <Check className="w-3 h-3" /> Signature captured
+            </p>
+          )}
+          <Button size="sm" onClick={() => setShowReschedule(true)}>
+            <Clock className="w-4 h-4 mr-1" /> Reschedule & Assign
+          </Button>
+        </div>
+      )}
+
+      {/* === Estimate Builder Modal === */}
+      <Dialog open={showEstimateBuilder} onOpenChange={setShowEstimateBuilder}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Build Estimate for PM</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">Problem Description (visible to PM)</Label>
+              <Textarea value={estimateProblem} onChange={e => setEstimateProblem(e.target.value)} rows={3} placeholder="Describe the issue clearly for the PM..." />
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Options ({estimateOptions.length}/3)</Label>
+                {estimateOptions.length < 3 && (
+                  <Button size="sm" variant="outline" onClick={addEstimateOption}>
+                    <Plus className="w-3 h-3 mr-1" /> Add Option
+                  </Button>
+                )}
+              </div>
+              {estimateOptions.map((opt, idx) => (
+                <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">Option {idx + 1}</span>
+                    {estimateOptions.length > 1 && (
+                      <button onClick={() => removeEstimateOption(idx)} className="text-destructive hover:text-destructive/80">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Input placeholder="Option name (e.g. Standard Repair)" value={opt.name} onChange={e => updateEstimateOption(idx, 'name', e.target.value)} />
+                  <Textarea placeholder="Description (optional)" rows={2} value={opt.description} onChange={e => updateEstimateOption(idx, 'description', e.target.value)} />
+                  <Input type="number" step="0.01" placeholder="Price" value={opt.price} onChange={e => updateEstimateOption(idx, 'price', e.target.value)} />
+                </div>
+              ))}
+            </div>
+            <div>
+              <Label className="text-xs">PM Email</Label>
+              <Input type="email" value={estimatePmEmail} onChange={e => setEstimatePmEmail(e.target.value)} placeholder="pm@example.com" />
+            </div>
+            <div>
+              <Label className="text-xs">Optional note to PM</Label>
+              <Textarea value={estimatePmNote} onChange={e => setEstimatePmNote(e.target.value)} rows={2} placeholder="Add context if needed..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEstimateBuilder(false)}>Cancel</Button>
+            <Button onClick={handleSendEstimate} disabled={sendingEstimate}>
+              {sendingEstimate ? 'Sending...' : 'Send Estimate to PM'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === Reschedule Modal === */}
+      <Dialog open={showReschedule} onOpenChange={setShowReschedule}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Reschedule & Assign</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">New appointment time</Label>
+              <Input type="datetime-local" value={rescheduleTime} onChange={e => setRescheduleTime(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs">Technician</Label>
+              <Select value={ticket.technician_id ?? ''} onValueChange={async (v) => { await supabase.from('tickets').update({ technician_id: v }).eq('id', id); fetchTicket(); }}>
+                <SelectTrigger><SelectValue placeholder="Select technician" /></SelectTrigger>
+                <SelectContent>
+                  {technicians.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReschedule(false)}>Cancel</Button>
+            <Button onClick={handleReschedule} disabled={changingStatus}>Reschedule & Open</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Action Buttons */}
       <div className="flex gap-2 flex-wrap [&>button]:w-full [&>button]:sm:w-auto">
         {/* Assign Technician */}
