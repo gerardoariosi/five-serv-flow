@@ -60,6 +60,38 @@ const ClientDetail = () => {
     enabled: !!id && activeTab === 'inspections',
   });
 
+  const { data: notes } = useQuery({
+    queryKey: ['client-notes', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('client_notes')
+        .select('id, note, created_at, created_by, users:created_by(full_name)')
+        .eq('client_id', id!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!id && activeTab === 'notes' && canSeeNotes,
+  });
+
+  const addNote = useMutation({
+    mutationFn: async (text: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      const { error } = await supabase.from('client_notes').insert({
+        client_id: id!,
+        note: text,
+        created_by: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteText('');
+      queryClient.invalidateQueries({ queryKey: ['client-notes', id] });
+      toast.success('Note saved');
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to save note'),
+  });
+
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (!client) return <p className="text-center text-muted-foreground py-12">Client not found.</p>;
 
