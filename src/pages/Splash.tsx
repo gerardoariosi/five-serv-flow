@@ -22,7 +22,7 @@ const Splash = () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user) {
-        setTimeout(() => navigate('/login', { replace: true }), 800);
+        setTimeout(() => navigate('/login', { replace: true }), 3300);
         return;
       }
 
@@ -34,7 +34,7 @@ const Splash = () => {
         .maybeSingle();
 
       if (!profile) {
-        setTimeout(() => navigate('/login', { replace: true }), 800);
+        setTimeout(() => navigate('/login', { replace: true }), 3300);
         return;
       }
 
@@ -62,13 +62,13 @@ const Splash = () => {
           .maybeSingle();
 
         if (!company?.setup_completed) {
-          setTimeout(() => navigate('/setup/step-1', { replace: true }), 800);
+          setTimeout(() => navigate('/setup/step-1', { replace: true }), 3300);
           return;
         }
       }
 
       // Redirect to dashboard (placeholder for now)
-      setTimeout(() => navigate('/dashboard', { replace: true }), 800);
+      setTimeout(() => navigate('/dashboard', { replace: true }), 3300);
     };
 
     checkSession();
