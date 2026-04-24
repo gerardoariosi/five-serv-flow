@@ -357,10 +357,29 @@ const CalendarPage = () => {
 
   const CalendarComponent = isMobile ? BigCalendar : DnDCalendar;
 
+  const { data: technicianRoles = [] } = useQuery({
+    queryKey: ['calendar-technicians'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'technician');
+      if (error) throw error;
+      return (data ?? []).map((r: any) => r.user_id as string);
+    },
+    enabled: canFilter,
+  });
+
   const techOptions = useMemo(() => {
-    const techIds = [...new Set(tickets.map((t: any) => t.technician_id).filter(Boolean))];
-    return techIds.map(id => ({ id, name: userMap[id] || 'Unknown' }));
-  }, [tickets, userMap]);
+    const ids = technicianRoles.length
+      ? technicianRoles
+      : ([...new Set(tickets.map((t: any) => t.technician_id).filter(Boolean))] as string[]);
+    return ids
+      .map((id) => ({ id, name: userMap[id] || 'Unknown' }))
+      .filter((t) => t.name !== 'Unknown' || !technicianRoles.length)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [technicianRoles, tickets, userMap]);
+
 
   return (
     <div className="p-4 max-w-6xl mx-auto space-y-3">
