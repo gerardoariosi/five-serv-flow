@@ -100,6 +100,8 @@ const CalendarPage = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const { activeRole } = useAuthStore();
+  const canFilter = activeRole === 'admin' || activeRole === 'supervisor';
   const [view, setView] = useState<any>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [reschedule, setReschedule] = useState<RescheduleState | null>(null);
