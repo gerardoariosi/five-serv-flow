@@ -96,8 +96,20 @@ const AccountingList = () => {
     setEmailTo('');
   };
 
+  const handleBulkUpdate = async (status: 'invoiced' | 'paid') => {
+    if (selected.size === 0) return;
+    setBulkUpdating(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('tickets').update({ billing_status: status }).in('id', ids);
+    setBulkUpdating(false);
+    if (error) { toast.error(`Update failed: ${error.message}`); return; }
+    toast.success(`${ids.length} ticket(s) marked as ${status}`);
+    setSelected(new Set());
+    queryClient.invalidateQueries({ queryKey: ['accounting-tickets'] });
+  };
+
   return (
-    <div className="p-4 max-w-3xl mx-auto space-y-4">
+    <div className="p-4 max-w-3xl mx-auto space-y-4 pb-28">
       <h1 className="text-xl font-bold text-foreground">Accounting</h1>
 
       {/* Search */}
