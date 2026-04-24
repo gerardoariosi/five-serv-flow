@@ -128,6 +128,7 @@ const ClientDetail = () => {
           <TabsTrigger value="properties">Properties</TabsTrigger>
           <TabsTrigger value="tickets">Tickets</TabsTrigger>
           <TabsTrigger value="inspections">Inspections</TabsTrigger>
+          {canSeeNotes && <TabsTrigger value="notes">Internal Notes</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="properties" className="mt-4">
