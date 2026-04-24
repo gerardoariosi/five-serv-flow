@@ -87,10 +87,6 @@ const Dashboard = () => {
       supabase.rpc('get_user_directory'),
       supabase.from('user_roles').select('user_id').eq('role', 'technician'),
     ]);
-      supabase.from('properties').select('id, name, address'),
-      supabase.from('zones').select('id, name'),
-      supabase.rpc('get_user_directory'),
-    ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
     (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
@@ -104,6 +100,7 @@ const Dashboard = () => {
     const uMap: Record<string, string> = {};
     (userRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
+    setTechnicianIds(((techRolesRes.data ?? []) as any[]).map((r) => r.user_id));
     setLoading(false);
   }, []);
 
