@@ -969,6 +969,7 @@ export type Database = {
           rejection_count: number | null
           related_inspection_id: string | null
           status: string | null
+          target_completion_date: string | null
           technician_id: string | null
           unit: string | null
           vendor_id: string | null
@@ -1009,6 +1010,7 @@ export type Database = {
           rejection_count?: number | null
           related_inspection_id?: string | null
           status?: string | null
+          target_completion_date?: string | null
           technician_id?: string | null
           unit?: string | null
           vendor_id?: string | null
@@ -1049,6 +1051,7 @@ export type Database = {
           rejection_count?: number | null
           related_inspection_id?: string | null
           status?: string | null
+          target_completion_date?: string | null
           technician_id?: string | null
           unit?: string | null
           vendor_id?: string | null

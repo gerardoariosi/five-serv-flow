@@ -9,20 +9,61 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wrench, AlertTriangle, Wifi, WifiOff, Send } from 'lucide-react';
+import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wifi, WifiOff, Send, AlertTriangle, Clock, FileText } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getChecklistFor } from '@/lib/workChecklists';
 
-type WorkStep = 'en_camino' | 'llegue' | 'evaluation' | 'working' | 'ready_for_review';
+type WorkType = 'make-ready' | 'repair' | 'emergency' | 'capex';
+type WorkStep =
+  | 'start'           // make-ready: start work button
+  | 'en_camino'       // repair/emergency: on my way
+  | 'llegue'          // repair/emergency: arrived (upload + advance)
+  | 'evaluation_form' // repair/emergency/capex: fill evaluation
+  | 'evaluation_pending' // waiting for admin decision after evaluation submitted
+  | 'estimate_pending'   // capex: waiting for estimate -> PM approval
+  | 'reschedule_pending' // capex: estimate approved, waiting reschedule
+  | 'working'
+  | 'ready_for_review';
 
-const stepLabels: Record<WorkStep, string> = {
-  en_camino: 'En Camino',
-  llegue: 'Llegué',
-  evaluation: 'Submit Evaluation',
-  working: 'Working',
-  ready_for_review: 'Ready for Review',
+const normalizeWorkType = (wt?: string | null): WorkType => {
+  if (!wt) return 'repair';
+  const k = wt.toLowerCase().replace('_', '-');
+  if (k === 'make-ready' || k === 'repair' || k === 'emergency' || k === 'capex') return k as WorkType;
+  return 'repair';
+};
+
+const stepDefs: Record<WorkType, { key: WorkStep; label: string }[]> = {
+  'make-ready': [
+    { key: 'working', label: 'Working' },
+    { key: 'ready_for_review', label: 'Review' },
+    { key: 'ready_for_review', label: 'Closed' },
+  ],
+  repair: [
+    { key: 'en_camino', label: 'On My Way' },
+    { key: 'llegue', label: 'Arrived' },
+    { key: 'evaluation_form', label: 'Evaluation' },
+    { key: 'working', label: 'Working' },
+    { key: 'ready_for_review', label: 'Review' },
+    { key: 'ready_for_review', label: 'Closed' },
+  ],
+  emergency: [
+    { key: 'en_camino', label: 'On My Way' },
+    { key: 'llegue', label: 'Arrived' },
+    { key: 'evaluation_form', label: 'Evaluation' },
+    { key: 'working', label: 'Working' },
+    { key: 'ready_for_review', label: 'Review' },
+    { key: 'ready_for_review', label: 'Closed' },
+  ],
+  capex: [
+    { key: 'evaluation_form', label: 'Evaluation' },
+    { key: 'estimate_pending', label: 'Estimate' },
+    { key: 'reschedule_pending', label: 'Approved' },
+    { key: 'working', label: 'Working' },
+    { key: 'ready_for_review', label: 'Review' },
+    { key: 'ready_for_review', label: 'Closed' },
+  ],
 };
 
 const TicketWork = () => {
@@ -47,9 +88,13 @@ const TicketWork = () => {
   const [closeNote, setCloseNote] = useState('');
   const [closePhoto, setClosePhoto] = useState<File | null>(null);
 
-  // Evaluation
+  // Evaluation form
   const [evaluationText, setEvaluationText] = useState('');
   const [submittingEval, setSubmittingEval] = useState(false);
+
+  // Target completion date (Working step)
+  const [targetDate, setTargetDate] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -71,12 +116,12 @@ const TicketWork = () => {
     ]);
     setTicket(tRes.data);
     setPhotos(phRes.data ?? []);
+    setTargetDate(((tRes.data as any)?.target_completion_date as string) ?? '');
 
     const pMap: Record<string, { name: string; address: string }> = {};
     (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
     setProperties(pMap);
 
-    // Fetch full property photo history if technician has active ticket
     if (tRes.data?.property_id) {
       const { data: propTickets } = await supabase.from('tickets').select('id').eq('property_id', tRes.data.property_id);
       if (propTickets && propTickets.length > 0) {
@@ -85,32 +130,50 @@ const TicketWork = () => {
         setPropertyPhotos(allPhotos ?? []);
       }
     }
-
     setLoading(false);
   }, [id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const workType: WorkType = normalizeWorkType(ticket?.work_type);
+
   const getCurrentStep = (): WorkStep => {
-    if (!ticket) return 'en_camino';
-    const status = ticket.status;
-    if (status === 'open') return 'en_camino';
-    if (status === 'pending_evaluation') return 'evaluation';
-    if (status === 'in_progress') {
-      // After admin approves evaluation, tech proceeds. If no evaluation done yet & no work_started, show llegue
-      if (ticket.evaluation_submitted_at) {
-        return ticket.work_started_at ? 'working' : 'working';
-      }
-      return ticket.work_started_at ? 'working' : 'llegue';
+    if (!ticket) return 'start';
+    const s = ticket.status;
+
+    if (s === 'ready_for_review') return 'ready_for_review';
+    if (s === 'paused') return 'working';
+
+    if (workType === 'make-ready') {
+      if (s === 'open') return 'start';
+      return 'working';
     }
-    if (status === 'paused') return 'working';
-    if (status === 'ready_for_review') return 'ready_for_review';
+
+    if (workType === 'capex') {
+      if (s === 'open' && !ticket.evaluation_submitted_at) return 'evaluation_form';
+      if (s === 'pending_evaluation') return 'evaluation_pending';
+      if (s === 'estimate_pending' || s === 'estimate_sent') return 'estimate_pending';
+      if (s === 'estimate_approved') return 'reschedule_pending';
+      if (s === 'in_progress') return 'working';
+      // Default for capex: if evaluation submitted but unknown intermediate → working
+      if (ticket.evaluation_submitted_at && !ticket.work_started_at) return 'evaluation_pending';
+      return 'working';
+    }
+
+    // repair / emergency
+    if (s === 'open') return 'en_camino';
+    if (s === 'pending_evaluation') return 'evaluation_pending';
+    if (s === 'in_progress') {
+      if (ticket.work_started_at) return 'working';
+      if (ticket.evaluation_submitted_at) return 'working';
+      // Arrived but evaluation not yet submitted
+      return 'llegue';
+    }
     return 'en_camino';
   };
 
   const currentStep = getCurrentStep();
   const currentPhotos = photos.filter((p: any) => p.ticket_id === id);
-  const hasStartPhoto = currentPhotos.some((p: any) => p.stage === 'start' || p.stage === 'open' || p.stage === 'in_progress' || p.stage === 'evaluation');
   const hasEvaluationPhoto = currentPhotos.some((p: any) => p.stage === 'evaluation');
   const pendingSyncPhotos = currentPhotos.filter((p: any) => p.is_pending_sync);
 
@@ -120,14 +183,9 @@ const TicketWork = () => {
     setUploading(true);
 
     if (!isOnline) {
-      // Save locally with pending flag
       const localUrl = URL.createObjectURL(f);
       await supabase.from('ticket_photos').insert({
-        ticket_id: id,
-        url: localUrl,
-        stage,
-        technician_id: user.id,
-        is_pending_sync: true,
+        ticket_id: id, url: localUrl, stage, technician_id: user.id, is_pending_sync: true,
       });
       toast.info('Photo saved locally. Will sync when online.');
       setUploading(false);
@@ -152,36 +210,51 @@ const TicketWork = () => {
     e.target.value = '';
   };
 
-  const advanceStep = async (step: WorkStep) => {
-    if (!ticket || !user) return;
-
-    if (step === 'working' && !hasStartPhoto) {
-      toast.error('Upload at least 1 photo before starting work');
-      return;
-    }
-
-    let newStatus = ticket.status;
-    const updates: any = {};
-
-    if (step === 'en_camino') {
-      newStatus = 'in_progress';
-    } else if (step === 'llegue') {
-      newStatus = 'in_progress';
-    } else if (step === 'working') {
-      newStatus = 'in_progress';
-      updates.work_started_at = new Date().toISOString();
-    } else if (step === 'ready_for_review') {
-      setShowComplete(true);
-      return;
-    }
-
-    updates.status = newStatus;
-    await supabase.from('tickets').update(updates).eq('id', id);
+  const logTimeline = async (from: string, to: string, note: string) => {
+    if (!user) return;
     await supabase.from('ticket_timeline').insert({
-      ticket_id: id, from_status: ticket.status, to_status: newStatus,
-      changed_by: user.id, note: `Technician: ${stepLabels[step]}`,
+      ticket_id: id, from_status: from, to_status: to, changed_by: user.id, note,
     });
-    toast.success(stepLabels[step]);
+  };
+
+  // Make-Ready: Start Work
+  const startMakeReadyWork = async () => {
+    if (!ticket || !user) return;
+    await supabase.from('tickets').update({
+      status: 'in_progress',
+      work_started_at: new Date().toISOString(),
+    }).eq('id', id);
+    await logTimeline(ticket.status, 'in_progress', 'Make-ready: work started');
+    toast.success('Work started');
+    fetchData();
+  };
+
+  // Repair/Emergency: On My Way
+  const onMyWay = async () => {
+    if (!ticket || !user) return;
+    await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
+    await logTimeline(ticket.status, 'in_progress', 'Technician: On My Way');
+    toast.success('On My Way');
+    fetchData();
+  };
+
+  // Repair/Emergency: Arrived (no status change, just timeline marker; show evaluation form)
+  // The evaluation form is rendered when at 'llegue' step.
+
+  const submitEvaluation = async () => {
+    if (!ticket || !user) return;
+    if (!hasEvaluationPhoto) { toast.error('Upload at least 1 evaluation photo'); return; }
+    if (!evaluationText.trim()) { toast.error('Description required'); return; }
+    setSubmittingEval(true);
+    await supabase.from('tickets').update({
+      status: 'pending_evaluation',
+      evaluation_description: evaluationText.trim(),
+      evaluation_submitted_at: new Date().toISOString(),
+    } as any).eq('id', id);
+    await logTimeline(ticket.status, 'pending_evaluation', `Evaluation submitted: ${evaluationText.trim().slice(0, 200)}`);
+    toast.success('Evaluation submitted');
+    setEvaluationText('');
+    setSubmittingEval(false);
     fetchData();
   };
 
@@ -193,16 +266,19 @@ const TicketWork = () => {
     setTicket({ ...ticket, checklist_progress: next });
   };
 
+  const saveTargetDate = async (value: string) => {
+    if (!ticket) return;
+    setSavingDate(true);
+    await supabase.from('tickets').update({ target_completion_date: value || null } as any).eq('id', id);
+    setSavingDate(false);
+    toast.success(value ? 'Target date saved' : 'Target date cleared');
+  };
+
   const handlePause = async () => {
     if (!pauseReason.trim()) { toast.error('Reason required'); return; }
     await supabase.from('tickets').update({ status: 'paused' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
-      ticket_id: id, from_status: ticket.status, to_status: 'paused',
-      changed_by: user?.id, note: `Paused: ${pauseReason}${pauseReturnDate ? ` | Est. return: ${pauseReturnDate}` : ''}`,
-    });
-    setPauseReason('');
-    setPauseReturnDate('');
-    setShowPause(false);
+    await logTimeline(ticket.status, 'paused', `Paused: ${pauseReason}${pauseReturnDate ? ` | Est. return: ${pauseReturnDate}` : ''}`);
+    setPauseReason(''); setPauseReturnDate(''); setShowPause(false);
     toast.success('Ticket paused');
     fetchData();
   };
@@ -210,33 +286,18 @@ const TicketWork = () => {
   const handleMarkComplete = async () => {
     if (!closePhoto) { toast.error('Closing photo required'); return; }
     if (!closeNote.trim()) { toast.error('Closing note required'); return; }
-
     await handleUploadPhoto('close', closePhoto);
-
     await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
-      ticket_id: id, from_status: ticket.status, to_status: 'ready_for_review',
-      changed_by: user?.id, note: `Completed: ${closeNote}`,
-    });
-    setClosePhoto(null);
-    setCloseNote('');
-    setShowComplete(false);
+    await logTimeline(ticket.status, 'ready_for_review', `Completed: ${closeNote}`);
+    setClosePhoto(null); setCloseNote(''); setShowComplete(false);
     toast.success('Submitted for review');
-
-    // Fan-out emails to admins
-    try {
-      await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } });
-    } catch { /* non-blocking */ }
-
+    try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* */ }
     fetchData();
   };
 
   const resumeWork = async () => {
     await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
-      ticket_id: id, from_status: 'paused', to_status: 'in_progress',
-      changed_by: user?.id, note: 'Resumed work',
-    });
+    await logTimeline('paused', 'in_progress', 'Resumed work');
     toast.success('Work resumed');
     fetchData();
   };
@@ -246,6 +307,15 @@ const TicketWork = () => {
 
   const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
   const address = ticket.property_id ? properties[ticket.property_id]?.address : null;
+  const steps = stepDefs[workType];
+
+  // Determine active step index for progress indicator
+  const activeStepIndex = (() => {
+    if (ticket.status === 'ready_for_review') return steps.length - 2; // Review
+    if (ticket.status === 'closed') return steps.length - 1;
+    const idx = steps.findIndex(s => s.key === currentStep);
+    return idx === -1 ? 0 : idx;
+  })();
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-5">
@@ -312,6 +382,27 @@ const TicketWork = () => {
         </div>
       </div>
 
+      {/* Step Indicator */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {steps.map((step, i) => {
+          const active = i === activeStepIndex;
+          const done = i < activeStepIndex || ticket.status === 'closed';
+          return (
+            <div key={`${step.label}-${i}`} className="flex items-center flex-shrink-0">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                active ? 'bg-primary text-primary-foreground border-primary'
+                : done ? 'bg-green-500/15 text-green-500 border-green-500/30'
+                : 'bg-card text-muted-foreground border-border'
+              }`}>
+                {done && !active ? <CheckCircle className="w-3 h-3" /> : <span className="font-bold">{i + 1}</span>}
+                <span>{step.label}</span>
+              </div>
+              {i < steps.length - 1 && <div className={`w-3 h-px ${done ? 'bg-green-500/40' : 'bg-border'}`} />}
+            </div>
+          );
+        })}
+      </div>
+
       {/* Pending sync indicator */}
       {pendingSyncPhotos.length > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-orange-500/10 border border-orange-500/30">
@@ -331,13 +422,13 @@ const TicketWork = () => {
         {ticket.description && <p className="text-sm text-muted-foreground mt-2">{ticket.description}</p>}
       </div>
 
-      {/* Step flow buttons */}
+      {/* Step content */}
       <div className="space-y-3">
         {ticket.status === 'paused' ? (
           <Button className="w-full" size="lg" onClick={resumeWork}>
             <Play className="w-5 h-5 mr-2" /> Resume Work
           </Button>
-        ) : ticket.status === 'ready_for_review' ? (
+        ) : currentStep === 'ready_for_review' ? (
           <div className="text-center py-6">
             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
             <p className="text-foreground font-medium">Submitted for Review</p>
@@ -345,16 +436,27 @@ const TicketWork = () => {
           </div>
         ) : (
           <>
-            {currentStep === 'en_camino' && (
-              <Button className="w-full" size="lg" onClick={() => advanceStep('en_camino')}>
-                <Navigation className="w-5 h-5 mr-2" /> En Camino
+            {/* MAKE-READY: Start */}
+            {currentStep === 'start' && workType === 'make-ready' && (
+              <Button className="w-full" size="lg" onClick={startMakeReadyWork}>
+                <Play className="w-5 h-5 mr-2" /> Start Work
               </Button>
             )}
+
+            {/* REPAIR/EMERGENCY: On My Way */}
+            {currentStep === 'en_camino' && (
+              <Button className="w-full" size="lg" onClick={onMyWay}>
+                <Navigation className="w-5 h-5 mr-2" /> On My Way
+              </Button>
+            )}
+
+            {/* REPAIR/EMERGENCY: Arrived → Evaluation form */}
             {currentStep === 'llegue' && (
               <>
-                <Button className="w-full" size="lg" variant="outline" onClick={() => advanceStep('llegue')}>
-                  <MapPin className="w-5 h-5 mr-2" /> Llegué
-                </Button>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-foreground font-medium">You've arrived. Submit your evaluation below.</span>
+                </div>
 
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
@@ -364,44 +466,48 @@ const TicketWork = () => {
 
                 <div className="bg-card border border-border rounded-lg p-4 space-y-2">
                   <Label>What did you find?</Label>
-                  <Textarea
-                    value={evaluationText}
-                    onChange={e => setEvaluationText(e.target.value)}
-                    rows={4}
-                    placeholder="Describe what you found at the property..."
-                  />
+                  <Textarea value={evaluationText} onChange={e => setEvaluationText(e.target.value)} rows={4} placeholder="Describe what you found at the property..." />
                 </div>
 
-                <Button
-                  className="w-full"
-                  size="lg"
-                  disabled={!hasEvaluationPhoto || !evaluationText.trim() || submittingEval}
-                  onClick={async () => {
-                    if (!user) return;
-                    setSubmittingEval(true);
-                    await supabase.from('tickets').update({
-                      status: 'pending_evaluation',
-                      evaluation_description: evaluationText.trim(),
-                      evaluation_submitted_at: new Date().toISOString(),
-                    } as any).eq('id', id);
-                    await supabase.from('ticket_timeline').insert({
-                      ticket_id: id, from_status: ticket.status, to_status: 'pending_evaluation',
-                      changed_by: user.id, note: `Evaluation submitted: ${evaluationText.trim().slice(0, 200)}`,
-                    });
-                    toast.success('Evaluation submitted');
-                    setSubmittingEval(false);
-                    fetchData();
-                  }}
-                >
+                <Button className="w-full" size="lg" disabled={!hasEvaluationPhoto || !evaluationText.trim() || submittingEval} onClick={submitEvaluation}>
                   {submittingEval ? <Spinner size="sm" /> : <><Send className="w-5 h-5 mr-2" /> Submit to Admin</>}
                 </Button>
               </>
             )}
-            {currentStep === 'evaluation' && (
+
+            {/* CAPEX: Evaluation form (no arrival step) */}
+            {currentStep === 'evaluation_form' && workType === 'capex' && (
+              <>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-foreground font-medium">CapEx evaluation — submit findings for estimate.</span>
+                </div>
+
+                <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-primary/40 rounded-lg cursor-pointer hover:bg-primary/5 transition-colors">
+                  <Camera className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-primary font-medium">Upload Evaluation Photo {!hasEvaluationPhoto && '(required)'}</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('evaluation')} />
+                </label>
+
+                <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                  <Label>Findings & scope</Label>
+                  <Textarea value={evaluationText} onChange={e => setEvaluationText(e.target.value)} rows={4} placeholder="Describe scope and conditions for the estimate..." />
+                </div>
+
+                <Button className="w-full" size="lg" disabled={!hasEvaluationPhoto || !evaluationText.trim() || submittingEval} onClick={submitEvaluation}>
+                  {submittingEval ? <Spinner size="sm" /> : <><Send className="w-5 h-5 mr-2" /> Submit to Admin</>}
+                </Button>
+              </>
+            )}
+
+            {/* Evaluation pending admin */}
+            {currentStep === 'evaluation_pending' && (
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6 text-center space-y-3">
-                <CheckCircle className="w-10 h-10 text-yellow-500 mx-auto" />
+                <Clock className="w-10 h-10 text-yellow-500 mx-auto" />
                 <p className="text-foreground font-medium">Evaluation submitted</p>
-                <p className="text-sm text-muted-foreground">Waiting for admin decision.</p>
+                <p className="text-sm text-muted-foreground">
+                  {workType === 'capex' ? 'Waiting for admin to prepare estimate.' : 'Waiting for admin decision.'}
+                </p>
                 {ticket.evaluation_description && (
                   <div className="text-left bg-background rounded p-3 mt-3 border border-border">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Your Evaluation</p>
@@ -410,6 +516,26 @@ const TicketWork = () => {
                 )}
               </div>
             )}
+
+            {/* CapEx: estimate pending PM approval */}
+            {currentStep === 'estimate_pending' && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 text-center space-y-2">
+                <Clock className="w-10 h-10 text-blue-500 mx-auto" />
+                <p className="text-foreground font-medium">Waiting for PM Approval</p>
+                <p className="text-sm text-muted-foreground">Estimate sent to the Property Manager. You'll be notified once approved.</p>
+              </div>
+            )}
+
+            {/* CapEx: estimate approved, awaiting reschedule */}
+            {currentStep === 'reschedule_pending' && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 text-center space-y-2">
+                <CheckCircle className="w-10 h-10 text-green-500 mx-auto" />
+                <p className="text-foreground font-medium">Estimate Approved</p>
+                <p className="text-sm text-muted-foreground">Waiting to be rescheduled by admin.</p>
+              </div>
+            )}
+
+            {/* WORKING step (all flows) */}
             {currentStep === 'working' && (
               <>
                 {/* Checklist */}
@@ -436,13 +562,36 @@ const TicketWork = () => {
                   );
                 })()}
 
+                {/* Optional Target Completion Date */}
+                <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary" />
+                    Target Completion Date (optional)
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="date"
+                      value={targetDate}
+                      onChange={e => setTargetDate(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => saveTargetDate(targetDate)}
+                      disabled={savingDate}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+
                 <label className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
                   <Camera className="w-5 h-5 text-primary" />
                   <span className="text-sm text-muted-foreground">Upload Progress Photo</span>
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('process')} />
                 </label>
 
-                <Button className="w-full" size="lg" onClick={() => advanceStep('ready_for_review')}>
+                <Button className="w-full" size="lg" onClick={() => setShowComplete(true)}>
                   <CheckCircle className="w-5 h-5 mr-2" /> Mark Complete
                 </Button>
               </>
@@ -450,8 +599,8 @@ const TicketWork = () => {
           </>
         )}
 
-        {/* Pause always visible during active work */}
-        {['open', 'in_progress'].includes(ticket.status) && (
+        {/* Pause visible during active work */}
+        {['open', 'in_progress'].includes(ticket.status) && currentStep === 'working' && (
           <Button variant="destructive" className="w-full" size="lg" onClick={() => setShowPause(true)}>
             <Pause className="w-5 h-5 mr-2" /> Pause
           </Button>
