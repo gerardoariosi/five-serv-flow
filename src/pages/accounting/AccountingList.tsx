@@ -26,10 +26,14 @@ const billingBadgeVariant = (status: string) => {
 
 const AccountingList = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { activeRole } = useAuthStore();
+  const canBulkUpdate = activeRole === 'admin' || activeRole === 'accounting';
   const [search, setSearch] = useState('');
   const [billingFilter, setBillingFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [emailDialog, setEmailDialog] = useState<string | null>(null);
   const [emailTo, setEmailTo] = useState('');
 
