@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/stores/authStore';
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(BigCalendar as any);
