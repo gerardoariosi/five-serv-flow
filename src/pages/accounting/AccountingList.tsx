@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,10 +26,14 @@ const billingBadgeVariant = (status: string) => {
 
 const AccountingList = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { activeRole } = useAuthStore();
+  const canBulkUpdate = activeRole === 'admin' || activeRole === 'accounting';
   const [search, setSearch] = useState('');
   const [billingFilter, setBillingFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [emailDialog, setEmailDialog] = useState<string | null>(null);
   const [emailTo, setEmailTo] = useState('');
 
@@ -91,8 +96,20 @@ const AccountingList = () => {
     setEmailTo('');
   };
 
+  const handleBulkUpdate = async (status: 'invoiced' | 'paid') => {
+    if (selected.size === 0) return;
+    setBulkUpdating(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('tickets').update({ billing_status: status }).in('id', ids);
+    setBulkUpdating(false);
+    if (error) { toast.error(`Update failed: ${error.message}`); return; }
+    toast.success(`${ids.length} ticket(s) marked as ${status}`);
+    setSelected(new Set());
+    queryClient.invalidateQueries({ queryKey: ['accounting-tickets'] });
+  };
+
   return (
-    <div className="p-4 max-w-3xl mx-auto space-y-4">
+    <div className="p-4 max-w-3xl mx-auto space-y-4 pb-28">
       <h1 className="text-xl font-bold text-foreground">Accounting</h1>
 
       {/* Search */}
@@ -177,6 +194,22 @@ const AccountingList = () => {
           );
         })}
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      {canBulkUpdate && selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
+          <span className="text-sm font-medium">{selected.size} ticket{selected.size === 1 ? '' : 's'} selected</span>
+          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('invoiced')}>
+            Mark as Invoiced
+          </Button>
+          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('paid')}>
+            Mark as Paid
+          </Button>
+          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       {/* Email Dialog */}
       <Dialog open={!!emailDialog} onOpenChange={() => { setEmailDialog(null); setEmailTo(''); }}>
