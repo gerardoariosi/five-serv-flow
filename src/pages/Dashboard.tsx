@@ -9,6 +9,11 @@ import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plu
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 interface TicketRow {
   id: string;
@@ -59,14 +64,28 @@ const Dashboard = () => {
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
+  const [technicianIds, setTechnicianIds] = useState<string[]>([]);
+
+  // Quick-create modal state
+  const canQuickCreate = activeRole === 'admin' || activeRole === 'supervisor';
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [propertySearch, setPropertySearch] = useState('');
+  const [qcWorkType, setQcWorkType] = useState('repair');
+  const [qcPriority, setQcPriority] = useState('normal');
+  const [qcPropertyId, setQcPropertyId] = useState('');
+  const [qcUnit, setQcUnit] = useState('');
+  const [qcTechnicianId, setQcTechnicianId] = useState('');
+  const [qcDescription, setQcDescription] = useState('');
 
   const fetchData = useCallback(async () => {
-    const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
+    const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
+      supabase.from('user_roles').select('user_id').eq('role', 'technician'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
@@ -81,6 +100,7 @@ const Dashboard = () => {
     const uMap: Record<string, string> = {};
     (userRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
+    setTechnicianIds(((techRolesRes.data ?? []) as any[]).map((r) => r.user_id));
     setLoading(false);
   }, []);
 
@@ -167,6 +187,51 @@ const Dashboard = () => {
   ];
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
+
+  const technicianOptions = technicianIds
+    .map((id) => ({ id, name: users[id] || 'Unnamed' }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const propertyOptionsList = (() => {
+    const list = Object.entries(properties).map(([id, p]) => ({ id, name: p.name, address: p.address }));
+    const q = propertySearch.trim().toLowerCase();
+    const filtered = q
+      ? list.filter((p) => p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q))
+      : list;
+    return filtered.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 50);
+  })();
+
+  const resetQuickForm = () => {
+    setQcWorkType('repair');
+    setQcPriority('normal');
+    setQcPropertyId('');
+    setQcUnit('');
+    setQcTechnicianId('');
+    setQcDescription('');
+    setPropertySearch('');
+  };
+
+  const handleQuickCreate = async () => {
+    if (!qcPropertyId) { toast.error('Select a property'); return; }
+    setCreating(true);
+    const { data: fsData } = await supabase.rpc('generate_fs_number');
+    const { error } = await supabase.from('tickets').insert({
+      fs_number: fsData ?? null,
+      work_type: qcWorkType,
+      priority: qcPriority,
+      property_id: qcPropertyId,
+      unit: qcUnit || null,
+      technician_id: qcTechnicianId || null,
+      description: qcDescription || null,
+      status: 'open',
+    });
+    setCreating(false);
+    if (error) { toast.error(`Failed: ${error.message}`); return; }
+    toast.success('Ticket created');
+    setQuickOpen(false);
+    resetQuickForm();
+    fetchData();
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -285,16 +350,103 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Floating new-ticket FAB on mobile */}
-      {(activeRole === 'admin' || activeRole === 'supervisor') && (
-        <Button
-          onClick={() => navigate('/tickets/new')}
-          className="md:hidden fixed bottom-4 right-4 h-12 w-12 rounded-full p-0 shadow-lg z-20"
-          aria-label="New ticket"
+      {/* Floating quick-create FAB */}
+      {canQuickCreate && (
+        <button
+          onClick={() => setQuickOpen(true)}
+          aria-label="Quick create ticket"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-xl z-30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+          style={{ backgroundColor: '#FFD700', color: '#000' }}
         >
-          <Plus className="w-5 h-5" />
-        </Button>
+          <Plus className="w-7 h-7" strokeWidth={2.5} />
+        </button>
       )}
+
+      {/* Quick Create Modal */}
+      <Dialog open={quickOpen} onOpenChange={(o) => { setQuickOpen(o); if (!o) resetQuickForm(); }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Quick Create Ticket</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Work Type</Label>
+                <Select value={qcWorkType} onValueChange={setQcWorkType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="make_ready">Make-Ready</SelectItem>
+                    <SelectItem value="repair">Repair</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
+                    <SelectItem value="capex">CapEx</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Priority</Label>
+                <Select value={qcPriority} onValueChange={setQcPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Property</Label>
+              <Input
+                placeholder="Search property by name or address..."
+                value={propertySearch}
+                onChange={(e) => setPropertySearch(e.target.value)}
+                className="mb-2"
+              />
+              <Select value={qcPropertyId} onValueChange={setQcPropertyId}>
+                <SelectTrigger><SelectValue placeholder="Select a property" /></SelectTrigger>
+                <SelectContent>
+                  {propertyOptionsList.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No matches</div>
+                  )}
+                  {propertyOptionsList.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name || p.address}{p.name && p.address ? ` — ${p.address}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Unit</Label>
+              <Input value={qcUnit} onChange={(e) => setQcUnit(e.target.value)} placeholder="Optional" />
+            </div>
+
+            <div>
+              <Label>Technician</Label>
+              <Select value={qcTechnicianId} onValueChange={setQcTechnicianId}>
+                <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                <SelectContent>
+                  {technicianOptions.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Description</Label>
+              <Textarea value={qcDescription} onChange={(e) => setQcDescription(e.target.value)} rows={3} placeholder="Optional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setQuickOpen(false); resetQuickForm(); }}>Cancel</Button>
+            <Button onClick={handleQuickCreate} disabled={creating} style={{ backgroundColor: '#FFD700', color: '#000' }}>
+              {creating ? 'Creating...' : 'Create Ticket'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
