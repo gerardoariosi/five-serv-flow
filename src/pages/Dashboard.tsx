@@ -188,6 +188,51 @@ const Dashboard = () => {
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
 
+  const technicianOptions = technicianIds
+    .map((id) => ({ id, name: users[id] || 'Unnamed' }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const propertyOptionsList = (() => {
+    const list = Object.entries(properties).map(([id, p]) => ({ id, name: p.name, address: p.address }));
+    const q = propertySearch.trim().toLowerCase();
+    const filtered = q
+      ? list.filter((p) => p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q))
+      : list;
+    return filtered.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 50);
+  })();
+
+  const resetQuickForm = () => {
+    setQcWorkType('repair');
+    setQcPriority('normal');
+    setQcPropertyId('');
+    setQcUnit('');
+    setQcTechnicianId('');
+    setQcDescription('');
+    setPropertySearch('');
+  };
+
+  const handleQuickCreate = async () => {
+    if (!qcPropertyId) { toast.error('Select a property'); return; }
+    setCreating(true);
+    const { data: fsData } = await supabase.rpc('generate_fs_number');
+    const { error } = await supabase.from('tickets').insert({
+      fs_number: fsData ?? null,
+      work_type: qcWorkType,
+      priority: qcPriority,
+      property_id: qcPropertyId,
+      unit: qcUnit || null,
+      technician_id: qcTechnicianId || null,
+      description: qcDescription || null,
+      status: 'open',
+    });
+    setCreating(false);
+    if (error) { toast.error(`Failed: ${error.message}`); return; }
+    toast.success('Ticket created');
+    setQuickOpen(false);
+    resetQuickForm();
+    fetchData();
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* Metric cards */}
