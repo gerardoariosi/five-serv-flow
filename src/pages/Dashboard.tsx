@@ -350,16 +350,103 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Floating new-ticket FAB on mobile */}
-      {(activeRole === 'admin' || activeRole === 'supervisor') && (
-        <Button
-          onClick={() => navigate('/tickets/new')}
-          className="md:hidden fixed bottom-4 right-4 h-12 w-12 rounded-full p-0 shadow-lg z-20"
-          aria-label="New ticket"
+      {/* Floating quick-create FAB */}
+      {canQuickCreate && (
+        <button
+          onClick={() => setQuickOpen(true)}
+          aria-label="Quick create ticket"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-xl z-30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+          style={{ backgroundColor: '#FFD700', color: '#000' }}
         >
-          <Plus className="w-5 h-5" />
-        </Button>
+          <Plus className="w-7 h-7" strokeWidth={2.5} />
+        </button>
       )}
+
+      {/* Quick Create Modal */}
+      <Dialog open={quickOpen} onOpenChange={(o) => { setQuickOpen(o); if (!o) resetQuickForm(); }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Quick Create Ticket</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Work Type</Label>
+                <Select value={qcWorkType} onValueChange={setQcWorkType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="make_ready">Make-Ready</SelectItem>
+                    <SelectItem value="repair">Repair</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
+                    <SelectItem value="capex">CapEx</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Priority</Label>
+                <Select value={qcPriority} onValueChange={setQcPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Property</Label>
+              <Input
+                placeholder="Search property by name or address..."
+                value={propertySearch}
+                onChange={(e) => setPropertySearch(e.target.value)}
+                className="mb-2"
+              />
+              <Select value={qcPropertyId} onValueChange={setQcPropertyId}>
+                <SelectTrigger><SelectValue placeholder="Select a property" /></SelectTrigger>
+                <SelectContent>
+                  {propertyOptionsList.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No matches</div>
+                  )}
+                  {propertyOptionsList.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name || p.address}{p.name && p.address ? ` — ${p.address}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Unit</Label>
+              <Input value={qcUnit} onChange={(e) => setQcUnit(e.target.value)} placeholder="Optional" />
+            </div>
+
+            <div>
+              <Label>Technician</Label>
+              <Select value={qcTechnicianId} onValueChange={setQcTechnicianId}>
+                <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                <SelectContent>
+                  {technicianOptions.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Description</Label>
+              <Textarea value={qcDescription} onChange={(e) => setQcDescription(e.target.value)} rows={3} placeholder="Optional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setQuickOpen(false); resetQuickForm(); }}>Cancel</Button>
+            <Button onClick={handleQuickCreate} disabled={creating} style={{ backgroundColor: '#FFD700', color: '#000' }}>
+              {creating ? 'Creating...' : 'Create Ticket'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
