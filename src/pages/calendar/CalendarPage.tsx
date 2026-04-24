@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/stores/authStore';
 
 const localizer = momentLocalizer(moment);
 const DnDCalendar = withDragAndDrop(BigCalendar as any);
@@ -99,6 +100,8 @@ const CalendarPage = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const { activeRole } = useAuthStore();
+  const canFilter = activeRole === 'admin' || activeRole === 'supervisor';
   const [view, setView] = useState<any>(Views.MONTH);
   const [date, setDate] = useState(new Date());
   const [reschedule, setReschedule] = useState<RescheduleState | null>(null);
@@ -354,10 +357,29 @@ const CalendarPage = () => {
 
   const CalendarComponent = isMobile ? BigCalendar : DnDCalendar;
 
+  const { data: technicianRoles = [] } = useQuery({
+    queryKey: ['calendar-technicians'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'technician');
+      if (error) throw error;
+      return (data ?? []).map((r: any) => r.user_id as string);
+    },
+    enabled: canFilter,
+  });
+
   const techOptions = useMemo(() => {
-    const techIds = [...new Set(tickets.map((t: any) => t.technician_id).filter(Boolean))];
-    return techIds.map(id => ({ id, name: userMap[id] || 'Unknown' }));
-  }, [tickets, userMap]);
+    const ids = technicianRoles.length
+      ? technicianRoles
+      : ([...new Set(tickets.map((t: any) => t.technician_id).filter(Boolean))] as string[]);
+    return ids
+      .map((id) => ({ id, name: userMap[id] || 'Unknown' }))
+      .filter((t) => t.name !== 'Unknown' || !technicianRoles.length)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [technicianRoles, tickets, userMap]);
+
 
   return (
     <div className="p-4 max-w-6xl mx-auto space-y-3">
@@ -367,28 +389,32 @@ const CalendarPage = () => {
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap items-center">
-        <Select value={filterTech} onValueChange={setFilterTech}>
-          <SelectTrigger className="w-[150px] h-8 text-xs bg-secondary border-border"><SelectValue placeholder="Technician" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Technicians</SelectItem>
-            {techOptions.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterZone} onValueChange={setFilterZone}>
-          <SelectTrigger className="w-[130px] h-8 text-xs bg-secondary border-border"><SelectValue placeholder="Zone" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Zones</SelectItem>
-            {zones.map((z: any) => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterWorkType} onValueChange={setFilterWorkType}>
-          <SelectTrigger className="w-[140px] h-8 text-xs bg-secondary border-border"><SelectValue placeholder="Work Type" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {workTypes.map((w: any) => <SelectItem key={w.key} value={w.key}>{w.label}</SelectItem>)}
-            <SelectItem value="inspection">Inspection</SelectItem>
-          </SelectContent>
-        </Select>
+        {canFilter && (
+          <>
+            <Select value={filterTech} onValueChange={setFilterTech}>
+              <SelectTrigger className="w-[180px] h-8 text-xs bg-secondary border-border"><SelectValue placeholder="Technician" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Technicians</SelectItem>
+                {techOptions.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterZone} onValueChange={setFilterZone}>
+              <SelectTrigger className="w-[130px] h-8 text-xs bg-secondary border-border"><SelectValue placeholder="Zone" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Zones</SelectItem>
+                {zones.map((z: any) => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterWorkType} onValueChange={setFilterWorkType}>
+              <SelectTrigger className="w-[140px] h-8 text-xs bg-secondary border-border"><SelectValue placeholder="Work Type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {workTypes.map((w: any) => <SelectItem key={w.key} value={w.key}>{w.label}</SelectItem>)}
+                <SelectItem value="inspection">Inspection</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        )}
 
         {/* Legend */}
         <div className="flex gap-2 flex-wrap ml-auto">
