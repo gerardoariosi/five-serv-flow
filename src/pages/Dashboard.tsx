@@ -64,11 +64,29 @@ const Dashboard = () => {
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
+  const [technicianIds, setTechnicianIds] = useState<string[]>([]);
+
+  // Quick-create modal state
+  const canQuickCreate = activeRole === 'admin' || activeRole === 'supervisor';
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [propertySearch, setPropertySearch] = useState('');
+  const [qcWorkType, setQcWorkType] = useState('repair');
+  const [qcPriority, setQcPriority] = useState('normal');
+  const [qcPropertyId, setQcPropertyId] = useState('');
+  const [qcUnit, setQcUnit] = useState('');
+  const [qcTechnicianId, setQcTechnicianId] = useState('');
+  const [qcDescription, setQcDescription] = useState('');
 
   const fetchData = useCallback(async () => {
-    const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
+    const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
+      supabase.from('properties').select('id, name, address'),
+      supabase.from('zones').select('id, name'),
+      supabase.rpc('get_user_directory'),
+      supabase.from('user_roles').select('user_id').eq('role', 'technician'),
+    ]);
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
