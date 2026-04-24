@@ -1,17 +1,24 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Building2, Mail, Phone, Edit } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import Spinner from '@/components/ui/Spinner';
+import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('properties');
+  const [noteText, setNoteText] = useState('');
+  const queryClient = useQueryClient();
+  const { user, activeRole } = useAuthStore();
+  const canSeeNotes = activeRole === 'admin' || activeRole === 'supervisor';
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['client', id],
@@ -53,6 +60,38 @@ const ClientDetail = () => {
     enabled: !!id && activeTab === 'inspections',
   });
 
+  const { data: notes } = useQuery({
+    queryKey: ['client-notes', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('client_notes')
+        .select('id, note, created_at, created_by, users:created_by(full_name)')
+        .eq('client_id', id!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!id && activeTab === 'notes' && canSeeNotes,
+  });
+
+  const addNote = useMutation({
+    mutationFn: async (text: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      const { error } = await supabase.from('client_notes').insert({
+        client_id: id!,
+        note: text,
+        created_by: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteText('');
+      queryClient.invalidateQueries({ queryKey: ['client-notes', id] });
+      toast.success('Note saved');
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to save note'),
+  });
+
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (!client) return <p className="text-center text-muted-foreground py-12">Client not found.</p>;
 
@@ -89,6 +128,7 @@ const ClientDetail = () => {
           <TabsTrigger value="properties">Properties</TabsTrigger>
           <TabsTrigger value="tickets">Tickets</TabsTrigger>
           <TabsTrigger value="inspections">Inspections</TabsTrigger>
+          {canSeeNotes && <TabsTrigger value="notes">Internal Notes</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="properties" className="mt-4">
@@ -143,6 +183,46 @@ const ClientDetail = () => {
             </div>
           )}
         </TabsContent>
+
+        {canSeeNotes && (
+          <TabsContent value="notes" className="mt-4">
+            <div className="bg-card border border-border rounded-lg p-4 mb-4">
+              <Textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Add a note about this client..."
+                rows={4}
+                className="mb-3"
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={!noteText.trim() || addNote.isPending}
+                  onClick={() => addNote.mutate(noteText.trim())}
+                >
+                  {addNote.isPending ? 'Saving...' : 'Save Note'}
+                </Button>
+              </div>
+            </div>
+
+            {notes?.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No notes yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {notes?.map((n: any) => (
+                  <div key={n.id} className="bg-card border border-border rounded-lg p-3">
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{n.note}</p>
+                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                      <span>{n.users?.full_name || 'Unknown'}</span>
+                      <span>{new Date(n.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
