@@ -195,6 +195,22 @@ const AccountingList = () => {
         })}
       </div>
 
+      {/* Floating Bulk Action Bar */}
+      {canBulkUpdate && selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
+          <span className="text-sm font-medium">{selected.size} ticket{selected.size === 1 ? '' : 's'} selected</span>
+          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('invoiced')}>
+            Mark as Invoiced
+          </Button>
+          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('paid')}>
+            Mark as Paid
+          </Button>
+          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
+
       {/* Email Dialog */}
       <Dialog open={!!emailDialog} onOpenChange={() => { setEmailDialog(null); setEmailTo(''); }}>
         <DialogContent>
