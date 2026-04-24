@@ -183,6 +183,46 @@ const ClientDetail = () => {
             </div>
           )}
         </TabsContent>
+
+        {canSeeNotes && (
+          <TabsContent value="notes" className="mt-4">
+            <div className="bg-card border border-border rounded-lg p-4 mb-4">
+              <Textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Add a note about this client..."
+                rows={4}
+                className="mb-3"
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={!noteText.trim() || addNote.isPending}
+                  onClick={() => addNote.mutate(noteText.trim())}
+                >
+                  {addNote.isPending ? 'Saving...' : 'Save Note'}
+                </Button>
+              </div>
+            </div>
+
+            {notes?.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No notes yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {notes?.map((n: any) => (
+                  <div key={n.id} className="bg-card border border-border rounded-lg p-3">
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{n.note}</p>
+                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                      <span>{n.users?.full_name || 'Unknown'}</span>
+                      <span>{new Date(n.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
