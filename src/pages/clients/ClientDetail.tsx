@@ -15,6 +15,10 @@ const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('properties');
+  const [noteText, setNoteText] = useState('');
+  const queryClient = useQueryClient();
+  const { user, activeRole } = useAuthStore();
+  const canSeeNotes = activeRole === 'admin' || activeRole === 'supervisor';
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['client', id],
