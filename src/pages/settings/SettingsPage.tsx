@@ -10,7 +10,95 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Power, Download, Upload, Key, Globe, FileText, Tag, Wrench, ClipboardList, MapPin, Calendar, Building2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Power, Download, Upload, Key, Globe, FileText, Tag, Wrench, ClipboardList, MapPin, Calendar, Building2, Bell } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useAuthStore } from '@/stores/authStore';
+import { isPushSupported, requestAndSubscribe, unsubscribeFromPush } from '@/lib/pushNotifications';
+import { useEffect } from 'react';
+
+// ─── Notifications Section ───
+const NotificationsSection = () => {
+  const user = useAuthStore((s) => s.user);
+  const [enabled, setEnabled] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [loading, setLoading] = useState(false);
+  const supported = isPushSupported();
+
+  const refresh = async () => {
+    if (!supported) return;
+    setPermission(Notification.permission);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      setEnabled(!!sub && Notification.permission === 'granted');
+    } catch {
+      setEnabled(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const handleToggle = async (next: boolean) => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      if (next) {
+        const result = await requestAndSubscribe(user.id);
+        if (result === 'granted') {
+          toast.success('Notifications enabled');
+          localStorage.removeItem('fiveserv-push-prompt-dismissed');
+        } else {
+          toast.error('Notifications blocked. Enable them in your browser settings.');
+        }
+      } else {
+        await unsubscribeFromPush(user.id);
+        toast.success('Notifications disabled');
+      }
+      await refresh();
+    } catch (e) {
+      toast.error('Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">Notifications</h3>
+      <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Bell className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">Push Notifications</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Get push alerts on your device for tickets, reviews and updates — even when the app is closed.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={enabled}
+            onCheckedChange={handleToggle}
+            disabled={!supported || loading || permission === 'denied'}
+          />
+        </div>
+
+        {!supported && (
+          <p className="text-xs text-muted-foreground">
+            Push notifications are not supported in this browser. On iOS, install the app to your Home Screen first.
+          </p>
+        )}
+        {supported && permission === 'denied' && (
+          <p className="text-xs text-destructive">
+            Notifications are blocked. Enable them in your browser/device settings, then return here.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ─── Specialties Section ───
 const SpecialtiesSection = () => {
@@ -705,6 +793,7 @@ const ExportImportSection = () => {
 const settingsSections = [
   { key: 'specialties', label: 'Specialties', icon: Tag },
   { key: 'work_types', label: 'Work Types', icon: Wrench },
+  { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'email_templates', label: 'Email Templates', icon: FileText },
   { key: 'inspection_items', label: 'Inspection Items', icon: ClipboardList },
   { key: 'zones', label: 'Zones', icon: MapPin },
@@ -723,6 +812,7 @@ const SettingsPage = () => {
     switch (activeSection) {
       case 'specialties': return <SpecialtiesSection />;
       case 'work_types': return <WorkTypesSection />;
+      case 'notifications': return <NotificationsSection />;
       case 'email_templates': return <EmailTemplatesSection />;
       case 'inspection_items': return <InspectionItemsSection />;
       case 'zones': return <ZonesSection />;
