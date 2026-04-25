@@ -220,6 +220,18 @@ const TicketDetail = () => {
         });
       }
     } catch { /* non-blocking */ }
+    // Push notify assigned technician
+    try {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_id: assignTechId,
+          title: 'New Ticket Assigned',
+          body: `${ticket.fs_number ?? 'Ticket'} — ${(ticket.work_type ?? 'work').replace('-', ' ')}`,
+          url: `/my-work/${id}`,
+          tag: `ticket-${id}`,
+        },
+      });
+    } catch { /* non-blocking */ }
     setAssignTechId('');
     setShowAssignModal(false);
     toast.success('Technician assigned');
