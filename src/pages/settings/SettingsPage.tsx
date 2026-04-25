@@ -793,6 +793,7 @@ const ExportImportSection = () => {
 const settingsSections = [
   { key: 'specialties', label: 'Specialties', icon: Tag },
   { key: 'work_types', label: 'Work Types', icon: Wrench },
+  { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'email_templates', label: 'Email Templates', icon: FileText },
   { key: 'inspection_items', label: 'Inspection Items', icon: ClipboardList },
   { key: 'zones', label: 'Zones', icon: MapPin },
