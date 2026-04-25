@@ -13,10 +13,30 @@ const EnablePushPrompt = () => {
 
   useEffect(() => {
     if (!user || !isPushSupported()) return;
-    if (Notification.permission !== 'default') return;
+    if (Notification.permission === 'denied') return;
     if (localStorage.getItem(DISMISS_KEY) === '1') return;
-    const t = setTimeout(() => setVisible(true), 3000);
-    return () => clearTimeout(t);
+
+    let cancelled = false;
+    const check = async () => {
+      // Show if permission is default (never asked) OR if granted but no subscription saved yet
+      let shouldShow = Notification.permission === 'default';
+      if (!shouldShow && Notification.permission === 'granted') {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          shouldShow = !sub;
+        } catch {
+          shouldShow = false;
+        }
+      }
+      if (!cancelled && shouldShow) {
+        setTimeout(() => !cancelled && setVisible(true), 1000);
+      }
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   if (!visible || !user) return null;
