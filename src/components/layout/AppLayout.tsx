@@ -5,6 +5,7 @@ import TopNav from './TopNav';
 import DrawerMenu from './DrawerMenu';
 import MobileBottomNav from './MobileBottomNav';
 import SessionExpiredModal from '@/components/auth/SessionExpiredModal';
+import EnablePushPrompt from '@/components/notifications/EnablePushPrompt';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,6 +105,7 @@ const AppLayout = () => {
       </main>
       {isTechnician && <MobileBottomNav />}
       <SessionExpiredModal open={sessionExpired} onSignIn={handleSignIn} />
+      <EnablePushPrompt />
     </div>
   );
 };
