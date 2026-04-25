@@ -11,6 +11,7 @@ import { ArrowLeft, Check, XCircle, Send, AlertTriangle, Clock } from 'lucide-re
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
 import SendPMReportModal from '@/components/tickets/SendPMReportModal';
+import { pushToRoles } from '@/lib/pushNotifications';
 
 const TicketReview = () => {
   const { id } = useParams();
@@ -78,6 +79,17 @@ const TicketReview = () => {
       changed_by: user.id,
       note: 'Approved and closed',
     });
+    // Push notify all accounting users — billing required
+    try {
+      await pushToRoles(
+        ['accounting'],
+        'Ticket Closed — Billing Required',
+        `${ticket.fs_number ?? 'Ticket'} — ${property?.name ?? ''} needs invoicing`.trim(),
+        '/accounting',
+        `billing-${id}`,
+      );
+    } catch { /* non-blocking */ }
+
     setShowApprove(false);
     setApproved(true);
     toast.success('Ticket approved and closed');

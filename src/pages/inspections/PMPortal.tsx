@@ -235,6 +235,26 @@ const PMPortal = () => {
       console.error('Admin notification failed', err);
     }
 
+    // Push notify all admins + supervisors (best-effort, anon caller)
+    try {
+      const { data: roleRows } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['admin', 'supervisor'] as any);
+      const userIds = Array.from(new Set((roleRows ?? []).map((r: any) => r.user_id).filter(Boolean)));
+      if (userIds.length > 0) {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: userIds,
+            title: 'Inspection Submitted',
+            body: `PM submitted inspection ${inspection.ins_number ?? ''} — ${property?.name ?? ''}`.trim(),
+            url: `/inspections/${inspection.id}`,
+            tag: `inspection-${inspection.id}`,
+          },
+        });
+      }
+    } catch { /* non-blocking */ }
+
     setShowConfirm(false);
     setSubmitted(true);
     setReadOnly(true);

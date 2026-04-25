@@ -81,6 +81,39 @@ export async function requestAndSubscribe(userId: string): Promise<NotificationP
   return permission;
 }
 
+/**
+ * Send push notification to all users with any of the given app_roles.
+ * Best-effort, non-throwing — errors are logged and swallowed so callers
+ * never break their primary flow on push failures.
+ */
+export async function pushToRoles(
+  roles: string[],
+  title: string,
+  body: string,
+  url: string,
+  tag?: string
+): Promise<void> {
+  try {
+    if (!roles || roles.length === 0) return;
+    const { data: roleRows, error: roleErr } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .in('role', roles as any);
+    if (roleErr) {
+      console.error('pushToRoles: failed to load user_roles', roleErr);
+      return;
+    }
+    const userIds = Array.from(new Set((roleRows ?? []).map((r: any) => r.user_id).filter(Boolean)));
+    if (userIds.length === 0) return;
+
+    await supabase.functions.invoke('send-push-notification', {
+      body: { user_ids: userIds, title, body, url, tag },
+    });
+  } catch (err) {
+    console.error('pushToRoles failed', err);
+  }
+}
+
 export async function unsubscribeFromPush(userId: string): Promise<void> {
   if (!isPushSupported()) return;
   const reg = await navigator.serviceWorker.ready;
