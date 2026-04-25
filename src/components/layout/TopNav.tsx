@@ -126,6 +126,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         </DropdownMenu>
       </div>
     </header>
+    </>
   );
 };
 
