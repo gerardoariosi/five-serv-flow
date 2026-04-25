@@ -253,6 +253,22 @@ const TicketWork = () => {
     } as any).eq('id', id);
     await logTimeline(ticket.status, 'pending_evaluation', `Evaluation submitted: ${evaluationText.trim().slice(0, 200)}`);
     toast.success('Evaluation submitted');
+    // Push notify all admins
+    try {
+      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
+      if (adminIds.length > 0) {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: adminIds,
+            title: 'Evaluation Submitted',
+            body: `${ticket.fs_number ?? 'Ticket'} — awaiting approval`,
+            url: `/tickets/${id}`,
+            tag: `eval-${id}`,
+          },
+        });
+      }
+    } catch { /* non-blocking */ }
     setEvaluationText('');
     setSubmittingEval(false);
     fetchData();
@@ -292,6 +308,22 @@ const TicketWork = () => {
     setClosePhoto(null); setCloseNote(''); setShowComplete(false);
     toast.success('Submitted for review');
     try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* */ }
+    // Push notify all admins
+    try {
+      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
+      if (adminIds.length > 0) {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: adminIds,
+            title: 'Ticket Ready for Review',
+            body: `${ticket.fs_number ?? 'Ticket'} is ready for review`,
+            url: `/tickets/${id}`,
+            tag: `review-${id}`,
+          },
+        });
+      }
+    } catch { /* non-blocking */ }
     fetchData();
   };
 

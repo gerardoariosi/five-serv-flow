@@ -143,6 +143,22 @@ const EstimatePortal = () => {
     setSubmitted(true);
     setReadOnly(true);
     toast.success('Estimate approved');
+    // Push notify all admins (best-effort, anon caller)
+    try {
+      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
+      if (adminIds.length > 0) {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: adminIds,
+            title: 'Estimate Approved',
+            body: `${ticket.fs_number ?? 'Ticket'} — ${opt.option_name} · $${opt.price}`,
+            url: `/tickets/${ticket.id}`,
+            tag: `estimate-${ticket.id}`,
+          },
+        });
+      }
+    } catch { /* non-blocking */ }
     setSubmitting(false);
   };
 
