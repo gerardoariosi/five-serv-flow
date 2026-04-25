@@ -50,7 +50,10 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
   const roleStyle = activeRole ? roleBadgeStyles[activeRole] : null;
 
   return (
-    <header className="h-16 bg-background/95 backdrop-blur-sm border-b-2 border-[#FFD700]/60 flex items-center justify-between px-4 shrink-0 sticky top-0 z-40">
+    <header
+      className="bg-background/95 backdrop-blur-sm border-b-2 border-[#FFD700]/60 flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
+      style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
+    >
       <div className="flex items-center">
         <button
           onClick={onMenuClick}

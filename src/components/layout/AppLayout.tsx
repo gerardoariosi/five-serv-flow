@@ -100,7 +100,10 @@ const AppLayout = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <TopNav onMenuClick={() => setDrawerOpen(true)} />
       <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <main className={`flex-1 overflow-y-auto ${isTechnician ? 'pb-16 md:pb-0' : ''}`}>
+      <main
+        className={`flex-1 overflow-y-auto ${isTechnician ? 'pb-16 md:pb-0' : ''}`}
+        style={{ paddingBottom: isTechnician ? undefined : 'env(safe-area-inset-bottom)' }}
+      >
         <Outlet />
       </main>
       {isTechnician && <MobileBottomNav />}
