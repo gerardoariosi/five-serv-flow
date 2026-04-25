@@ -266,12 +266,9 @@ const PricingReview = () => {
           ))}
 
           {/* Total */}
-          <div className="bg-card border-2 border-primary/40 rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <span className="text-sm font-bold text-foreground">Total</span>
-            </div>
-            <span className="text-xl font-bold text-primary">${total.toFixed(2)}</span>
+          <div className="bg-white border-l-4 border-[#FFD700] rounded-lg p-4 flex items-center justify-between">
+            <span className="text-gray-500 text-sm font-medium">Total</span>
+            <span className="text-[#1A1A1A] text-2xl font-bold">${total.toFixed(2)}</span>
           </div>
 
           <Button

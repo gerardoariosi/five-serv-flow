@@ -550,13 +550,13 @@ const PMPortal = () => {
           );
         })}
 
-        {/* Total — prominent dark bar */}
-        <div className="bg-gray-900 rounded-xl p-5 flex items-center justify-between">
+        {/* Selected Total bar */}
+        <div className="bg-white border-t border-gray-200 shadow-lg rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Total</p>
-            <p className="text-xs text-gray-500 mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
+            <p className="text-[#1A1A1A] text-xs font-bold uppercase tracking-wider">Selected Total</p>
+            <p className="text-gray-500 text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
           </div>
-          <p className="text-3xl font-bold tabular-nums" style={{ color: '#FFD700' }}>${total.toFixed(2)}</p>
+          <p className="text-[#1A1A1A] text-2xl font-bold tabular-nums">${total.toFixed(2)}</p>
         </div>
 
         {/* General note */}
