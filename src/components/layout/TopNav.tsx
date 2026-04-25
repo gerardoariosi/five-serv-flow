@@ -50,6 +50,12 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
   const roleStyle = activeRole ? roleBadgeStyles[activeRole] : null;
 
   return (
+    <>
+      <div
+        aria-hidden="true"
+        className="fixed top-0 left-0 right-0 z-[51] bg-background"
+        style={{ height: 'env(safe-area-inset-top)' }}
+      />
     <header
       className="bg-background/95 backdrop-blur-sm border-b-2 border-[#FFD700]/60 flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
       style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
@@ -120,6 +126,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         </DropdownMenu>
       </div>
     </header>
+    </>
   );
 };
 
