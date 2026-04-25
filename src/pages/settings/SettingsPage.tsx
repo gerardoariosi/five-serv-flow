@@ -812,6 +812,7 @@ const SettingsPage = () => {
     switch (activeSection) {
       case 'specialties': return <SpecialtiesSection />;
       case 'work_types': return <WorkTypesSection />;
+      case 'notifications': return <NotificationsSection />;
       case 'email_templates': return <EmailTemplatesSection />;
       case 'inspection_items': return <InspectionItemsSection />;
       case 'zones': return <ZonesSection />;
