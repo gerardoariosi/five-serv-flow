@@ -111,7 +111,41 @@ Deno.serve(async (req) => {
     if (res.ok) sent++
   }
 
-  return new Response(JSON.stringify({ success: true, sent }), {
+  // Also send push notification to admins + supervisors (best-effort)
+  let pushSent = 0
+  try {
+    const { data: pushRoles } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .in('role', ['admin', 'supervisor'])
+    const pushUserIds = Array.from(
+      new Set((pushRoles ?? []).map((r: any) => r.user_id).filter(Boolean))
+    )
+    if (pushUserIds.length > 0) {
+      const pushRes = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_ids: pushUserIds,
+          title: 'Ready for Review',
+          body: `Ticket ${ticket.fs_number ?? ''} is ready for your review`.trim(),
+          url: `/tickets/${ticket.id}`,
+          tag: `review-${ticket.id}`,
+        }),
+      })
+      if (pushRes.ok) {
+        const pj = await pushRes.json().catch(() => ({}))
+        pushSent = pj?.sent ?? 0
+      }
+    }
+  } catch (err) {
+    console.error('Push notification failed', err)
+  }
+
+  return new Response(JSON.stringify({ success: true, sent, pushSent }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
