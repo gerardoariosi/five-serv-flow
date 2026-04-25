@@ -4,21 +4,23 @@
   "description": "FiveServ Operations App",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "background_color": "#1A1A1A",
   "theme_color": "#1A1A1A",
   "orientation": "portrait",
+  "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/logo.png",
-      "sizes": "192x192",
+      "src": "/FiveServ_Logo_2_No_BG.png",
+      "sizes": "any",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/logo.png",
+      "src": "/FiveServ_Logo_2_No_BG.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }

@@ -126,6 +126,7 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
         className={`fixed top-0 left-0 h-full w-[280px] bg-background border-r border-border z-50 transform transition-transform duration-300 drawer-spring ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         <div className="flex flex-col h-full">
           {/* Profile header */}
