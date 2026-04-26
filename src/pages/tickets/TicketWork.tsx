@@ -253,20 +253,40 @@ const TicketWork = () => {
     } as any).eq('id', id);
     await logTimeline(ticket.status, 'pending_evaluation', `Evaluation submitted: ${evaluationText.trim().slice(0, 200)}`);
     toast.success('Evaluation submitted');
-    // Push notify all admins
+    // Push + in-app to admins/supervisors
     try {
-      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
-      if (adminIds.length > 0) {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            user_ids: adminIds,
-            title: 'Evaluation Submitted',
-            body: `${ticket.fs_number ?? 'Ticket'} — awaiting approval`,
-            url: `/tickets/${id}`,
-            tag: `eval-${id}`,
-          },
-        });
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          roles: ['admin', 'supervisor'],
+          title: 'Evaluation Submitted',
+          body: `${ticket.fs_number ?? 'Ticket'} — awaiting approval`,
+          url: `/tickets/${id}`,
+          tag: `eval-${id}`,
+        },
+      });
+    } catch { /* non-blocking */ }
+    // Email admins/supervisors (best-effort)
+    try {
+      const { data: roleRows } = await supabase
+        .from('user_roles').select('user_id').in('role', ['admin', 'supervisor'] as any);
+      const ids = Array.from(new Set((roleRows ?? []).map((r: any) => r.user_id).filter(Boolean)));
+      if (ids.length > 0) {
+        const { data: usrs } = await supabase
+          .from('users').select('email').in('id', ids);
+        const emails = (usrs ?? []).map((u: any) => u.email).filter(Boolean) as string[];
+        await Promise.all(emails.map((to_email) =>
+          supabase.functions.invoke('send-business-email', {
+            body: {
+              template_name: 'evaluation_submitted',
+              to_email,
+              variables: {
+                fs_number: ticket.fs_number ?? '',
+                description: evaluationText.trim().slice(0, 500),
+                detail_url: `${window.location.origin}/tickets/${id}`,
+              },
+            },
+          }).catch(() => null)
+        ));
       }
     } catch { /* non-blocking */ }
     setEvaluationText('');
