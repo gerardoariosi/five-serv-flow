@@ -282,7 +282,45 @@ const ChatPage = () => {
     inputRef.current?.focus();
   };
 
-  // Parse mentions in message content — resolve to detail routes
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    const { error } = await supabase.from('chat_groups').insert({
+      name: newGroupName.trim(),
+      is_fixed: false,
+      role_access: ['admin', 'supervisor', 'technician', 'accounting'],
+    });
+    if (error) { toast.error('Failed to create group'); return; }
+    toast.success('Group created');
+    setShowCreateGroup(false);
+    setNewGroupName('');
+    queryClient.invalidateQueries({ queryKey: ['chat-groups'] });
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    if (activeRole !== 'admin') return;
+    const { error } = await supabase.from('chat_messages').update({ deleted_at: new Date().toISOString() }).eq('id', msgId);
+    if (error) { toast.error('Failed to delete'); return; }
+    queryClient.invalidateQueries({ queryKey: ['chat-messages', activeGroup] });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeGroup || !user?.id) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB'); return; }
+
+    const ext = file.name.split('.').pop();
+    const path = `chat/${activeGroup}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('profile-photos').upload(path, file);
+    if (uploadError) { toast.error('Upload failed'); return; }
+    const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path);
+
+    await supabase.from('chat_messages').insert({
+      group_id: activeGroup,
+      sender_id: user.id,
+      content: '📷 Photo',
+      photo_url: urlData.publicUrl,
+    });
+  };
   const handleMentionClick = async (type: string, value: string) => {
     if (type === 'ticket') {
       const { data } = await supabase.from('tickets').select('id').eq('fs_number', value).maybeSingle();
