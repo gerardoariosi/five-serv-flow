@@ -82,9 +82,9 @@ export async function requestAndSubscribe(userId: string): Promise<NotificationP
 }
 
 /**
- * Send push notification to all users with any of the given app_roles.
- * Best-effort, non-throwing — errors are logged and swallowed so callers
- * never break their primary flow on push failures.
+ * Send push + insert in-app notifications for all users with any of the given app_roles.
+ * Resolution happens server-side via service role, so this works from anon callers
+ * (PM/Estimate portals) and bypasses user_roles RLS.
  */
 export async function pushToRoles(
   roles: string[],
@@ -95,22 +95,32 @@ export async function pushToRoles(
 ): Promise<void> {
   try {
     if (!roles || roles.length === 0) return;
-    const { data: roleRows, error: roleErr } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .in('role', roles as any);
-    if (roleErr) {
-      console.error('pushToRoles: failed to load user_roles', roleErr);
-      return;
-    }
-    const userIds = Array.from(new Set((roleRows ?? []).map((r: any) => r.user_id).filter(Boolean)));
-    if (userIds.length === 0) return;
-
     await supabase.functions.invoke('send-push-notification', {
-      body: { user_ids: userIds, title, body, url, tag },
+      body: { roles, title, body, url, tag },
     });
   } catch (err) {
     console.error('pushToRoles failed', err);
+  }
+}
+
+/**
+ * Send push + insert in-app notification(s) for explicit user_ids.
+ */
+export async function pushToUsers(
+  userIds: string[],
+  title: string,
+  body: string,
+  url: string,
+  tag?: string
+): Promise<void> {
+  try {
+    const ids = (userIds || []).filter(Boolean);
+    if (ids.length === 0) return;
+    await supabase.functions.invoke('send-push-notification', {
+      body: { user_ids: ids, title, body, url, tag },
+    });
+  } catch (err) {
+    console.error('pushToUsers failed', err);
   }
 }
 

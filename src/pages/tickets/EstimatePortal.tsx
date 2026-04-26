@@ -143,18 +143,36 @@ const EstimatePortal = () => {
     setSubmitted(true);
     setReadOnly(true);
     toast.success('Estimate approved');
-    // Push notify all admins (best-effort, anon caller)
+    // Push + in-app notify all admins/supervisors (server resolves roles)
     try {
-      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
-      if (adminIds.length > 0) {
-        await supabase.functions.invoke('send-push-notification', {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          roles: ['admin', 'supervisor'],
+          title: 'Estimate Approved',
+          body: `${ticket.fs_number ?? 'Ticket'} — ${opt.option_name} · $${opt.price}`,
+          url: `/tickets/${ticket.id}`,
+          tag: `estimate-${ticket.id}`,
+        },
+      });
+    } catch { /* non-blocking */ }
+
+    // Email notify admin (best-effort, anon caller — uses service role inside fn)
+    try {
+      const { data: company } = await supabase
+        .from('company_profile').select('contact_email').limit(1).maybeSingle();
+      const adminEmail = company?.contact_email;
+      if (adminEmail) {
+        await supabase.functions.invoke('send-business-email', {
           body: {
-            user_ids: adminIds,
-            title: 'Estimate Approved',
-            body: `${ticket.fs_number ?? 'Ticket'} — ${opt.option_name} · $${opt.price}`,
-            url: `/tickets/${ticket.id}`,
-            tag: `estimate-${ticket.id}`,
+            template_name: 'estimate_approved',
+            to_email: adminEmail,
+            variables: {
+              fs_number: ticket.fs_number ?? '',
+              option_name: opt.option_name,
+              option_price: String(opt.price),
+              property_name: property?.name ?? '',
+              detail_url: `${window.location.origin}/tickets/${ticket.id}`,
+            },
           },
         });
       }

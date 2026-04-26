@@ -253,20 +253,40 @@ const TicketWork = () => {
     } as any).eq('id', id);
     await logTimeline(ticket.status, 'pending_evaluation', `Evaluation submitted: ${evaluationText.trim().slice(0, 200)}`);
     toast.success('Evaluation submitted');
-    // Push notify all admins
+    // Push + in-app to admins/supervisors
     try {
-      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
-      if (adminIds.length > 0) {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            user_ids: adminIds,
-            title: 'Evaluation Submitted',
-            body: `${ticket.fs_number ?? 'Ticket'} — awaiting approval`,
-            url: `/tickets/${id}`,
-            tag: `eval-${id}`,
-          },
-        });
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          roles: ['admin', 'supervisor'],
+          title: 'Evaluation Submitted',
+          body: `${ticket.fs_number ?? 'Ticket'} — awaiting approval`,
+          url: `/tickets/${id}`,
+          tag: `eval-${id}`,
+        },
+      });
+    } catch { /* non-blocking */ }
+    // Email admins/supervisors (best-effort)
+    try {
+      const { data: roleRows } = await supabase
+        .from('user_roles').select('user_id').in('role', ['admin', 'supervisor'] as any);
+      const ids = Array.from(new Set((roleRows ?? []).map((r: any) => r.user_id).filter(Boolean)));
+      if (ids.length > 0) {
+        const { data: usrs } = await supabase
+          .from('users').select('email').in('id', ids);
+        const emails = (usrs ?? []).map((u: any) => u.email).filter(Boolean) as string[];
+        await Promise.all(emails.map((to_email) =>
+          supabase.functions.invoke('send-business-email', {
+            body: {
+              template_name: 'evaluation_submitted',
+              to_email,
+              variables: {
+                fs_number: ticket.fs_number ?? '',
+                description: evaluationText.trim().slice(0, 500),
+                detail_url: `${window.location.origin}/tickets/${id}`,
+              },
+            },
+          }).catch(() => null)
+        ));
       }
     } catch { /* non-blocking */ }
     setEvaluationText('');
@@ -294,6 +314,18 @@ const TicketWork = () => {
     if (!pauseReason.trim()) { toast.error('Reason required'); return; }
     await supabase.from('tickets').update({ status: 'paused' }).eq('id', id);
     await logTimeline(ticket.status, 'paused', `Paused: ${pauseReason}${pauseReturnDate ? ` | Est. return: ${pauseReturnDate}` : ''}`);
+    // Push + in-app to admins/supervisors
+    try {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          roles: ['admin', 'supervisor'],
+          title: 'Ticket Paused',
+          body: `${ticket.fs_number ?? 'Ticket'} paused: ${pauseReason.slice(0, 120)}`,
+          url: `/tickets/${id}`,
+          tag: `pause-${id}`,
+        },
+      });
+    } catch { /* non-blocking */ }
     setPauseReason(''); setPauseReturnDate(''); setShowPause(false);
     toast.success('Ticket paused');
     fetchData();
@@ -307,23 +339,8 @@ const TicketWork = () => {
     await logTimeline(ticket.status, 'ready_for_review', `Completed: ${closeNote}`);
     setClosePhoto(null); setCloseNote(''); setShowComplete(false);
     toast.success('Submitted for review');
+    // notify-ready-for-review handles email + push to admins/supervisors
     try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* */ }
-    // Push notify all admins
-    try {
-      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
-      if (adminIds.length > 0) {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            user_ids: adminIds,
-            title: 'Ticket Ready for Review',
-            body: `${ticket.fs_number ?? 'Ticket'} is ready for review`,
-            url: `/tickets/${id}`,
-            tag: `review-${id}`,
-          },
-        });
-      }
-    } catch { /* non-blocking */ }
     fetchData();
   };
 
