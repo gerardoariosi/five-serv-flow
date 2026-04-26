@@ -145,18 +145,80 @@ const ChatPage = () => {
     if (!isMobile && !activeGroup && groups.length > 0) setActiveGroup(groups[0].id);
   }, [groups, activeGroup, isMobile]);
 
+  // User directory for @mentions
+  const { data: userDirectory = [] } = useQuery({
+    queryKey: ['user-directory'],
+    queryFn: async () => {
+      const { data } = await supabase.rpc('get_user_directory');
+      return (data ?? []) as Array<{ id: string; full_name: string }>;
+    },
+  });
+
+  // @user mention autocomplete state
+  const [userMentionQuery, setUserMentionQuery] = useState<string | null>(null);
+  const userMentionMatches = useMemo(() => {
+    if (userMentionQuery === null) return [];
+    const q = userMentionQuery.toLowerCase();
+    return (userDirectory as any[])
+      .filter((u) => (u.full_name ?? '').toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [userMentionQuery, userDirectory]);
+
+  // Resolve @"Full Name" tokens in message → array of user_ids
+  const resolveMentionedUsers = (text: string): string[] => {
+    const ids = new Set<string>();
+    // Match @"Quoted Name" OR @FirstWord up to a special-marker boundary
+    const quoted = /@"([^"]+)"/g;
+    let m;
+    while ((m = quoted.exec(text)) !== null) {
+      const name = m[1].trim().toLowerCase();
+      const u = (userDirectory as any[]).find((x) => (x.full_name ?? '').toLowerCase() === name);
+      if (u) ids.add(u.id);
+    }
+    // Also match exact full names without quotes by scanning directory
+    (userDirectory as any[]).forEach((u) => {
+      const fn = (u.full_name ?? '').trim();
+      if (!fn) return;
+      const re = new RegExp(`@${fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (re.test(text)) ids.add(u.id);
+    });
+    return Array.from(ids);
+  };
+
   const handleSend = async () => {
     if (!message.trim() || !activeGroup || !user?.id) return;
     setSending(true);
-    const { error } = await supabase.from('chat_messages').insert({
-      group_id: activeGroup,
-      sender_id: user.id,
-      content: message.trim(),
-    });
+    const content = message.trim();
+    const { data: inserted, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        group_id: activeGroup,
+        sender_id: user.id,
+        content,
+      })
+      .select('id')
+      .single();
     setSending(false);
     if (error) { toast.error('Failed to send'); return; }
     setMessage('');
+    setUserMentionQuery(null);
     inputRef.current?.focus();
+
+    // Resolve @user mentions and notify (push + in-app)
+    const mentionedIds = resolveMentionedUsers(content).filter((uid) => uid !== user.id);
+    if (mentionedIds.length > 0) {
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: mentionedIds,
+            title: `${user.full_name ?? 'Someone'} mentioned you`,
+            body: content.slice(0, 140),
+            url: `/chat?group=${activeGroup}`,
+            tag: `mention-${inserted?.id ?? activeGroup}`,
+          },
+        });
+      } catch { /* non-blocking */ }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -166,44 +228,46 @@ const ChatPage = () => {
     }
   };
 
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-    const { error } = await supabase.from('chat_groups').insert({
-      name: newGroupName.trim(),
-      is_fixed: false,
-      role_access: ['admin', 'supervisor', 'technician', 'accounting'],
-    });
-    if (error) { toast.error('Failed to create group'); return; }
-    toast.success('Group created');
-    setShowCreateGroup(false);
-    setNewGroupName('');
-    queryClient.invalidateQueries({ queryKey: ['chat-groups'] });
+  // Track @ typing for autocomplete
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setMessage(v);
+    // Find the last @ before caret without an intervening space
+    const caret = e.target.selectionStart ?? v.length;
+    const before = v.slice(0, caret);
+    const at = before.lastIndexOf('@');
+    if (at >= 0) {
+      const between = before.slice(at + 1);
+      // Stop if the @token is one of the entity types (handled separately)
+      if (/^(ticket|property|inspection|technician)\b/i.test(between)) {
+        setUserMentionQuery(null);
+        return;
+      }
+      if (!/\s/.test(between) && between.length <= 30) {
+        setUserMentionQuery(between);
+        return;
+      }
+    }
+    setUserMentionQuery(null);
   };
 
-  const handleDeleteMessage = async (msgId: string) => {
-    if (activeRole !== 'admin') return;
-    const { error } = await supabase.from('chat_messages').update({ deleted_at: new Date().toISOString() }).eq('id', msgId);
-    if (error) { toast.error('Failed to delete'); return; }
-    queryClient.invalidateQueries({ queryKey: ['chat-messages', activeGroup] });
-  };
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeGroup || !user?.id) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB'); return; }
-
-    const ext = file.name.split('.').pop();
-    const path = `chat/${activeGroup}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('profile-photos').upload(path, file);
-    if (uploadError) { toast.error('Upload failed'); return; }
-    const { data: urlData } = supabase.storage.from('profile-photos').getPublicUrl(path);
-
-    await supabase.from('chat_messages').insert({
-      group_id: activeGroup,
-      sender_id: user.id,
-      content: '📷 Photo',
-      photo_url: urlData.publicUrl,
-    });
+  const insertUserMention = (fullName: string) => {
+    const v = message;
+    const caret = inputRef.current?.selectionStart ?? v.length;
+    const before = v.slice(0, caret);
+    const after = v.slice(caret);
+    const at = before.lastIndexOf('@');
+    if (at < 0) return;
+    const needsQuotes = /\s/.test(fullName);
+    const token = needsQuotes ? `@"${fullName}" ` : `@${fullName} `;
+    const next = before.slice(0, at) + token + after;
+    setMessage(next);
+    setUserMentionQuery(null);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      const pos = at + token.length;
+      inputRef.current?.setSelectionRange(pos, pos);
+    }, 0);
   };
 
   const insertMention = (type: string) => {
