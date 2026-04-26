@@ -314,6 +314,18 @@ const TicketWork = () => {
     if (!pauseReason.trim()) { toast.error('Reason required'); return; }
     await supabase.from('tickets').update({ status: 'paused' }).eq('id', id);
     await logTimeline(ticket.status, 'paused', `Paused: ${pauseReason}${pauseReturnDate ? ` | Est. return: ${pauseReturnDate}` : ''}`);
+    // Push + in-app to admins/supervisors
+    try {
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          roles: ['admin', 'supervisor'],
+          title: 'Ticket Paused',
+          body: `${ticket.fs_number ?? 'Ticket'} paused: ${pauseReason.slice(0, 120)}`,
+          url: `/tickets/${id}`,
+          tag: `pause-${id}`,
+        },
+      });
+    } catch { /* non-blocking */ }
     setPauseReason(''); setPauseReturnDate(''); setShowPause(false);
     toast.success('Ticket paused');
     fetchData();
@@ -327,23 +339,8 @@ const TicketWork = () => {
     await logTimeline(ticket.status, 'ready_for_review', `Completed: ${closeNote}`);
     setClosePhoto(null); setCloseNote(''); setShowComplete(false);
     toast.success('Submitted for review');
+    // notify-ready-for-review handles email + push to admins/supervisors
     try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* */ }
-    // Push notify all admins
-    try {
-      const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-      const adminIds = (adminRoles ?? []).map((r: any) => r.user_id);
-      if (adminIds.length > 0) {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            user_ids: adminIds,
-            title: 'Ticket Ready for Review',
-            body: `${ticket.fs_number ?? 'Ticket'} is ready for review`,
-            url: `/tickets/${id}`,
-            tag: `review-${id}`,
-          },
-        });
-      }
-    } catch { /* non-blocking */ }
     fetchData();
   };
 
