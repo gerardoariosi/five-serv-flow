@@ -79,7 +79,7 @@ const TicketReview = () => {
       changed_by: user.id,
       note: 'Approved and closed',
     });
-    // Push notify all accounting users — billing required
+    // Push + in-app notify all accounting users — billing required
     try {
       await pushToRoles(
         ['accounting'],
@@ -88,6 +88,30 @@ const TicketReview = () => {
         '/accounting',
         `billing-${id}`,
       );
+    } catch { /* non-blocking */ }
+    // Email all accounting users
+    try {
+      const { data: roleRows } = await supabase
+        .from('user_roles').select('user_id').eq('role', 'accounting');
+      const ids = (roleRows ?? []).map((r: any) => r.user_id).filter(Boolean);
+      if (ids.length > 0) {
+        const { data: usrs } = await supabase
+          .from('users').select('email').in('id', ids);
+        const emails = (usrs ?? []).map((u: any) => u.email).filter(Boolean) as string[];
+        await Promise.all(emails.map((to_email) =>
+          supabase.functions.invoke('send-business-email', {
+            body: {
+              template_name: 'ticket_ready_for_billing',
+              to_email,
+              variables: {
+                fs_number: ticket.fs_number ?? '',
+                property_name: property?.name ?? '',
+                detail_url: `${window.location.origin}/accounting`,
+              },
+            },
+          }).catch(() => null)
+        ));
+      }
     } catch { /* non-blocking */ }
 
     setShowApprove(false);
@@ -112,9 +136,42 @@ const TicketReview = () => {
       changed_by: user.id,
       note: `Rejected: ${rejectReason}`,
     });
+    // Notify the assigned technician (push + in-app + email)
+    if (ticket.technician_id) {
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: [ticket.technician_id],
+            title: 'Ticket Rejected',
+            body: `${ticket.fs_number ?? 'Ticket'} returned: ${rejectReason.slice(0, 120)}`,
+            url: `/my-work/${id}`,
+            tag: `reject-${id}`,
+          },
+        });
+      } catch { /* non-blocking */ }
+      // Email technician
+      try {
+        const { data: techUser } = await supabase
+          .from('users').select('email, full_name').eq('id', ticket.technician_id).maybeSingle();
+        if (techUser?.email) {
+          await supabase.functions.invoke('send-business-email', {
+            body: {
+              template_name: 'ticket_rejected',
+              to_email: techUser.email,
+              variables: {
+                fs_number: ticket.fs_number ?? '',
+                technician_name: techUser.full_name ?? '',
+                rejection_reason: rejectReason,
+                detail_url: `${window.location.origin}/my-work/${id}`,
+              },
+            },
+          });
+        }
+      } catch { /* non-blocking */ }
+    }
     setRejectReason('');
     setShowReject(false);
-    toast.success('Ticket rejected — returned to In Progress');
+    toast.success('Ticket rejected — technician notified');
     fetchData();
     setProcessing(false);
   };
