@@ -409,6 +409,19 @@ const TicketDetail = () => {
         message: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
         link: `/my-work/${id}`,
       });
+      // Push to technician
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: [ticket.technician_id],
+            title: 'Work Rescheduled',
+            body: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
+            url: `/my-work/${id}`,
+            tag: `reschedule-${id}`,
+            skip_in_app: true, // already inserted above
+          },
+        });
+      } catch { /* non-blocking */ }
       const techEmail = users[ticket.technician_id]?.email;
       if (techEmail) {
         try {
