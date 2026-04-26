@@ -489,14 +489,30 @@ const ChatPage = () => {
                   </Button>
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                 </label>
-                <Input
-                  ref={inputRef}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type a message..."
-                  className="flex-1 h-8 text-sm"
-                />
+                <div className="relative flex-1">
+                  {userMentionQuery !== null && userMentionMatches.length > 0 && (
+                    <div className="absolute bottom-10 left-0 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[200px] z-50 max-h-60 overflow-y-auto">
+                      {userMentionMatches.map((u: any) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => insertUserMention(u.full_name)}
+                          className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-secondary"
+                        >
+                          @{u.full_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <Input
+                    ref={inputRef}
+                    value={message}
+                    onChange={handleMessageChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type a message..."
+                    className="w-full h-8 text-sm"
+                  />
+                </div>
                 <Button size="icon" className="h-8 w-8" onClick={handleSend} disabled={sending || !message.trim()}>
                   <Send className="w-4 h-4" />
                 </Button>
