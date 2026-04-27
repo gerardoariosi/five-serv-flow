@@ -322,8 +322,9 @@ const TicketForm = () => {
       }
 
       navigate('/tickets');
-    } catch {
-      toast.error('Error saving ticket');
+    } catch (err: any) {
+      console.error('Ticket save error:', err);
+      toast.error(err?.message || err?.error?.message || 'Error saving ticket');
     }
     setSaving(false);
   };
