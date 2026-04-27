@@ -1,17 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Edit, Plus } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, MapPin, Edit, Plus, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { activeRole, user } = useAuthStore();
+  const canSeeNotes = activeRole === 'admin' || activeRole === 'supervisor';
   const [activeTab, setActiveTab] = useState('active');
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [tenantName, setTenantName] = useState('');
+  const [tenantPhone, setTenantPhone] = useState('');
+  const [generalNotes, setGeneralNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
 
   const { data: property, isLoading } = useQuery({
     queryKey: ['property', id],
