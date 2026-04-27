@@ -1,116 +1,116 @@
-# Analysis & Implementation Plan
+# Analysis Report — PWA Icon + Technician Email
 
-## CRITICAL BUGS
+## ISSUE 1 — Desktop PWA Icon Not Showing
 
-### 1. Client form — address field missing for residential clients
-**File:** `src/pages/clients/ClientForm.tsx`
-**Finding:** ClientForm has no address field at all — only company_name, contact_name, email, phone, type. The `clients` table also has no address column. Residential clients need an address (their own home), distinct from `properties.address`.
-**Fix:**
-- Migration: add `address text` column to `clients` table.
-- Add Address input to ClientForm, conditionally rendered when `form.type === 'residential'` (or always shown but labeled "Service Address" for residential).
-- Save to clients.address on insert/update.
+### Root cause confirmed
+The single PNG referenced in `public/manifest.json` is **708×248 pixels** (a wide logo, not square). Chrome desktop PWA installer requires actual square PNG files at exactly 192×192 and 512×512. The manifest currently lies about the dimensions:
 
-### 2. Desktop PWA icon not showing
-**Files:** `public/manifest.json`, `index.html`
-**Finding:** manifest.json declares only one icon (`/FiveServ_Logo_2_No_BG.png`) with `sizes: "any"` and `sizes: "512x512"`. Chrome desktop install requires standard PNG sizes (192x192 and 512x512) with `purpose: "any"` separately from `maskable`. Also, `index.html` `<link rel="icon">` points to `/logo.png`, not the FiveServ logo.
-**Fix:**
-- In `public/manifest.json`, declare 3 icon entries: 192x192 (any), 512x512 (any), 512x512 (maskable) — all pointing to `/FiveServ_Logo_2_No_BG.png`.
-- In `index.html`, change `<link rel="icon">` and `<link rel="apple-touch-icon">` to use `/FiveServ_Logo_2_No_BG.png`.
-
-### 3. Password reset — users can't set new password
-**Files:** `src/hooks/useAuth.ts`, `src/pages/ResetPassword.tsx`, Supabase auth URL config
-**Finding:** `resetPasswordForEmail` uses `redirectTo: ${window.location.origin}/reset-password`. ResetPassword.tsx checks `window.location.hash` for `type=recovery`. Two likely failure modes:
-- Supabase recovery emails now use `?code=` (PKCE) instead of `#access_token=...`. The hash check fails, so `tokenValid` falls back to `getSession()` which is null → "Link Expired" shown.
-- Auth `Site URL` / redirect allow-list in Supabase doesn't include the published domain.
-**Fix:**
-- Update ResetPassword.tsx to also handle `?code=` query param: call `supabase.auth.exchangeCodeForSession(code)` then mark token valid.
-- Verify Supabase Auth `Site URL` and `Additional Redirect URLs` include both preview and published domains (config check, not code).
-
-### 4. App name everywhere
-**Files:** `index.html`, `public/manifest.json`
-**Finding:** `index.html` `<title>` = "FiveServ Operations" ✓; OG title = "FiveServ" ✗; manifest `name` = "FiveServ Operations Hub" ✗; `short_name` = "FiveServ".
-**Fix:**
-- `manifest.json`: `name` → "FiveServ Operations", keep `short_name: "FiveServ"`.
-- `index.html`: og:title, twitter:title, application-name → "FiveServ Operations".
-
-### 5. "Error saving the ticket"
-**File:** `src/pages/tickets/TicketForm.tsx` (line 325)
-**Finding:** The catch block discards the error: `} catch { toast.error('Error saving ticket'); }`. The actual cause is hidden. Most likely culprits in the payload (lines 245-255):
-- `appointment_time` empty string passed as null ✓ — fine.
-- `related_inspection_id: form.related_inspection_id || null` ✓.
-- The insert spreads `...form` which includes `quote_reference` — but the `tickets` table has no listed audit failures here.
-- Most suspicious: when `draftId.current` exists from auto-save and a non-draft submit happens, `payload.fs_number` is NOT set (only set in the else-branch line 272). The auto-saved draft already has fs_number, so update is fine. BUT — RLS policy "Admins and supervisors can create tickets" blocks INSERT for technicians; if a non-admin/supervisor user tries to create, the insert silently fails.
-- Also: auto-save inserts draft as `status='draft'` then the submit tries to insert again because `draftId.current` only persists in ref — if user navigated, ref is empty → duplicate `fs_number` collision.
-**Fix:**
-- Replace `catch {}` with `catch (err: any) { toast.error(err.message || 'Error saving ticket'); console.error(err); }` to surface the real error.
-- Ensure `appointment_time` empty string converts to `null` (already done) and ISO format on submit.
-- After fixing the catch, re-test to identify the actual DB error and patch.
-
-## DESIGN CHANGES
-
-### 6. Reports page — title color
-**File:** `src/pages/reports/ReportList.tsx` line 35
-**Fix:** Change `text-primary` → `text-foreground font-bold` on the report title `<p>`. Keep gold for the icon (line 32) and icon background.
-
-### 7. Role badge — dark background, white text
-**Files:** `src/components/layout/TopNav.tsx` (lines 20-25), `src/components/layout/DrawerMenu.tsx` (lines 19-24)
-**Fix:** Replace per-role gold/colored backgrounds with uniform dark style:
-- `bg-foreground text-background` (auto-inverts in dark/light mode), OR
-- `bg-[#1A1A1A] text-white` for explicit dark.
-Apply same change in both TopNav `roleBadgeStyles` and DrawerMenu `roleBadgeStyles`.
-
-### 8. Chat — sender names + entity tags
-**File:** `src/pages/chat/ChatPage.tsx`
-**Fix:**
-- Line 436: sender name `text-primary` → `text-foreground`.
-- Line 348: entity tag pill `text-primary font-medium` → `bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs font-medium`.
-
-### 9. Prices — gold to black, totals green
-**Scope:** App-wide audit of price display.
-**Files:** `src/pages/tickets/TicketDetail.tsx`, `EstimatePortal.tsx`, `PMPortal.tsx`, `PricingReview.tsx`, `accounting/AccountingDetail.tsx`, `AccountingList.tsx`, `inspections/InspectionDetail.tsx`, `tickets/TicketReview.tsx`, `lib/inspectionPdf.ts`, `lib/ticketPdf.ts`, `lib/reportPdf.ts`.
-**Fix:**
-- Find all `text-primary` (or `#FFD700`) classes on price/`$` values → change to `text-foreground`.
-- Identify "grand total" / "pre-approved total" lines → change to `text-[#22c55e]` (green-500).
-- In PDF helpers (`inspectionPdf.ts`, `reportPdf.ts`), set price text color to `#000000` for PM-facing PDFs regardless of theme.
-
-## FEATURES
-
-### 10. Property Notes (admin/supervisor only)
-**Files:** `src/pages/properties/PropertyDetail.tsx`, new migration.
-**Database migration:**
-```sql
-CREATE TABLE public.property_notes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  property_id uuid NOT NULL,
-  tenant_name text,
-  tenant_phone text,
-  notes text,
-  updated_at timestamptz DEFAULT now(),
-  updated_by uuid
-);
-ALTER TABLE public.property_notes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin/supervisor read" ON property_notes FOR SELECT TO authenticated
-  USING (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'supervisor'));
-CREATE POLICY "admin/supervisor write" ON property_notes FOR ALL TO authenticated
-  USING (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'supervisor'))
-  WITH CHECK (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'supervisor'));
-CREATE UNIQUE INDEX ON property_notes(property_id);
+```json
+{ "src": "/FiveServ_Logo_2_No_BG.png", "sizes": "192x192", ... }
+{ "src": "/FiveServ_Logo_2_No_BG.png", "sizes": "512x512", ... }
 ```
-**UI:** Add `<Collapsible>` section to PropertyDetail above tabs, gated by `activeRole === 'admin' || activeRole === 'supervisor'`. Form: tenant_name, tenant_phone, textarea notes; "Last updated: {updated_at} by {updated_by name}"; upsert on save.
 
-### 11. Active Role switcher
-**Finding:** DrawerMenu **already has** a role switcher (lines 156-178) — works correctly. Profile page does NOT.
-**Files:** `src/pages/Profile.tsx`, `src/stores/authStore.ts`.
-**Fix:**
-- Add a "Active Role" section to Profile.tsx near top, only when `user.roles.length > 1`. Render buttons identical to DrawerMenu's switcher.
-- Update `authStore.setActiveRole` to also persist to localStorage: `localStorage.setItem('fiveserv-active-role', role)`.
-- In `authStore.setUser` and `useAuth.initialize`, read localStorage value first; fall back to `roles[0]` if missing/invalid.
-- Notifications: already query by `user_id` (not by role) in NotificationDropdown — confirmed receives for all roles regardless of activeRole. No change needed.
+Chrome inspects the actual pixel dimensions, sees 708×248, rejects the icon as invalid for installability, and falls back to the generic page-screenshot icon.
 
-## EXECUTION ORDER
+### Files in `/public/` today
+| File | Actual size | Notes |
+|---|---|---|
+| `FiveServ_Logo_2_No_BG.png` | 708×248 | Wide logo, transparent bg |
+| `FiveServ_Logo_Black_Text.png` | 706×256 | Wide logo, black text |
+| `logo.png` | 1533×2000 | Tall portrait, not square |
+| `favicon.ico` | — | Browser favicon only |
 
-1. **Critical bugs first**: #5 (surface ticket error), #3 (password reset code exchange), #4 (app name), #2 (PWA icons), #1 (client address column + field).
-2. **Design**: #7 (role badge), #8 (chat colors), #6 (reports), #9 (prices audit — largest scope).
-3. **Features**: #10 (property notes table + UI), #11 (Profile role switcher + localStorage persistence).
+**No square 192×192 or 512×512 PNG exists.** That's why the desktop icon is broken.
 
-No changes will be made until you approve.
+### Fix required
+1. Generate two new square PNGs from `logo.png` (or the wordmark on a dark `#1A1A1A` square canvas with padding):
+   - `/public/icon-192.png` — exactly 192×192
+   - `/public/icon-512.png` — exactly 512×512
+   - `/public/icon-512-maskable.png` — exactly 512×512 with safe-zone padding (~20%) and full-bleed `#1A1A1A` background, `purpose: "maskable"`
+2. Update `public/manifest.json` to reference these three files with correct `sizes` and explicit `purpose` values (`"any"` for the first two, `"maskable"` for the third).
+3. Optionally update `index.html` `<link rel="apple-touch-icon">` to point to `/icon-512.png` for nicer iOS home-screen icons.
+
+No code/route changes — purely asset generation + manifest update.
+
+---
+
+## ISSUE 2 — Technician Assignment Email Has Broken Variables & Buttons
+
+### Template confirmed in DB
+`email_templates.template_key = 'technician_assigned'` references **8 variables**:
+
+```
+{{technician_name}}  {{fs_number}}  {{property_name}}  {{property_address}}
+{{unit}}             {{work_type}}  {{appointment_date}} {{appointment_time}}
+{{job_description}}  {{app_url}}    {{directions_url}}
+```
+
+### Caller call sites
+Both call sites only pass **6 variables** (`fs_number`, `property_name`, `work_type`, `appointment_time`, `technician_name`):
+
+| File | Line | Trigger |
+|---|---|---|
+| `src/pages/tickets/TicketForm.tsx` | 306–320 | New ticket created with technician |
+| `src/pages/tickets/TicketDetail.tsx` | 206–220 | Tech assigned to existing ticket |
+
+### Missing variables → why they render as literal `{{...}}`
+The `send-business-email` edge function (lines 99–113 of `supabase/functions/send-business-email/index.ts`) does a literal `template.replace(/\{\{(\w+)\}\}/g, ...)` and **leaves any unmatched token unchanged**. So every variable not passed in shows up as `{{property_address}}` etc. in the recipient's inbox.
+
+| Token | Source data needed |
+|---|---|
+| `{{property_address}}` | `properties.address` — not currently fetched in either caller |
+| `{{unit}}` | `tickets.unit` — column exists, never passed |
+| `{{job_description}}` | `tickets.description` — never passed |
+| `{{appointment_date}}` | Currently only `appointment_time` is sent (combined date+time string). Template wants date and time as **separate** lines |
+| `{{app_url}}` | Never passed → "Open in App" button has empty `href` |
+| `{{directions_url}}` | Never passed → "Get Directions" button has empty `href` |
+
+### Fix required (per call site)
+
+**TicketForm.tsx (line 306–320)** — add to the `variables` object:
+```
+property_address: prop?.address ?? '',
+unit: form.unit ?? '',
+job_description: form.description ?? '',
+appointment_date: form.appointment_time
+  ? new Date(form.appointment_time).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday:'short', month:'short', day:'numeric', year:'numeric' })
+  : 'Not scheduled',
+appointment_time: form.appointment_time
+  ? new Date(form.appointment_time).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour:'numeric', minute:'2-digit' })
+  : '',
+app_url: `https://app.fiveserv.net/tickets/${ticketId}`,
+directions_url: prop?.address
+  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prop.address)}`
+  : '',
+```
+
+**TicketDetail.tsx (line 206–220)** — same additions, but using existing context:
+- `property_address` ← `properties[ticket.property_id]?.address`
+- `unit` ← `ticket.unit`
+- `job_description` ← `ticket.description`
+- `appointment_date` ← split formatter on `ticket.appointment_time`
+- `appointment_time` ← time-only formatter
+- `app_url` ← `https://app.fiveserv.net/tickets/${id}`
+- `directions_url` ← `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(properties[ticket.property_id]?.address ?? '')}`
+
+### Also verify
+- `TicketForm.tsx` `properties` array must include `address` in its select. Let me note: if the `properties` list was loaded with `select('id, name')` only, `prop?.address` will be `undefined`. The fix should also widen the properties query to include `address` (and `unit` is on ticket, not property).
+- `TicketDetail.tsx` `properties` lookup map — same check; ensure `address` is loaded.
+
+### No edge function changes needed
+`send-business-email` is generic — it substitutes whatever tokens are passed. The fix is **entirely client-side** in the two call sites.
+
+---
+
+## Summary of Changes (when approved)
+
+**Issue 1 — Assets + manifest**
+- Generate `public/icon-192.png` (192×192), `public/icon-512.png` (512×512), `public/icon-512-maskable.png` (512×512 maskable) from `logo.png`
+- Update `public/manifest.json` icons array to reference the three new files
+- Optionally update `<link rel="apple-touch-icon">` in `index.html`
+
+**Issue 2 — Technician email payload**
+- `src/pages/tickets/TicketForm.tsx` (≈line 310): add 7 missing variables; ensure `properties` query includes `address`
+- `src/pages/tickets/TicketDetail.tsx` (≈line 210): add 7 missing variables; ensure `properties` map includes `address`
+- No edge function changes
+- No DB / template changes (template is already correct)

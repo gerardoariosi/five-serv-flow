@@ -62,7 +62,7 @@ const TicketForm = () => {
     const fetchOptions = async () => {
       const [cRes, pRes, zRes, uRes, iRes, wtRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
-        supabase.from('properties').select('id, name, zone_id, current_pm_id').eq('status', 'active'),
+        supabase.from('properties').select('id, name, address, zone_id, current_pm_id').eq('status', 'active'),
         supabase.from('zones').select('id, name').eq('status', 'active'),
         supabase.from('users').select('id, full_name, roles').filter('roles', 'cs', '{"technician"}'),
         supabase.from('inspections').select('id, ins_number, property_id').in('status', ['draft', 'pending']),
@@ -310,11 +310,21 @@ const TicketForm = () => {
                 variables: {
                   fs_number: fsNumber ?? '',
                   property_name: prop?.name ?? '',
+                  property_address: prop?.address ?? '',
+                  unit: form.unit ?? '',
                   work_type: (form.work_type ?? '').replace('-', ' '),
-                  appointment_time: form.appointment_time
-                    ? new Date(form.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' })
+                  job_description: form.description ?? '',
+                  appointment_date: form.appointment_time
+                    ? new Date(form.appointment_time).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
                     : 'Not scheduled',
+                  appointment_time: form.appointment_time
+                    ? new Date(form.appointment_time).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })
+                    : '',
                   technician_name: techUser?.full_name ?? tech?.full_name ?? '',
+                  app_url: `https://app.fiveserv.net/tickets/${ticketId}`,
+                  directions_url: prop?.address
+                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prop.address)}`
+                    : '',
                 },
               },
             });

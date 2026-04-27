@@ -210,11 +210,21 @@ const TicketDetail = () => {
             variables: {
               fs_number: ticket.fs_number ?? '',
               property_name: ticket.property_id ? properties[ticket.property_id]?.name ?? '' : '',
+              property_address: ticket.property_id ? properties[ticket.property_id]?.address ?? '' : '',
+              unit: ticket.unit ?? '',
               work_type: (ticket.work_type ?? '').replace('-', ' '),
-              appointment_time: ticket.appointment_time
-                ? new Date(ticket.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' })
+              job_description: ticket.description ?? '',
+              appointment_date: ticket.appointment_time
+                ? new Date(ticket.appointment_time).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
                 : 'Not scheduled',
+              appointment_time: ticket.appointment_time
+                ? new Date(ticket.appointment_time).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })
+                : '',
               technician_name: users[assignTechId]?.name ?? '',
+              app_url: `https://app.fiveserv.net/tickets/${id}`,
+              directions_url: properties[ticket.property_id]?.address
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(properties[ticket.property_id].address)}`
+                : '',
             },
           },
         });
