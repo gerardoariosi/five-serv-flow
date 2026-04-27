@@ -16,7 +16,7 @@ const ClientForm = () => {
   const queryClient = useQueryClient();
   const isEdit = !!id;
 
-  const [form, setForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', type: 'pm' });
+  const [form, setForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', type: 'pm', address: '' });
   const [emailError, setEmailError] = useState('');
 
   const { data: existing, isLoading } = useQuery({
@@ -37,6 +37,7 @@ const ClientForm = () => {
         email: existing.email ?? '',
         phone: existing.phone ?? '',
         type: existing.type ?? 'pm',
+        address: (existing as any).address ?? '',
       });
     }
   }, [existing]);
@@ -119,6 +120,19 @@ const ClientForm = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {form.type === 'residential' && (
+          <div>
+            <Label>Service Address</Label>
+            <Input
+              value={form.address}
+              onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+              placeholder="e.g. 123 Main St, Springfield"
+              className="bg-secondary border-border"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Home or service address for this residential client.</p>
+          </div>
+        )}
 
         <Button onClick={() => mutation.mutate()} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2">
           {mutation.isPending ? <Spinner size="sm" /> : isEdit ? 'Update Client' : 'Create Client'}

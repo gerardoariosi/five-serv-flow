@@ -358,7 +358,7 @@ const InspectionDetail = () => {
           {inspection.pm_total_selected != null && inspection.pm_total_selected > 0 && (
             <div className="flex items-center justify-between pt-2 border-t border-border">
               <span className="text-xs text-muted-foreground">PM Approved Total</span>
-              <span className="text-sm font-bold text-primary">${inspection.pm_total_selected.toFixed(2)}</span>
+              <span className="text-sm font-bold text-[#22c55e]">${inspection.pm_total_selected.toFixed(2)}</span>
             </div>
           )}
           <DialogFooter>
@@ -607,7 +607,7 @@ const InspectionDetail = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Pre-Approved Total</span>
-                  <p className="text-primary font-bold">${(inspection.pm_total_selected ?? 0).toFixed(2)}</p>
+                  <p className="text-[#22c55e] font-bold">${(inspection.pm_total_selected ?? 0).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -621,7 +621,7 @@ const InspectionDetail = () => {
                 <div key={item.id} className="bg-card border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">{item.item_name}</span>
-                    <span className="text-sm font-bold text-primary">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                    <span className="text-sm font-bold text-foreground">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
                   </div>
                   {item.area && <p className="text-[11px] text-muted-foreground mt-0.5 uppercase tracking-wider">{String(item.area).replace(/_/g, ' ')}</p>}
                   {item.item_note && <p className="text-xs text-muted-foreground mt-1"><span className="font-semibold">Tech:</span> <span className="italic">{item.item_note}</span></p>}

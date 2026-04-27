@@ -1,17 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Edit, Plus } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, MapPin, Edit, Plus, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { activeRole, user } = useAuthStore();
+  const canSeeNotes = activeRole === 'admin' || activeRole === 'supervisor';
   const [activeTab, setActiveTab] = useState('active');
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [tenantName, setTenantName] = useState('');
+  const [tenantPhone, setTenantPhone] = useState('');
+  const [generalNotes, setGeneralNotes] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
 
   const { data: property, isLoading } = useQuery({
     queryKey: ['property', id],
@@ -51,6 +64,41 @@ const PropertyDetail = () => {
     },
     enabled: !!id && activeTab === 'inspections',
   });
+
+  const { data: propertyNote } = useQuery({
+    queryKey: ['property-notes', id],
+    queryFn: async () => {
+      const { data } = await supabase.from('property_notes' as any).select('*').eq('property_id', id!).maybeSingle();
+      return data as any;
+    },
+    enabled: !!id && canSeeNotes,
+  });
+
+  useEffect(() => {
+    if (propertyNote) {
+      setTenantName(propertyNote.tenant_name ?? '');
+      setTenantPhone(propertyNote.tenant_phone ?? '');
+      setGeneralNotes(propertyNote.notes ?? '');
+    }
+  }, [propertyNote]);
+
+  const saveNotes = async () => {
+    if (!id || !user?.id) return;
+    setSavingNotes(true);
+    const payload: any = {
+      property_id: id,
+      tenant_name: tenantName || null,
+      tenant_phone: tenantPhone || null,
+      notes: generalNotes || null,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('property_notes' as any).upsert(payload, { onConflict: 'property_id' });
+    setSavingNotes(false);
+    if (error) { toast.error(error.message || 'Failed to save notes'); return; }
+    toast.success('Notes saved');
+    queryClient.invalidateQueries({ queryKey: ['property-notes', id] });
+  };
 
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (!property) return <p className="text-center text-muted-foreground py-12">Property not found.</p>;
@@ -96,6 +144,43 @@ const PropertyDetail = () => {
           <Plus className="w-4 h-4 mr-1" /> New Inspection
         </Button>
       </div>
+
+      {/* Notes (admin/supervisor only) */}
+      {canSeeNotes && (
+        <div className="bg-card border border-border rounded-lg mb-4 overflow-hidden">
+          <button
+            onClick={() => setNotesOpen((o) => !o)}
+            className="w-full flex items-center justify-between p-4 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+          >
+            <span>Property Notes (internal)</span>
+            {notesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {notesOpen && (
+            <div className="p-4 pt-0 space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Tenant Name</Label>
+                <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Tenant Phone</Label>
+                <Input value={tenantPhone} onChange={(e) => setTenantPhone(e.target.value)} placeholder="(555) 123-4567" className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">General Notes</Label>
+                <Textarea value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} rows={4} className="bg-secondary border-border" />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {propertyNote?.updated_at ? `Last updated: ${new Date(propertyNote.updated_at).toLocaleString()}` : 'Not yet saved'}
+                </p>
+                <Button size="sm" onClick={saveNotes} disabled={savingNotes} className="bg-primary text-primary-foreground">
+                  {savingNotes ? <Spinner size="sm" /> : (<><Save className="w-3 h-3 mr-1" /> Save</>)}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-secondary w-full justify-start">

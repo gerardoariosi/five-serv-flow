@@ -18,10 +18,10 @@ interface TopNavProps {
 }
 
 const roleBadgeStyles: Record<AppRole, { bg: string; text: string; abbr: string }> = {
-  admin:      { bg: 'bg-[#FFD700]/15', text: 'text-[#FFD700]', abbr: 'ADM' },
-  supervisor: { bg: 'bg-[#185FA5]/15', text: 'text-[#5B9BE0]', abbr: 'SUP' },
-  technician: { bg: 'bg-[#3B6D11]/20', text: 'text-[#7CC242]', abbr: 'TEC' },
-  accounting: { bg: 'bg-[#534AB7]/20', text: 'text-[#8B82E0]', abbr: 'ACC' },
+  admin:      { bg: 'bg-foreground', text: 'text-background', abbr: 'ADM' },
+  supervisor: { bg: 'bg-foreground', text: 'text-background', abbr: 'SUP' },
+  technician: { bg: 'bg-foreground', text: 'text-background', abbr: 'TEC' },
+  accounting: { bg: 'bg-foreground', text: 'text-background', abbr: 'ACC' },
 };
 
 const TopNav = ({ onMenuClick }: TopNavProps) => {

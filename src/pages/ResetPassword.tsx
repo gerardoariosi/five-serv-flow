@@ -19,14 +19,41 @@ const ResetPassword = () => {
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes('type=recovery') || hash.includes('type=invite')) {
-      setTokenValid(true);
-    } else {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setTokenValid(!!session);
-      });
-    }
+    const run = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const errorDesc = url.searchParams.get('error_description');
+
+      if (errorDesc) {
+        setTokenValid(false);
+        return;
+      }
+
+      // PKCE flow: exchange ?code= for a session
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          // Clean the URL so refresh doesn't re-exchange
+          window.history.replaceState({}, '', '/reset-password');
+          setTokenValid(true);
+          return;
+        }
+        setTokenValid(false);
+        return;
+      }
+
+      // Legacy hash-based recovery/invite tokens
+      const hash = window.location.hash;
+      if (hash.includes('type=recovery') || hash.includes('type=invite')) {
+        setTokenValid(true);
+        return;
+      }
+
+      // Already authenticated session (e.g. after exchange on a previous mount)
+      const { data: { session } } = await supabase.auth.getSession();
+      setTokenValid(!!session);
+    };
+    run();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
