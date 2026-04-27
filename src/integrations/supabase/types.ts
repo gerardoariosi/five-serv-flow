@@ -153,6 +153,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          address: string | null
           company_name: string | null
           contact_name: string | null
           created_at: string | null
@@ -163,6 +164,7 @@ export type Database = {
           type: string | null
         }
         Insert: {
+          address?: string | null
           company_name?: string | null
           contact_name?: string | null
           created_at?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           type?: string | null
         }
         Update: {
+          address?: string | null
           company_name?: string | null
           contact_name?: string | null
           created_at?: string | null
@@ -687,6 +690,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      property_notes: {
+        Row: {
+          id: string
+          notes: string | null
+          property_id: string
+          tenant_name: string | null
+          tenant_phone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          property_id: string
+          tenant_name?: string | null
+          tenant_phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          property_id?: string
+          tenant_name?: string | null
+          tenant_phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       push_subscriptions: {
         Row: {

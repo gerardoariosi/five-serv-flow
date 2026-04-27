@@ -1,108 +1,116 @@
+# Analysis & Implementation Plan
 
+## CRITICAL BUGS
 
-# PM-Facing Documents & Portals — Redesign Audit
+### 1. Client form — address field missing for residential clients
+**File:** `src/pages/clients/ClientForm.tsx`
+**Finding:** ClientForm has no address field at all — only company_name, contact_name, email, phone, type. The `clients` table also has no address column. Residential clients need an address (their own home), distinct from `properties.address`.
+**Fix:**
+- Migration: add `address text` column to `clients` table.
+- Add Address input to ClientForm, conditionally rendered when `form.type === 'residential'` (or always shown but labeled "Service Address" for residential).
+- Save to clients.address on insert/update.
 
-## Current state summary
+### 2. Desktop PWA icon not showing
+**Files:** `public/manifest.json`, `index.html`
+**Finding:** manifest.json declares only one icon (`/FiveServ_Logo_2_No_BG.png`) with `sizes: "any"` and `sizes: "512x512"`. Chrome desktop install requires standard PNG sizes (192x192 and 512x512) with `purpose: "any"` separately from `maskable`. Also, `index.html` `<link rel="icon">` points to `/logo.png`, not the FiveServ logo.
+**Fix:**
+- In `public/manifest.json`, declare 3 icon entries: 192x192 (any), 512x512 (any), 512x512 (maskable) — all pointing to `/FiveServ_Logo_2_No_BG.png`.
+- In `index.html`, change `<link rel="icon">` and `<link rel="apple-touch-icon">` to use `/FiveServ_Logo_2_No_BG.png`.
 
-| File | Status |
-|---|---|
-| `PMPortal.tsx` | Working web portal, light-mode forced, basic card layout, "FS" text (not real wordmark), no formal header/footer, no legal text |
-| `inspectionPdf.ts` | Working `generateFiveServPdf` + `generatePmVersionPdf`. White header (not black), bullet-point items (not table), no alternating rows, summary box has no gold border, footer missing center contact line |
-| `AccountingDetail.tsx` | "Export PDF" button is a `toast.info('Exporting PDF...')` **stub** — no PDF generation exists |
-| `ReportDetail.tsx` | "Export PDF" button is a `toast.info('Exporting PDF...')` **stub** — no PDF generation exists |
+### 3. Password reset — users can't set new password
+**Files:** `src/hooks/useAuth.ts`, `src/pages/ResetPassword.tsx`, Supabase auth URL config
+**Finding:** `resetPasswordForEmail` uses `redirectTo: ${window.location.origin}/reset-password`. ResetPassword.tsx checks `window.location.hash` for `type=recovery`. Two likely failure modes:
+- Supabase recovery emails now use `?code=` (PKCE) instead of `#access_token=...`. The hash check fails, so `tokenValid` falls back to `getSession()` which is null → "Link Expired" shown.
+- Auth `Site URL` / redirect allow-list in Supabase doesn't include the published domain.
+**Fix:**
+- Update ResetPassword.tsx to also handle `?code=` query param: call `supabase.auth.exchangeCodeForSession(code)` then mark token valid.
+- Verify Supabase Auth `Site URL` and `Additional Redirect URLs` include both preview and published domains (config check, not code).
 
----
+### 4. App name everywhere
+**Files:** `index.html`, `public/manifest.json`
+**Finding:** `index.html` `<title>` = "FiveServ Operations" ✓; OG title = "FiveServ" ✗; manifest `name` = "FiveServ Operations Hub" ✗; `short_name` = "FiveServ".
+**Fix:**
+- `manifest.json`: `name` → "FiveServ Operations", keep `short_name: "FiveServ"`.
+- `index.html`: og:title, twitter:title, application-name → "FiveServ Operations".
 
-## 1. PMPortal.tsx — exact changes
+### 5. "Error saving the ticket"
+**File:** `src/pages/tickets/TicketForm.tsx` (line 325)
+**Finding:** The catch block discards the error: `} catch { toast.error('Error saving ticket'); }`. The actual cause is hidden. Most likely culprits in the payload (lines 245-255):
+- `appointment_time` empty string passed as null ✓ — fine.
+- `related_inspection_id: form.related_inspection_id || null` ✓.
+- The insert spreads `...form` which includes `quote_reference` — but the `tickets` table has no listed audit failures here.
+- Most suspicious: when `draftId.current` exists from auto-save and a non-draft submit happens, `payload.fs_number` is NOT set (only set in the else-branch line 272). The auto-saved draft already has fs_number, so update is fine. BUT — RLS policy "Admins and supervisors can create tickets" blocks INSERT for technicians; if a non-admin/supervisor user tries to create, the insert silently fails.
+- Also: auto-save inserts draft as `status='draft'` then the submit tries to insert again because `draftId.current` only persists in ref — if user navigated, ref is empty → duplicate `fs_number` collision.
+**Fix:**
+- Replace `catch {}` with `catch (err: any) { toast.error(err.message || 'Error saving ticket'); console.error(err); }` to surface the real error.
+- Ensure `appointment_time` empty string converts to `null` (already done) and ISO format on submit.
+- After fixing the catch, re-test to identify the actual DB error and patch.
 
-| # | Location | Change |
-|---|---|---|
-| 1 | Lines 335–345 (header) | Replace white header with black `#1A1A1A` full-width bar. Center FiveServ wordmark (`F` gold #FFD700 + `iveServ` white). Add gold 2px line at bottom. Below header in small gray text: property name + `INS-####` |
-| 2 | New block after header | Add **hero card** (white, rounded, subtle shadow): single elegant info row with property name, address, visit date, technician name |
-| 3 | Lines 397–435 (items) | Replace bordered checkbox cards with **invoice-style rows**: checkbox + item name (bold left), status badge (colored), qty × unit price, total right-aligned. Thin `border-b border-gray-100` separators only (no heavy borders) |
-| 4 | Lines 446–457 (photos) | Cleaner grid: add area caption below each photo (small gray text), softer hover (`hover:opacity-90` + subtle shadow lift) |
-| 5 | Lines 462–466 (total) | Convert to invoice-style: top separator line, "Selected Total" label gray, amount large black with gold underline accent. Drop the heavy yellow border |
-| 6 | New block before closing `<div>` (line 533) | Add **footer**: small FiveServ wordmark, "Licensed & Insured · Central Florida", `info@fiveserv.net`, `(407) 881-4942`, italic gray "This document is confidential." |
-| 7 | Lines 482–493 (signature) | Add legal text below signature pad: *"By signing, you authorize FiveServ Property Solutions to proceed with selected work."* |
-| 8 | Lines 282 / 338 (PIN screen + sticky header) | Replace `<span>FS</span>` with proper FiveServ wordmark component (reuse `FiveServLogo` or inline) |
+## DESIGN CHANGES
 
----
+### 6. Reports page — title color
+**File:** `src/pages/reports/ReportList.tsx` line 35
+**Fix:** Change `text-primary` → `text-foreground font-bold` on the report title `<p>`. Keep gold for the icon (line 32) and icon background.
 
-## 2. inspectionPdf.ts — exact changes
+### 7. Role badge — dark background, white text
+**Files:** `src/components/layout/TopNav.tsx` (lines 20-25), `src/components/layout/DrawerMenu.tsx` (lines 19-24)
+**Fix:** Replace per-role gold/colored backgrounds with uniform dark style:
+- `bg-foreground text-background` (auto-inverts in dark/light mode), OR
+- `bg-[#1A1A1A] text-white` for explicit dark.
+Apply same change in both TopNav `roleBadgeStyles` and DrawerMenu `roleBadgeStyles`.
 
-Both `generateFiveServPdf` and `generatePmVersionPdf` share helpers. Refactor the helpers and they propagate.
+### 8. Chat — sender names + entity tags
+**File:** `src/pages/chat/ChatPage.tsx`
+**Fix:**
+- Line 436: sender name `text-primary` → `text-foreground`.
+- Line 348: entity tag pill `text-primary font-medium` → `bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs font-medium`.
 
-### `addHeader` (lines 21–42)
-- Black rectangle full width, height **40** (was 36, white)
-- FiveServ wordmark in white text on black (`F` gold, `iveServ` white)
-- Gold 2px line at y=40
-- Add **right-aligned** small white text in header: property name (top) + document type subtitle (bottom). Requires header signature change to accept `propertyName` and `docType`.
+### 9. Prices — gold to black, totals green
+**Scope:** App-wide audit of price display.
+**Files:** `src/pages/tickets/TicketDetail.tsx`, `EstimatePortal.tsx`, `PMPortal.tsx`, `PricingReview.tsx`, `accounting/AccountingDetail.tsx`, `AccountingList.tsx`, `inspections/InspectionDetail.tsx`, `tickets/TicketReview.tsx`, `lib/inspectionPdf.ts`, `lib/ticketPdf.ts`, `lib/reportPdf.ts`.
+**Fix:**
+- Find all `text-primary` (or `#FFD700`) classes on price/`$` values → change to `text-foreground`.
+- Identify "grand total" / "pre-approved total" lines → change to `text-[#22c55e]` (green-500).
+- In PDF helpers (`inspectionPdf.ts`, `reportPdf.ts`), set price text color to `#000000` for PM-facing PDFs regardless of theme.
 
-### `addInfoRow` (lines 69–79)
-- Render as **two-column table**: light gray label cell, dark value cell, thin `#E5E5E5` line below each row spanning full content width
-- Adjust x positions for proper column alignment
+## FEATURES
 
-### `addSectionTitle` (lines 58–67)
-- Keep gold 3px left border
-- Make text **uppercase + bold**
-- Add **full-width light gray separator line** under the title
+### 10. Property Notes (admin/supervisor only)
+**Files:** `src/pages/properties/PropertyDetail.tsx`, new migration.
+**Database migration:**
+```sql
+CREATE TABLE public.property_notes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL,
+  tenant_name text,
+  tenant_phone text,
+  notes text,
+  updated_at timestamptz DEFAULT now(),
+  updated_by uuid
+);
+ALTER TABLE public.property_notes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "admin/supervisor read" ON property_notes FOR SELECT TO authenticated
+  USING (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'supervisor'));
+CREATE POLICY "admin/supervisor write" ON property_notes FOR ALL TO authenticated
+  USING (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'supervisor'))
+  WITH CHECK (has_role(auth.uid(),'admin') OR has_role(auth.uid(),'supervisor'));
+CREATE UNIQUE INDEX ON property_notes(property_id);
+```
+**UI:** Add `<Collapsible>` section to PropertyDetail above tabs, gated by `activeRole === 'admin' || activeRole === 'supervisor'`. Form: tenant_name, tenant_phone, textarea notes; "Last updated: {updated_at} by {updated_by name}"; upsert on save.
 
-### Item rendering (lines 149–199 in `generateFiveServPdf` and 263–300 in `generatePmVersionPdf`)
-- Replace bullet+text rows with a **table layout**:
-  - Columns: item name | status badge (colored pill) | qty | unit price | total
-  - **Alternating row backgrounds**: `#FAFAFA` and white
-  - Column header row at top of each area
-- Status rendered as small filled rounded pill (not just colored text)
+### 11. Active Role switcher
+**Finding:** DrawerMenu **already has** a role switcher (lines 156-178) — works correctly. Profile page does NOT.
+**Files:** `src/pages/Profile.tsx`, `src/stores/authStore.ts`.
+**Fix:**
+- Add a "Active Role" section to Profile.tsx near top, only when `user.roles.length > 1`. Render buttons identical to DrawerMenu's switcher.
+- Update `authStore.setActiveRole` to also persist to localStorage: `localStorage.setItem('fiveserv-active-role', role)`.
+- In `authStore.setUser` and `useAuth.initialize`, read localStorage value first; fall back to `roles[0]` if missing/invalid.
+- Notifications: already query by `user_id` (not by role) in NotificationDropdown — confirmed receives for all roles regardless of activeRole. No change needed.
 
-### Summary box (lines 219–231 and 307–312)
-- Replace light gray rounded rect with **white rectangle + gold 1.5px border**
-- Total amount: large bold black, with gold accent label
+## EXECUTION ORDER
 
-### `addFooter` (lines 44–56)
-- Keep gold separator line
-- **Left**: tagline `Five Days. One Call. Done.` (note: spec says "Five Days" — current code has "One Team. One Call. Done." — confirm/replace)
-- **Center**: `FiveServ Property Solutions LLC · info@fiveserv.net · (407) 881-4942`
-- **Right**: `Page X of Y`
+1. **Critical bugs first**: #5 (surface ticket error), #3 (password reset code exchange), #4 (app name), #2 (PWA icons), #1 (client address column + field).
+2. **Design**: #7 (role badge), #8 (chat colors), #6 (reports), #9 (prices audit — largest scope).
+3. **Features**: #10 (property notes table + UI), #11 (Profile role switcher + localStorage persistence).
 
----
-
-## 3. AccountingDetail.tsx — exact changes
-
-Currently no PDF generation — line 201 is a `toast.info` stub.
-
-- Add new file **`src/lib/ticketPdf.ts`** exporting `generateTicketAccountingPdf(ticket, photos, technician, approver)` reusing the same redesigned helpers from `inspectionPdf.ts` (refactor helpers into a shared `src/lib/pdfHelpers.ts` to share black header, footer, info table, item table, summary box).
-- Sections: Header (black + property + ticket FS#) → Ticket Info table (PM, property, unit, type, technician, approved by) → Timestamps table → Photos by stage (start/process/close, embedded as images via `addImage`) → Billing summary box (status, QB invoice #, accounting notes).
-- Replace stub at line 201 with real call: `const doc = await generateTicketAccountingPdf(...); doc.save(\`${ticket.fs_number}-billing.pdf\`)`.
-
----
-
-## 4. ReportDetail.tsx — exact changes
-
-Currently no PDF generation — line 273 is a `toast.info` stub.
-
-- Add `generateReportPdf(reportData, filters)` to a new shared report PDF generator (or extend `ticketPdf.ts`).
-- Sections: Header (black + report title + date range from filters) → Filters applied (info table) → Summary metrics box (gold border) → Data table (alternating rows) → Footer.
-- Replace stub at line 273 with real call.
-
----
-
-## 5. Shared helper extraction (recommended)
-
-Create **`src/lib/pdfHelpers.ts`** with the redesigned `addBlackHeader`, `addFooter`, `addSectionTitle`, `addInfoTableRow`, `addItemTableRow`, `addSummaryBox`, `STATUS_PILL_COLORS`, brand color constants. Then `inspectionPdf.ts`, `ticketPdf.ts`, and `reportPdf.ts` all import from it. This guarantees visual consistency across all four PDFs and keeps the redesign DRY.
-
----
-
-## Files to create / modify
-
-| Action | File |
-|---|---|
-| Create | `src/lib/pdfHelpers.ts` (shared header/footer/table primitives) |
-| Create | `src/lib/ticketPdf.ts` (`generateTicketAccountingPdf`) |
-| Create | `src/lib/reportPdf.ts` (`generateReportPdf`) |
-| Modify | `src/lib/inspectionPdf.ts` (use new helpers, table-style items, black header, gold-border summary, full footer) |
-| Modify | `src/pages/inspections/PMPortal.tsx` (header, hero card, invoice items, photo grid, total, footer, legal text under signature, real wordmark) |
-| Modify | `src/pages/accounting/AccountingDetail.tsx` (replace toast stub with real PDF download) |
-| Modify | `src/pages/reports/ReportDetail.tsx` (replace toast stub with real PDF download) |
-
-No DB changes, no edge function changes, no migrations required. Pure presentation layer.
-
+No changes will be made until you approve.
