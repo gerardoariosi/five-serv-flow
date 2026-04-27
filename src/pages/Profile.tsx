@@ -6,13 +6,14 @@ import { Switch } from '@/components/ui/switch';
 import { Eye, EyeOff, Camera, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import PasswordStrength, { passwordIsValid } from '@/components/auth/PasswordStrength';
 import Spinner from '@/components/ui/Spinner';
 
 const Profile = () => {
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, activeRole, setActiveRole } = useAuthStore();
+  const roleLabels: Record<AppRole, string> = { admin: 'Admin', supervisor: 'Supervisor', technician: 'Technician', accounting: 'Accounting' };
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [phone, setPhone] = useState('');
   const [language, setLanguage] = useState<'en' | 'es'>('en');
@@ -154,6 +155,29 @@ const Profile = () => {
             onChange={handlePhotoUpload}
           />
         </div>
+
+        {/* Active Role switcher (only for users with multiple roles) */}
+        {user && user.roles && user.roles.length > 1 && (
+          <div className="bg-card border border-border rounded-lg p-4 mb-4">
+            <Label className="text-sm text-muted-foreground">Active Role</Label>
+            <p className="text-xs text-muted-foreground mb-3">Switch the dashboard view. You'll keep receiving notifications for all of your roles.</p>
+            <div className="flex flex-wrap gap-2">
+              {user.roles.map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setActiveRole(role)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    activeRole === role
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {roleLabels[role]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Profile Fields */}
         <div className="bg-card border border-border rounded-lg p-6 space-y-4 mb-4">
