@@ -345,7 +345,7 @@ const ChatPage = () => {
       const type = match[1];
       const value = match[2];
       parts.push(
-        <span key={match.index} className="text-primary font-medium cursor-pointer hover:underline" onClick={() => handleMentionClick(type, value)}>
+        <span key={match.index} className="inline-flex items-center bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs font-medium cursor-pointer hover:bg-blue-600" onClick={() => handleMentionClick(type, value)}>
           @{type} {value}
         </span>
       );
@@ -433,7 +433,7 @@ const ChatPage = () => {
                   <div className={`flex gap-2 group ${isOwn ? 'flex-row-reverse' : ''}`}>
                     <div className={`max-w-[75%] rounded-lg px-3 py-2 ${isOwn ? 'bg-primary/15' : 'bg-secondary'}`}>
                       {!isOwn && (
-                        <p className="text-[10px] font-semibold text-primary mb-0.5">
+                        <p className="text-[10px] font-semibold text-foreground mb-0.5">
                           {(msg.users as any)?.full_name || 'Unknown'}
                         </p>
                       )}

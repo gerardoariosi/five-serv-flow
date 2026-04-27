@@ -17,10 +17,10 @@ const roleLabels: Record<AppRole, string> = {
 };
 
 const roleBadgeStyles: Record<AppRole, string> = {
-  admin: 'bg-[#FFD700]/15 text-[#FFD700]',
-  supervisor: 'bg-[#185FA5]/15 text-[#5B9BE0]',
-  technician: 'bg-[#3B6D11]/20 text-[#7CC242]',
-  accounting: 'bg-[#534AB7]/20 text-[#8B82E0]',
+  admin: 'bg-foreground text-background',
+  supervisor: 'bg-foreground text-background',
+  technician: 'bg-foreground text-background',
+  accounting: 'bg-foreground text-background',
 };
 
 interface NavItem { label: string; icon: any; path: string; color: string; shortcut?: string }

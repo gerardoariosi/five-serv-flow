@@ -32,7 +32,7 @@ const ReportList = () => {
               <r.icon className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-primary">{r.title}</p>
+              <p className="text-sm font-bold text-foreground">{r.title}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{r.description}</p>
             </div>
           </div>

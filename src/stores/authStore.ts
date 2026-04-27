@@ -20,6 +20,23 @@ interface AuthState {
   logout: () => void;
 }
 
+const ACTIVE_ROLE_KEY = 'fiveserv-active-role';
+
+const readStoredRole = (): AppRole | null => {
+  try {
+    const v = localStorage.getItem(ACTIVE_ROLE_KEY);
+    if (v === 'admin' || v === 'supervisor' || v === 'technician' || v === 'accounting') return v;
+  } catch { /* SSR / privacy */ }
+  return null;
+};
+
+const resolveInitialRole = (user: UserProfile | null): AppRole | null => {
+  if (!user || !user.roles?.length) return null;
+  const stored = readStoredRole();
+  if (stored && user.roles.includes(stored)) return stored;
+  return user.roles[0];
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   activeRole: null,
@@ -27,9 +44,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) =>
     set({
       user,
-      activeRole: user?.roles?.[0] ?? null,
+      activeRole: resolveInitialRole(user),
     }),
-  setActiveRole: (role) => set({ activeRole: role }),
+  setActiveRole: (role) => {
+    try { localStorage.setItem(ACTIVE_ROLE_KEY, role); } catch { /* ignore */ }
+    set({ activeRole: role });
+  },
   setLoading: (isLoading) => set({ isLoading }),
-  logout: () => set({ user: null, activeRole: null, isLoading: false }),
+  logout: () => {
+    try { localStorage.removeItem(ACTIVE_ROLE_KEY); } catch { /* ignore */ }
+    set({ user: null, activeRole: null, isLoading: false });
+  },
 }));
