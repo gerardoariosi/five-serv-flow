@@ -65,6 +65,41 @@ const PropertyDetail = () => {
     enabled: !!id && activeTab === 'inspections',
   });
 
+  const { data: propertyNote } = useQuery({
+    queryKey: ['property-notes', id],
+    queryFn: async () => {
+      const { data } = await supabase.from('property_notes' as any).select('*').eq('property_id', id!).maybeSingle();
+      return data as any;
+    },
+    enabled: !!id && canSeeNotes,
+  });
+
+  useEffect(() => {
+    if (propertyNote) {
+      setTenantName(propertyNote.tenant_name ?? '');
+      setTenantPhone(propertyNote.tenant_phone ?? '');
+      setGeneralNotes(propertyNote.notes ?? '');
+    }
+  }, [propertyNote]);
+
+  const saveNotes = async () => {
+    if (!id || !user?.id) return;
+    setSavingNotes(true);
+    const payload: any = {
+      property_id: id,
+      tenant_name: tenantName || null,
+      tenant_phone: tenantPhone || null,
+      notes: generalNotes || null,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('property_notes' as any).upsert(payload, { onConflict: 'property_id' });
+    setSavingNotes(false);
+    if (error) { toast.error(error.message || 'Failed to save notes'); return; }
+    toast.success('Notes saved');
+    queryClient.invalidateQueries({ queryKey: ['property-notes', id] });
+  };
+
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (!property) return <p className="text-center text-muted-foreground py-12">Property not found.</p>;
 
@@ -109,6 +144,43 @@ const PropertyDetail = () => {
           <Plus className="w-4 h-4 mr-1" /> New Inspection
         </Button>
       </div>
+
+      {/* Notes (admin/supervisor only) */}
+      {canSeeNotes && (
+        <div className="bg-card border border-border rounded-lg mb-4 overflow-hidden">
+          <button
+            onClick={() => setNotesOpen((o) => !o)}
+            className="w-full flex items-center justify-between p-4 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+          >
+            <span>Property Notes (internal)</span>
+            {notesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </button>
+          {notesOpen && (
+            <div className="p-4 pt-0 space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Tenant Name</Label>
+                <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Tenant Phone</Label>
+                <Input value={tenantPhone} onChange={(e) => setTenantPhone(e.target.value)} placeholder="(555) 123-4567" className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">General Notes</Label>
+                <Textarea value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} rows={4} className="bg-secondary border-border" />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {propertyNote?.updated_at ? `Last updated: ${new Date(propertyNote.updated_at).toLocaleString()}` : 'Not yet saved'}
+                </p>
+                <Button size="sm" onClick={saveNotes} disabled={savingNotes} className="bg-primary text-primary-foreground">
+                  {savingNotes ? <Spinner size="sm" /> : (<><Save className="w-3 h-3 mr-1" /> Save</>)}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-secondary w-full justify-start">
