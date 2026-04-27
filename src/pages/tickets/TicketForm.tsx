@@ -259,18 +259,21 @@ const TicketForm = () => {
       if (isEdit) {
         delete payload.status;
         delete payload.is_draft_auto_saved;
-        await supabase.from('tickets').update(payload).eq('id', id);
+        const { error: updErr } = await supabase.from('tickets').update(payload).eq('id', id);
+        if (updErr) throw updErr;
         ticketId = id!;
         toast.success('Ticket updated');
       } else if (draftId.current) {
         // Update existing draft
         if (!asDraft) payload.is_draft_auto_saved = false;
-        await supabase.from('tickets').update(payload).eq('id', draftId.current);
+        const { error: updErr } = await supabase.from('tickets').update(payload).eq('id', draftId.current);
+        if (updErr) throw updErr;
         ticketId = draftId.current;
         toast.success(asDraft ? 'Draft saved' : 'Ticket created');
       } else {
         payload.fs_number = fsNumber;
-        const { data: inserted } = await supabase.from('tickets').insert(payload).select('id').single();
+        const { data: inserted, error: insErr } = await supabase.from('tickets').insert(payload).select('id').single();
+        if (insErr) throw insErr;
         ticketId = inserted!.id;
         toast.success(asDraft ? 'Draft saved' : 'Ticket created');
       }
