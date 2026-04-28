@@ -59,65 +59,49 @@ if (typeof window !== 'undefined') {
   void loadLogoDataUrl();
 }
 
-// ============= Black header with gold accent =============
+// ============= White header with gold accent =============
 export function addBlackHeader(doc: jsPDF, opts: HeaderOpts = {}) {
-  // Black background
-  doc.setFillColor(...BLACK);
+  // White background
+  doc.setFillColor(...WHITE);
   doc.rect(0, 0, PAGE_W, HEADER_H, 'F');
 
-  // Try image logo first (must be preloaded via preloadPdfAssets)
-  const logo = logoDataUrlCache;
-  if (logo) {
-    try {
-      // Logo height ~14mm, preserves aspect via auto width
-      doc.addImage(logo, 'PNG', MARGIN_X, 10, 0, 14);
-    } catch {
-      // fallback to text wordmark
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...GOLD);
-      doc.text('F', MARGIN_X, 24);
-      const fWidth = doc.getTextWidth('F');
-      doc.setTextColor(...WHITE);
-      doc.text('iveServ', MARGIN_X + fWidth, 24);
-    }
-  } else {
-    // Fallback wordmark
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...GOLD);
-    doc.text('F', MARGIN_X, 24);
-    const fWidth = doc.getTextWidth('F');
-    doc.setTextColor(...WHITE);
-    doc.text('iveServ', MARGIN_X + fWidth, 24);
-  }
+  // Thin gold 2px line at very top
+  doc.setFillColor(...GOLD);
+  doc.rect(0, 0, PAGE_W, 2, 'F');
 
-  // Tagline below wordmark
+  // FiveServ wordmark — F gold + iveServ dark
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...GOLD);
+  doc.text('F', MARGIN_X, 22);
+  const fWidth = doc.getTextWidth('F');
+  doc.setTextColor(...DARK_TEXT);
+  doc.text('iveServ', MARGIN_X + fWidth, 22);
+
+  // Sub-tagline
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...GOLD);
-  doc.text('ONE TEAM. ONE CALL. DONE.', MARGIN_X, 33);
+  doc.setTextColor(150, 150, 150);
+  doc.text('PROPERTY SOLUTIONS', MARGIN_X, 30);
 
-  // Right-aligned: property name (top) + docType (bottom)
-  if (opts.propertyName || opts.docType) {
-    doc.setTextColor(...WHITE);
-    doc.setFontSize(9);
+  // Right-aligned: property name + docType
+  if (opts.propertyName) {
+    doc.setTextColor(...DARK_TEXT);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    if (opts.propertyName) {
-      const txt = opts.propertyName;
-      doc.text(txt, PAGE_W - MARGIN_X, 20, { align: 'right' });
-    }
+    doc.text(opts.propertyName, PAGE_W - MARGIN_X, 20, { align: 'right' });
+  }
+  if (opts.docType) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(220, 220, 220);
-    if (opts.docType) {
-      doc.text(opts.docType, PAGE_W - MARGIN_X, 29, { align: 'right' });
-    }
+    doc.setTextColor(150, 150, 150);
+    doc.text(opts.docType, PAGE_W - MARGIN_X, 28, { align: 'right' });
   }
 
-  // Gold 2px line at bottom of header
-  doc.setFillColor(...GOLD);
-  doc.rect(0, HEADER_H, PAGE_W, 2, 'F');
+  // Bottom thin separator line
+  doc.setDrawColor(...BORDER_LIGHT);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN_X, HEADER_H - 4, PAGE_W - MARGIN_X, HEADER_H - 4);
 }
 
 // ============= Footer =============
@@ -125,19 +109,19 @@ export function addFooter(doc: jsPDF) {
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    // Gold separator line — full width
+    // Thin gold separator line — full width
     doc.setFillColor(...GOLD);
     doc.rect(0, FOOTER_Y, PAGE_W, 0.5, 'F');
 
     // Left: tagline
-    doc.setTextColor(...DARK_TEXT);
+    doc.setTextColor(150, 150, 150);
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'normal');
     doc.text('One Team. One Call. Done.', MARGIN_X, FOOTER_Y + 5);
 
     // Center: contact line
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(180, 180, 180);
     doc.text(
       'FiveServ Property Solutions LLC  ·  info@fiveserv.net  ·  (407) 881-4942',
       PAGE_W / 2,
@@ -145,12 +129,10 @@ export function addFooter(doc: jsPDF) {
       { align: 'center' }
     );
 
-    // Right: Confidential (italic) + page number on next line
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(...MUTED);
-    doc.text('Confidential', PAGE_W - MARGIN_X, FOOTER_Y + 5, { align: 'right' });
+    // Right: page number
+    doc.setTextColor(150, 150, 150);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Page ${i} of ${pageCount}`, PAGE_W - MARGIN_X, FOOTER_Y + 9, { align: 'right' });
+    doc.text(`Page ${i} of ${pageCount}`, PAGE_W - MARGIN_X, FOOTER_Y + 5, { align: 'right' });
   }
 }
 
@@ -162,11 +144,11 @@ export function addSectionTitle(doc: jsPDF, y: number, text: string): number {
   doc.rect(MARGIN_X, y, 3, 8, 'F');
   // Uppercase bold title
   doc.setTextColor(...DARK_TEXT);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text(text.toUpperCase(), MARGIN_X + 6, y + 6);
   // Light separator line under title
-  doc.setDrawColor(240, 240, 240);
+  doc.setDrawColor(...BORDER_LIGHT);
   doc.setLineWidth(0.3);
   doc.line(MARGIN_X, y + 11, PAGE_W - MARGIN_X, y + 11);
   return y + 18;
@@ -176,7 +158,7 @@ export function addSectionTitle(doc: jsPDF, y: number, text: string): number {
 export function addInfoTableRow(doc: jsPDF, y: number, label: string, value: string): number {
   if (y > 270) { doc.addPage(); y = HEADER_H + 8; }
   // Label in gray
-  doc.setTextColor(...MUTED);
+  doc.setTextColor(150, 150, 150);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.text(label.toUpperCase(), MARGIN_X + 2, y);
@@ -186,7 +168,7 @@ export function addInfoTableRow(doc: jsPDF, y: number, label: string, value: str
   doc.setFont('helvetica', 'normal');
   doc.text(value || '—', MARGIN_X + 55, y);
   // Thin separator
-  doc.setDrawColor(235, 235, 235);
+  doc.setDrawColor(240, 240, 240);
   doc.setLineWidth(0.2);
   doc.line(MARGIN_X, y + 2.5, PAGE_W - MARGIN_X, y + 2.5);
   return y + 8;
@@ -223,11 +205,11 @@ export function drawItemTableHeader(doc: jsPDF, y: number, columns: ItemColumn[]
   // Light gray header background
   doc.setFillColor(245, 245, 245);
   doc.rect(MARGIN_X, y, CONTENT_W, 7, 'F');
-  // Gold bottom border
+  // Gold bottom border (1px)
   doc.setFillColor(...GOLD);
-  doc.rect(MARGIN_X, y + 7, CONTENT_W, 0.6, 'F');
-  // Dark gray text
-  doc.setTextColor(80, 80, 80);
+  doc.rect(MARGIN_X, y + 7, CONTENT_W, 0.4, 'F');
+  // Header text
+  doc.setTextColor(100, 100, 100);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   for (const col of columns) {
@@ -265,19 +247,23 @@ export function addSummaryBox(
   valueColor: [number, number, number] = GREEN
 ): number {
   if (y + height > 270) { doc.addPage(); y = HEADER_H + 8; }
-  // White rect with gold border
+  // White rect, no full border — just gold left border 3px
   doc.setFillColor(...WHITE);
-  doc.setDrawColor(...GOLD);
-  doc.setLineWidth(1.5);
-  doc.rect(MARGIN_X, y, CONTENT_W, height, 'FD');
+  doc.rect(MARGIN_X, y, CONTENT_W, height, 'F');
+  doc.setFillColor(...GOLD);
+  doc.rect(MARGIN_X, y, 3, height, 'F');
+  // Subtle bottom separator
+  doc.setDrawColor(...BORDER_LIGHT);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN_X, y + height, PAGE_W - MARGIN_X, y + height);
   // Label
-  doc.setTextColor(...MUTED);
+  doc.setTextColor(150, 150, 150);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(label.toUpperCase(), MARGIN_X + 6, y + 8);
-  // Value (large, bold) — color configurable (default GREEN; PM-facing uses DARK_TEXT)
+  doc.text(label.toUpperCase(), MARGIN_X + 8, y + 8);
+  // Value (large, bold) — color configurable (default GREEN)
   doc.setTextColor(...valueColor);
-  doc.setFontSize(20);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text(value, PAGE_W - MARGIN_X - 6, y + height - 5, { align: 'right' });
   return y + height + 4;
