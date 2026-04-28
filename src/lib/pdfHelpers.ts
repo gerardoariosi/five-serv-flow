@@ -96,7 +96,7 @@ export function addBlackHeader(doc: jsPDF, opts: HeaderOpts = {}) {
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...GOLD);
-  doc.text('ONE TEAM. ONE CALL. DONE.', MARGIN_X, 32);
+  doc.text('ONE TEAM. ONE CALL. DONE.', MARGIN_X, 33);
 
   // Right-aligned: property name (top) + docType (bottom)
   if (opts.propertyName || opts.docType) {
@@ -111,7 +111,7 @@ export function addBlackHeader(doc: jsPDF, opts: HeaderOpts = {}) {
     doc.setFontSize(8);
     doc.setTextColor(220, 220, 220);
     if (opts.docType) {
-      doc.text(opts.docType, PAGE_W - MARGIN_X, 28, { align: 'right' });
+      doc.text(opts.docType, PAGE_W - MARGIN_X, 29, { align: 'right' });
     }
   }
 
@@ -261,7 +261,8 @@ export function addSummaryBox(
   y: number,
   height: number,
   label: string,
-  value: string
+  value: string,
+  valueColor: [number, number, number] = GREEN
 ): number {
   if (y + height > 270) { doc.addPage(); y = HEADER_H + 8; }
   // White rect with gold border
@@ -274,8 +275,8 @@ export function addSummaryBox(
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text(label.toUpperCase(), MARGIN_X + 6, y + 8);
-  // Value (large, bold) — totals always green
-  doc.setTextColor(...GREEN);
+  // Value (large, bold) — color configurable (default GREEN; PM-facing uses DARK_TEXT)
+  doc.setTextColor(...valueColor);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.text(value, PAGE_W - MARGIN_X - 6, y + height - 5, { align: 'right' });
