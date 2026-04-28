@@ -345,7 +345,7 @@ const PMPortal = () => {
 
   // Main portal
   return (
-    <div className="min-h-screen bg-[#F7F7F7]">
+    <div className="min-h-screen bg-white">
       {/* Confirm dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="bg-white">
@@ -424,20 +424,20 @@ const PMPortal = () => {
 
         {/* Instructions guide */}
         {!submitted && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+          <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden">
             <button
               onClick={() => setShowInstructions(prev => !prev)}
               className="w-full flex items-center justify-between px-4 py-3 text-left"
             >
-              <span className="flex items-center gap-2 text-sm font-semibold text-blue-800">
-                <Info className="w-4 h-4" /> How to Complete This Report
+              <span className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Info className="w-4 h-4 text-gray-400" /> How to Complete This Report
               </span>
-              {showInstructions ? <ChevronUp className="w-4 h-4 text-blue-600" /> : <ChevronDown className="w-4 h-4 text-blue-600" />}
+              {showInstructions ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
             </button>
             {showInstructions && (
               <div className="px-4 pb-3 space-y-1.5">
-                <p className="text-xs text-blue-700">This is the inspection report for your property. Please review and approve the repair items you'd like completed.</p>
-                <ul className="text-xs text-blue-700 list-disc pl-4 space-y-1">
+                <p className="text-xs text-gray-600">This is the inspection report for your property. Please review and approve the repair items you'd like completed.</p>
+                <ul className="text-xs text-gray-600 list-disc pl-4 space-y-1 marker:text-gray-400">
                   <li><strong>Select items</strong> — Check the box next to each repair you approve</li>
                   <li><strong>Add notes</strong> — Add optional notes per item for special instructions</li>
                   <li><strong>Review total</strong> — Your selected total updates automatically</li>
@@ -568,7 +568,7 @@ const PMPortal = () => {
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Total</p>
             <p className="text-gray-500 text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
           </div>
-          <p className="text-3xl font-bold text-[#FFD700] tabular-nums">${total.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-[#22c55e] tabular-nums">${total.toFixed(2)}</p>
         </div>
 
         {/* General note */}
@@ -628,8 +628,8 @@ const PMPortal = () => {
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
           <div><span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}><span style={{ color: '#FFD700' }}>F</span><span style={{ color: '#FFFFFF' }}>iveServ</span></span></div>
           <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>One Team. One Call. Done.</p>
-          <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
-          <p className="text-[11px] text-gray-300">
+          <p className="text-xs text-gray-400 mt-2">Licensed &amp; Insured · Central Florida</p>
+          <p className="text-xs text-gray-400">
             <a href="mailto:info@fiveserv.net" className="hover:text-white">info@fiveserv.net</a>
             {' · '}
             <a href="tel:+14078814942" className="hover:text-white">(407) 881-4942</a>
