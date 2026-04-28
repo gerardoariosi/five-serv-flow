@@ -13,6 +13,7 @@ import {
   DARK_TEXT,
   MUTED,
   GOLD,
+  GREEN,
   WHITE,
   BLACK,
   ALT_ROW,
@@ -90,7 +91,7 @@ export function generateReportPdf(data: ReportData): jsPDF {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.text(kpi.label.toUpperCase(), x + 4, y + 7);
-      doc.setTextColor(...BLACK);
+      doc.setTextColor(...GREEN);
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text(String(kpi.value), x + 4, y + 17);
@@ -112,10 +113,12 @@ export function generateReportPdf(data: ReportData): jsPDF {
     const colCount = table.headers.length;
     const colW = CONTENT_W / colCount;
 
-    // Table header (black bg)
-    doc.setFillColor(...BLACK);
+    // Table header (light gray bg with gold underline)
+    doc.setFillColor(245, 245, 245);
     doc.rect(MARGIN_X, y, CONTENT_W, 7, 'F');
-    doc.setTextColor(...WHITE);
+    doc.setFillColor(...GOLD);
+    doc.rect(MARGIN_X, y + 7, CONTENT_W, 0.6, 'F');
+    doc.setTextColor(80, 80, 80);
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     table.headers.forEach((h, idx) => {

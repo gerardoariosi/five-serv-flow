@@ -345,7 +345,7 @@ const PMPortal = () => {
 
   // Main portal
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F7F7F7]">
       {/* Confirm dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="bg-white">
@@ -392,18 +392,18 @@ const PMPortal = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Property</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5">{property?.name || '—'}</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">Property</p>
+              <p className="text-sm font-semibold text-gray-900 mt-0.5">{property?.name || '—'}</p>
               {property?.address && <p className="text-xs text-gray-500 mt-0.5">{property.address}</p>}
             </div>
             <div className="sm:text-right">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Visit Date</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">Inspection</p>
+              <p className="text-sm font-semibold text-gray-900 mt-0.5">{inspection.ins_number || '—'}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
                 {inspection.visit_date
                   ? new Date(inspection.visit_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                   : '—'}
               </p>
-              
             </div>
           </div>
         </div>
@@ -456,9 +456,8 @@ const PMPortal = () => {
           if (areaItems.length === 0 && areaPhotos.length === 0 && !areaNote) return null;
           return (
             <div key={area} className="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden">
-              {/* Area title bar — dark header */}
-              <div className="px-5 py-3 bg-gray-900 flex items-center gap-3">
-                <div className="w-1 h-5 rounded-sm" style={{ backgroundColor: '#FFD700' }} />
+              {/* Area title bar — dark header with gold left accent */}
+              <div className="px-5 py-3 bg-gray-900 border-l-4 border-l-[#FFD700] flex items-center">
                 <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em]">{area.replace(/_/g, ' ')}</h3>
               </div>
 
@@ -564,12 +563,12 @@ const PMPortal = () => {
         })}
 
         {/* Selected Total bar */}
-        <div className="bg-white border-t border-gray-200 shadow-lg rounded-xl p-5 flex items-center justify-between">
+        <div className="bg-gray-900 border-t-2 border-[#FFD700] shadow-lg rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-[#1A1A1A] text-xs font-bold uppercase tracking-wider">Selected Total</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Total</p>
             <p className="text-gray-500 text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
           </div>
-          <p className="text-[#1A1A1A] text-2xl font-bold tabular-nums">${total.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-[#FFD700] tabular-nums">${total.toFixed(2)}</p>
         </div>
 
         {/* General note */}
@@ -613,8 +612,7 @@ const PMPortal = () => {
         {/* Submit */}
         {!readOnly && (
           <Button
-            className="w-full bg-[#1A1A1A] hover:bg-black text-white font-bold border-b-2"
-            style={{ borderBottomColor: '#FFD700' }}
+            className="w-full bg-[#1A1A1A] hover:bg-black text-white font-bold border-l-4 border-[#FFD700]"
             size="lg"
             onClick={() => setShowConfirm(true)}
             disabled={!signatureData || selectedItems.size === 0}
