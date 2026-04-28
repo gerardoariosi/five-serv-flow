@@ -265,10 +265,10 @@ export function generatePmVersionPdf(data: InspectionData): jsPDF {
     });
   }
 
-  // Approved total — PM-facing: DARK_TEXT only (never GREEN/GOLD)
+  // Approved total — GREEN grand total
   y += 5;
   y = checkPageBreak(doc, y, 25);
-  y = addSummaryBox(doc, y, 20, 'Approved Total', `$${(inspection.pm_total_selected ?? 0).toFixed(2)}`, DARK_TEXT);
+  y = addSummaryBox(doc, y, 20, 'Approved Total', `$${(inspection.pm_total_selected ?? 0).toFixed(2)}`);
 
   // PM general note
   if (inspection.pm_general_note) {
