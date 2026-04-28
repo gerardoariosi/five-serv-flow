@@ -13,6 +13,7 @@ import {
   DARK_TEXT,
   MUTED,
   GOLD,
+  GREEN,
   WHITE,
   BLACK,
   ALT_ROW,
@@ -90,7 +91,7 @@ export function generateReportPdf(data: ReportData): jsPDF {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.text(kpi.label.toUpperCase(), x + 4, y + 7);
-      doc.setTextColor(...BLACK);
+      doc.setTextColor(...GREEN);
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text(String(kpi.value), x + 4, y + 17);

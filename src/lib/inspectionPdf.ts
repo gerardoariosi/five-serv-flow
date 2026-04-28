@@ -94,8 +94,8 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
   for (const area of allAreas) {
     y = checkPageBreak(doc, y, 24);
 
-    // Area sub-header (gold accent)
-    doc.setTextColor(...GOLD);
+    // Area sub-header
+    doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.text(area.replace(/_/g, ' ').toUpperCase(), MARGIN_X + 2, y + 4);
