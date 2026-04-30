@@ -48,6 +48,7 @@ import ChatPage from "./pages/chat/ChatPage";
 import SettingsPage from "./pages/settings/SettingsPage";
 import UserManagement from "./pages/settings/UserManagement";
 import Unsubscribe from "./pages/Unsubscribe";
+import HelpCenter from "./pages/HelpCenter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -120,6 +121,7 @@ const App = () => {
           <Route path="/portal/:token" element={<PMPortal />} />
           <Route path="/estimate/:token" element={<EstimatePortal />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
+          <Route path="/help" element={<HelpCenter />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
