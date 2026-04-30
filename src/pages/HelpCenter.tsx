@@ -588,12 +588,13 @@ const HelpCenter = () => {
   const [showTop, setShowTop] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Filtered content (fuzzy via Fuse)
+  // Filtered content (synonym-aware substring search)
   const q = query.trim();
   const filteredSections = useMemo(() => {
     if (q.length < 2) return HELP_SECTIONS;
+    const terms = expandQuery(q);
     const matchedIds = new Set(
-      articlesFuse.search(q).map((r) => r.item.articleId),
+      ARTICLE_INDEX.filter((e) => articleMatches(e, terms)).map((e) => e.articleId),
     );
     if (matchedIds.size === 0) return [];
     return HELP_SECTIONS
@@ -606,8 +607,8 @@ const HelpCenter = () => {
 
   const filteredFaqs = useMemo(() => {
     if (q.length < 2) return FAQS;
-    const matched = new Set(faqsFuse.search(q).map((r) => r.item.q));
-    return FAQS.filter((f) => matched.has(f.q));
+    const terms = expandQuery(q);
+    return FAQS.filter((f) => faqMatches(f, terms));
   }, [q]);
 
   const hasResults = filteredSections.length > 0 || filteredFaqs.length > 0;
