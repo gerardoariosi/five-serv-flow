@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Fuse from 'fuse.js';
 import { ArrowLeft, ArrowUp, ChevronDown, Search, HelpCircle, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -463,14 +464,84 @@ function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function bodyToString(body: Article['body']): string {
+  if (typeof body === 'string') return body;
+  if (Array.isArray(body)) {
+    return (body as Array<string | DefItem>)
+      .map((b) => (typeof b === 'string' ? b : `${b.label} ${b.description}`))
+      .join('\n');
+  }
+  return '';
+}
+
+// Flat searchable index, built once at module load.
+type ArticleIndexEntry = {
+  sectionId: string;
+  articleId: string;
+  title: string;
+  body: string;
+  tip: string;
+  note: string;
+};
+
+const ARTICLE_INDEX: ArticleIndexEntry[] = HELP_SECTIONS.flatMap((s) =>
+  s.articles.map((a) => ({
+    sectionId: s.id,
+    articleId: a.id,
+    title: a.title,
+    body: bodyToString(a.body),
+    tip: a.tip ?? '',
+    note: a.note ?? '',
+  })),
+);
+
+const articlesFuse = new Fuse(ARTICLE_INDEX, {
+  keys: [
+    { name: 'title', weight: 0.4 },
+    { name: 'body', weight: 0.4 },
+    { name: 'tip', weight: 0.1 },
+    { name: 'note', weight: 0.1 },
+  ],
+  threshold: 0.4,
+  includeMatches: true,
+  minMatchCharLength: 2,
+  ignoreLocation: true,
+});
+
+const faqsFuse = new Fuse(FAQS, {
+  keys: [
+    { name: 'q', weight: 0.5 },
+    { name: 'a', weight: 0.5 },
+  ],
+  threshold: 0.4,
+  includeMatches: true,
+  minMatchCharLength: 2,
+  ignoreLocation: true,
+});
+
 function Highlight({ text, query }: { text: string; query: string }) {
-  if (!query.trim()) return <>{text}</>;
-  const re = new RegExp(`(${escapeRegExp(query.trim())})`, 'ig');
+  const q = query.trim();
+  if (q.length < 2) return <>{text}</>;
+
+  // Build the list of tokens to highlight: the full query plus any
+  // whitespace-separated word ≥ 2 chars (helps with fuzzy hits where the
+  // exact full query doesn't appear verbatim in the text).
+  const tokens = Array.from(
+    new Set(
+      [q, ...q.split(/\s+/)].filter((t) => t.length >= 2),
+    ),
+  ).sort((a, b) => b.length - a.length); // longest first
+
+  if (tokens.length === 0) return <>{text}</>;
+
+  const re = new RegExp(`(${tokens.map(escapeRegExp).join('|')})`, 'ig');
   const parts = text.split(re);
+  const matchSet = new Set(tokens.map((t) => t.toLowerCase()));
+
   return (
     <>
       {parts.map((p, i) =>
-        re.test(p) && p.toLowerCase() === query.trim().toLowerCase() ? (
+        matchSet.has(p.toLowerCase()) ? (
           <mark key={i} className="bg-primary/30 text-foreground rounded px-0.5">{p}</mark>
         ) : (
           <span key={i}>{p}</span>
@@ -478,23 +549,6 @@ function Highlight({ text, query }: { text: string; query: string }) {
       )}
     </>
   );
-}
-
-function articleMatches(a: Article, q: string): boolean {
-  if (!q) return true;
-  const needle = q.toLowerCase();
-  if (a.title.toLowerCase().includes(needle)) return true;
-  if (a.tip?.toLowerCase().includes(needle)) return true;
-  if (a.note?.toLowerCase().includes(needle)) return true;
-  if (typeof a.body === 'string') return a.body.toLowerCase().includes(needle);
-  if (Array.isArray(a.body)) {
-    return (a.body as Array<string | DefItem>).some((b) =>
-      typeof b === 'string'
-        ? b.toLowerCase().includes(needle)
-        : b.label.toLowerCase().includes(needle) || b.description.toLowerCase().includes(needle),
-    );
-  }
-  return false;
 }
 
 // =====================================================================
@@ -509,22 +563,26 @@ const HelpCenter = () => {
   const [showTop, setShowTop] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Filtered content
+  // Filtered content (fuzzy via Fuse)
   const q = query.trim();
   const filteredSections = useMemo(() => {
-    if (!q) return HELP_SECTIONS;
+    if (q.length < 2) return HELP_SECTIONS;
+    const matchedIds = new Set(
+      articlesFuse.search(q).map((r) => r.item.articleId),
+    );
+    if (matchedIds.size === 0) return [];
     return HELP_SECTIONS
       .map((s) => ({
         ...s,
-        articles: s.articles.filter((a) => articleMatches(a, q) || s.title.toLowerCase().includes(q.toLowerCase())),
+        articles: s.articles.filter((a) => matchedIds.has(a.id)),
       }))
       .filter((s) => s.articles.length > 0);
   }, [q]);
 
   const filteredFaqs = useMemo(() => {
-    if (!q) return FAQS;
-    const n = q.toLowerCase();
-    return FAQS.filter((f) => f.q.toLowerCase().includes(n) || f.a.toLowerCase().includes(n));
+    if (q.length < 2) return FAQS;
+    const matched = new Set(faqsFuse.search(q).map((r) => r.item.q));
+    return FAQS.filter((f) => matched.has(f.q));
   }, [q]);
 
   const hasResults = filteredSections.length > 0 || filteredFaqs.length > 0;
