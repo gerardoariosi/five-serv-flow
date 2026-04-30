@@ -563,22 +563,26 @@ const HelpCenter = () => {
   const [showTop, setShowTop] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Filtered content
+  // Filtered content (fuzzy via Fuse)
   const q = query.trim();
   const filteredSections = useMemo(() => {
-    if (!q) return HELP_SECTIONS;
+    if (q.length < 2) return HELP_SECTIONS;
+    const matchedIds = new Set(
+      articlesFuse.search(q).map((r) => r.item.articleId),
+    );
+    if (matchedIds.size === 0) return [];
     return HELP_SECTIONS
       .map((s) => ({
         ...s,
-        articles: s.articles.filter((a) => articleMatches(a, q) || s.title.toLowerCase().includes(q.toLowerCase())),
+        articles: s.articles.filter((a) => matchedIds.has(a.id)),
       }))
       .filter((s) => s.articles.length > 0);
   }, [q]);
 
   const filteredFaqs = useMemo(() => {
-    if (!q) return FAQS;
-    const n = q.toLowerCase();
-    return FAQS.filter((f) => f.q.toLowerCase().includes(n) || f.a.toLowerCase().includes(n));
+    if (q.length < 2) return FAQS;
+    const matched = new Set(faqsFuse.search(q).map((r) => r.item.q));
+    return FAQS.filter((f) => matched.has(f.q));
   }, [q]);
 
   const hasResults = filteredSections.length > 0 || filteredFaqs.length > 0;
