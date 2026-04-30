@@ -762,18 +762,18 @@ const HelpCenter = () => {
 
 const ArticleCard = ({ article, query }: { article: Article; query: string }) => {
   return (
-    <Card id={`article-${article.id}`} className="fs-card p-5 scroll-mt-24">
+    <Card id={`article-${article.id}`} className="bg-white border border-gray-100 p-5 scroll-mt-24 shadow-none">
       <div className="flex items-start gap-3 mb-3">
-        <span className="shrink-0 inline-flex items-center justify-center text-[11px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary">
+        <span className="shrink-0 inline-flex items-center justify-center text-[11px] font-bold px-2 py-0.5 rounded bg-[#FFD700]/15 text-[#1A1A1A]">
           {article.number}
         </span>
-        <h3 className="text-base font-semibold text-foreground tracking-tight">
+        <h3 className="text-base font-semibold text-gray-900 tracking-tight">
           <Highlight text={article.title} query={query} />
         </h3>
       </div>
 
       {article.kind === 'prose' && (
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-gray-600 leading-relaxed">
           <Highlight text={article.body as string} query={query} />
         </p>
       )}
@@ -781,8 +781,8 @@ const ArticleCard = ({ article, query }: { article: Article; query: string }) =>
       {article.kind === 'steps' && (
         <ol className="space-y-2 list-none pl-0">
           {(article.body as string[]).map((step, i) => (
-            <li key={i} className="flex gap-3 text-sm text-foreground/90">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-secondary text-muted-foreground text-xs font-semibold inline-flex items-center justify-center">
+            <li key={i} className="flex gap-3 text-sm text-gray-700">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold inline-flex items-center justify-center">
                 {i + 1}
               </span>
               <span className="pt-0.5 leading-relaxed">
@@ -797,11 +797,11 @@ const ArticleCard = ({ article, query }: { article: Article; query: string }) =>
         <ul className="space-y-2.5">
           {(article.body as DefItem[]).map((it, i) => (
             <li key={i} className="text-sm">
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-gray-900">
                 <Highlight text={it.label} query={query} />
               </span>
-              <span className="text-muted-foreground"> — </span>
-              <span className="text-muted-foreground">
+              <span className="text-gray-500"> — </span>
+              <span className="text-gray-600">
                 <Highlight text={it.description} query={query} />
               </span>
             </li>
@@ -810,15 +810,15 @@ const ArticleCard = ({ article, query }: { article: Article; query: string }) =>
       )}
 
       {article.tip && (
-        <div className="mt-4 bg-primary/10 border-l-2 border-primary text-foreground/90 text-sm p-3 rounded-r">
-          <span className="text-primary font-bold mr-1">Tip:</span>
+        <div className="mt-4 bg-[#FFD700]/10 border-l-4 border-[#FFD700] text-gray-800 text-sm p-3 rounded-r">
+          <span className="text-[#1A1A1A] font-bold mr-1">Tip:</span>
           <Highlight text={article.tip} query={query} />
         </div>
       )}
 
       {article.note && (
-        <div className="mt-4 bg-amber-500/10 border-l-2 border-amber-500/70 text-foreground/90 text-sm p-3 rounded-r">
-          <span className="text-amber-400 font-bold mr-1">Note:</span>
+        <div className="mt-4 bg-amber-50 border-l-4 border-amber-400 text-gray-800 text-sm p-3 rounded-r">
+          <span className="text-amber-700 font-bold mr-1">Note:</span>
           <Highlight text={article.note} query={query} />
         </div>
       )}
