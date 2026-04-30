@@ -548,13 +548,9 @@ function Highlight({ text, query }: { text: string; query: string }) {
   const q = query.trim();
   if (q.length < 2) return <>{text}</>;
 
-  // Build the list of tokens to highlight: the full query plus any
-  // whitespace-separated word ≥ 2 chars (helps with fuzzy hits where the
-  // exact full query doesn't appear verbatim in the text).
+  // Highlight the full query, individual query words, and any of their synonyms.
   const tokens = Array.from(
-    new Set(
-      [q, ...q.split(/\s+/)].filter((t) => t.length >= 2),
-    ),
+    new Set(expandQuery(q).filter((t) => t.length >= 2)),
   ).sort((a, b) => b.length - a.length); // longest first
 
   if (tokens.length === 0) return <>{text}</>;
