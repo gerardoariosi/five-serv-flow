@@ -1,4 +1,4 @@
-import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users, DollarSign, CalendarDays, BarChart3, MessageCircle, Settings } from 'lucide-react';
+import { X, LogOut, User, LayoutDashboard, Building2, MapPin, Map, Ticket, Wrench, ClipboardCheck, Users, DollarSign, CalendarDays, BarChart3, MessageCircle, Settings, HelpCircle } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,6 +51,9 @@ const navGroupsByRole: Record<string, NavGroup[]> = {
       { label: 'Settings',   icon: Settings, path: '/settings', color: 'text-muted-foreground' },
       { label: 'My Profile', icon: User,     path: '/profile',  color: 'text-muted-foreground' },
     ]},
+    { title: 'SUPPORT', items: [
+      { label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' },
+    ]},
   ],
   supervisor: [
     { title: 'OPERATIONS', items: [
@@ -68,6 +71,7 @@ const navGroupsByRole: Record<string, NavGroup[]> = {
     { title: 'ANALYTICS',     items: [{ label: 'Reports', icon: BarChart3,    path: '/reports', color: 'text-indigo-400' }] },
     { title: 'COMMUNICATION', items: [{ label: 'Chat',    icon: MessageCircle, path: '/chat',    color: 'text-sky-400' }] },
     { title: 'ACCOUNT',       items: [{ label: 'My Profile', icon: User, path: '/profile', color: 'text-muted-foreground' }] },
+    { title: 'SUPPORT',       items: [{ label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' }] },
   ],
   technician: [
     { title: 'WORK', items: [
@@ -76,6 +80,7 @@ const navGroupsByRole: Record<string, NavGroup[]> = {
     ]},
     { title: 'COMMUNICATION', items: [{ label: 'Chat', icon: MessageCircle, path: '/chat', color: 'text-sky-400' }] },
     { title: 'ACCOUNT',       items: [{ label: 'My Profile', icon: User, path: '/profile', color: 'text-muted-foreground' }] },
+    { title: 'SUPPORT',       items: [{ label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' }] },
   ],
   accounting: [
     { title: 'OPERATIONS', items: [
@@ -85,6 +90,7 @@ const navGroupsByRole: Record<string, NavGroup[]> = {
     { title: 'ANALYTICS',     items: [{ label: 'Reports', icon: BarChart3,    path: '/reports', color: 'text-indigo-400' }] },
     { title: 'COMMUNICATION', items: [{ label: 'Chat',    icon: MessageCircle, path: '/chat',    color: 'text-sky-400' }] },
     { title: 'ACCOUNT',       items: [{ label: 'My Profile', icon: User, path: '/profile', color: 'text-muted-foreground' }] },
+    { title: 'SUPPORT',       items: [{ label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' }] },
   ],
 };
 
