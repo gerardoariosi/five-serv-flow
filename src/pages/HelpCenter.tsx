@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Fuse from 'fuse.js';
+
 import { ArrowLeft, ArrowUp, ChevronDown, Search, HelpCircle, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -495,41 +495,62 @@ const ARTICLE_INDEX: ArticleIndexEntry[] = HELP_SECTIONS.flatMap((s) =>
   })),
 );
 
-const articlesFuse = new Fuse(ARTICLE_INDEX, {
-  keys: [
-    { name: 'title', weight: 0.4 },
-    { name: 'body', weight: 0.4 },
-    { name: 'tip', weight: 0.1 },
-    { name: 'note', weight: 0.1 },
-  ],
-  threshold: 0.4,
-  includeMatches: true,
-  minMatchCharLength: 2,
-  ignoreLocation: true,
-});
+// Synonym map — common alternate words/phrases users might search for.
+const SYNONYMS: Record<string, string[]> = {
+  ticket: ['work order', 'job', 'task', 'repair', 'create ticket'],
+  inspection: ['inspect', 'walkthrough', 'property check'],
+  login: ['sign in', 'log in', 'access', 'password'],
+  password: ['login', 'sign in', 'forgot', 'reset'],
+  pm: ['property manager', 'client', 'portal'],
+  photo: ['picture', 'image', 'upload photo', 'before after'],
+  notification: ['push', 'alert', 'notify'],
+  assign: ['technician', 'allocate', 'send job'],
+  approve: ['review', 'accept', 'sign off'],
+  reject: ['deny', 'revision', 'send back'],
+  estimate: ['quote', 'price', 'cost', 'approval'],
+  billing: ['invoice', 'payment', 'accounting', 'paid'],
+  role: ['admin', 'supervisor', 'technician', 'accounting', 'permission'],
+  duplicate: ['copy', 'clone', 'repeat ticket'],
+  pause: ['stop', 'hold', 'waiting'],
+  emergency: ['urgent', 'asap', 'immediate'],
+  capex: ['renovation', 'project', 'capital'],
+};
 
-const faqsFuse = new Fuse(FAQS, {
-  keys: [
-    { name: 'q', weight: 0.5 },
-    { name: 'a', weight: 0.5 },
-  ],
-  threshold: 0.4,
-  includeMatches: true,
-  minMatchCharLength: 2,
-  ignoreLocation: true,
-});
+// Expand a query into a list of search terms (query words + their synonyms).
+function expandQuery(q: string): string[] {
+  const words = q.toLowerCase().split(/\s+/).filter((w) => w.length >= 2);
+  const terms = new Set<string>();
+  // Always include the full query as a phrase
+  if (q.trim().length >= 2) terms.add(q.trim().toLowerCase());
+  for (const w of words) {
+    terms.add(w);
+    const syns = SYNONYMS[w];
+    if (syns) syns.forEach((s) => terms.add(s.toLowerCase()));
+    // Also map the other direction: if w appears in any synonym list, include the key
+    for (const [key, list] of Object.entries(SYNONYMS)) {
+      if (list.some((s) => s.toLowerCase() === w)) terms.add(key);
+    }
+  }
+  return Array.from(terms);
+}
+
+function articleMatches(entry: ArticleIndexEntry, terms: string[]): boolean {
+  const haystack = `${entry.title}\n${entry.body}\n${entry.tip}\n${entry.note}`.toLowerCase();
+  return terms.some((t) => haystack.includes(t));
+}
+
+function faqMatches(faq: { q: string; a: string }, terms: string[]): boolean {
+  const haystack = `${faq.q}\n${faq.a}`.toLowerCase();
+  return terms.some((t) => haystack.includes(t));
+}
 
 function Highlight({ text, query }: { text: string; query: string }) {
   const q = query.trim();
   if (q.length < 2) return <>{text}</>;
 
-  // Build the list of tokens to highlight: the full query plus any
-  // whitespace-separated word ≥ 2 chars (helps with fuzzy hits where the
-  // exact full query doesn't appear verbatim in the text).
+  // Highlight the full query, individual query words, and any of their synonyms.
   const tokens = Array.from(
-    new Set(
-      [q, ...q.split(/\s+/)].filter((t) => t.length >= 2),
-    ),
+    new Set(expandQuery(q).filter((t) => t.length >= 2)),
   ).sort((a, b) => b.length - a.length); // longest first
 
   if (tokens.length === 0) return <>{text}</>;
@@ -563,12 +584,13 @@ const HelpCenter = () => {
   const [showTop, setShowTop] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Filtered content (fuzzy via Fuse)
+  // Filtered content (synonym-aware substring search)
   const q = query.trim();
   const filteredSections = useMemo(() => {
     if (q.length < 2) return HELP_SECTIONS;
+    const terms = expandQuery(q);
     const matchedIds = new Set(
-      articlesFuse.search(q).map((r) => r.item.articleId),
+      ARTICLE_INDEX.filter((e) => articleMatches(e, terms)).map((e) => e.articleId),
     );
     if (matchedIds.size === 0) return [];
     return HELP_SECTIONS
@@ -581,8 +603,8 @@ const HelpCenter = () => {
 
   const filteredFaqs = useMemo(() => {
     if (q.length < 2) return FAQS;
-    const matched = new Set(faqsFuse.search(q).map((r) => r.item.q));
-    return FAQS.filter((f) => matched.has(f.q));
+    const terms = expandQuery(q);
+    return FAQS.filter((f) => faqMatches(f, terms));
   }, [q]);
 
   const hasResults = filteredSections.length > 0 || filteredFaqs.length > 0;
@@ -664,7 +686,7 @@ const HelpCenter = () => {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search articles, steps, FAQs…"
+            placeholder="Search guides, or ask a question..."
             className="pl-9 bg-white border-gray-200 text-gray-900 focus-visible:border-[#FFD700]"
           />
         </div>
@@ -732,10 +754,7 @@ const HelpCenter = () => {
           {!hasResults && (
             <Card className="bg-white border border-gray-100 p-6 text-center shadow-none">
               <p className="text-sm text-gray-900">
-                No results for <span className="text-[#FFD700] font-semibold">"{q}"</span>
-              </p>
-              <p className="text-xs text-gray-600 mt-2">
-                Contact your Admin if you need more help.
+                No results for <span className="text-[#FFD700] font-semibold">"{q}"</span> — try different words or browse the sections below
               </p>
             </Card>
           )}
