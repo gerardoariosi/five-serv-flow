@@ -754,10 +754,7 @@ const HelpCenter = () => {
           {!hasResults && (
             <Card className="bg-white border border-gray-100 p-6 text-center shadow-none">
               <p className="text-sm text-gray-900">
-                No results for <span className="text-[#FFD700] font-semibold">"{q}"</span>
-              </p>
-              <p className="text-xs text-gray-600 mt-2">
-                Contact your Admin if you need more help.
+                No results for <span className="text-[#FFD700] font-semibold">"{q}"</span> — try different words or browse the sections below
               </p>
             </Card>
           )}
