@@ -572,16 +572,21 @@ function Highlight({ text, query }: { text: string; query: string }) {
   const q = query.trim();
   if (q.length < 2) return <>{text}</>;
 
-  // Highlight the full query, individual query words, and any of their synonyms.
-  const tokens = Array.from(
-    new Set(expandQuery(q).filter((t) => t.length >= 2)),
-  ).sort((a, b) => b.length - a.length); // longest first
+  // Highlight: full phrase + meaningful tokens (no stop words) + their synonyms.
+  const tokens = meaningfulTokens(q);
+  const expanded = expandTokens(tokens);
+  const all = new Set<string>(expanded);
+  all.add(q.toLowerCase());
 
-  if (tokens.length === 0) return <>{text}</>;
+  const list = Array.from(all)
+    .filter((t) => t.length >= 2)
+    .sort((a, b) => b.length - a.length); // longest first
 
-  const re = new RegExp(`(${tokens.map(escapeRegExp).join('|')})`, 'ig');
+  if (list.length === 0) return <>{text}</>;
+
+  const re = new RegExp(`(${list.map(escapeRegExp).join('|')})`, 'ig');
   const parts = text.split(re);
-  const matchSet = new Set(tokens.map((t) => t.toLowerCase()));
+  const matchSet = new Set(list.map((t) => t.toLowerCase()));
 
   return (
     <>
@@ -608,27 +613,38 @@ const HelpCenter = () => {
   const [showTop, setShowTop] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Filtered content (synonym-aware substring search)
+  // Search: try whole-phrase match first; fall back to meaningful tokens (+ synonyms).
   const q = query.trim();
-  const filteredSections = useMemo(() => {
-    if (q.length < 2) return HELP_SECTIONS;
-    const terms = expandQuery(q);
-    const matchedIds = new Set(
-      ARTICLE_INDEX.filter((e) => articleMatches(e, terms)).map((e) => e.articleId),
+  const { filteredSections, filteredFaqs } = useMemo(() => {
+    if (q.length < 2) {
+      return { filteredSections: HELP_SECTIONS, filteredFaqs: FAQS };
+    }
+    const phrase = q.toLowerCase();
+
+    // 1. Whole-phrase match
+    let matchedIds = new Set(
+      ARTICLE_INDEX.filter((e) => articleMatchesPhrase(e, phrase)).map((e) => e.articleId),
     );
-    if (matchedIds.size === 0) return [];
-    return HELP_SECTIONS
+    let faqs = FAQS.filter((f) => faqMatchesPhrase(f, phrase));
+
+    // 2. Fallback: meaningful tokens + synonyms
+    if (matchedIds.size === 0 && faqs.length === 0) {
+      const tokens = meaningfulTokens(q);
+      const terms = expandTokens(tokens);
+      matchedIds = new Set(
+        ARTICLE_INDEX.filter((e) => articleMatchesAny(e, terms)).map((e) => e.articleId),
+      );
+      faqs = FAQS.filter((f) => faqMatchesAny(f, terms));
+    }
+
+    const sections = HELP_SECTIONS
       .map((s) => ({
         ...s,
         articles: s.articles.filter((a) => matchedIds.has(a.id)),
       }))
       .filter((s) => s.articles.length > 0);
-  }, [q]);
 
-  const filteredFaqs = useMemo(() => {
-    if (q.length < 2) return FAQS;
-    const terms = expandQuery(q);
-    return FAQS.filter((f) => faqMatches(f, terms));
+    return { filteredSections: sections, filteredFaqs: faqs };
   }, [q]);
 
   const hasResults = filteredSections.length > 0 || filteredFaqs.length > 0;
