@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Fuse from 'fuse.js';
 import { ArrowLeft, ArrowUp, ChevronDown, Search, HelpCircle, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -458,8 +459,6 @@ const FAQS: { q: string; a: string }[] = [
 // =====================================================================
 // Helpers
 // =====================================================================
-
-import Fuse from 'fuse.js';
 
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
