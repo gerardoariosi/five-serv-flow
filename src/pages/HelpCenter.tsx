@@ -632,7 +632,7 @@ const HelpCenter = () => {
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
                     )}
                   >
-                    <span className="text-[#FFD700] font-bold mr-2">{s.number}.</span>
+                    <span className="text-[#1A1A1A] font-bold mr-2">{s.number}.</span>
                     {s.title}
                   </button>
                 );
