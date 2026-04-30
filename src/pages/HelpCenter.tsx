@@ -516,17 +516,29 @@ const SYNONYMS: Record<string, string[]> = {
   capex: ['renovation', 'project', 'capital'],
 };
 
-// Expand a query into a list of search terms (query words + their synonyms).
-function expandQuery(q: string): string[] {
-  const words = q.toLowerCase().split(/\s+/).filter((w) => w.length >= 2);
+// Common stop words to ignore when tokenizing the query.
+const STOP_WORDS = new Set([
+  'how', 'to', 'a', 'an', 'the', 'i', 'do', 'can', 'what', 'is', 'are',
+  'my', 'in', 'on', 'at', 'for', 'of', 'and', 'or', 'did', 'does',
+  'where', 'when', 'why', 'which', 'who',
+]);
+
+// Get meaningful tokens from a query: lowercase, no stop words, length >= 3.
+function meaningfulTokens(q: string): string[] {
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
+}
+
+// Expand meaningful tokens with synonyms.
+function expandTokens(tokens: string[]): string[] {
   const terms = new Set<string>();
-  // Always include the full query as a phrase
-  if (q.trim().length >= 2) terms.add(q.trim().toLowerCase());
-  for (const w of words) {
+  for (const w of tokens) {
     terms.add(w);
     const syns = SYNONYMS[w];
     if (syns) syns.forEach((s) => terms.add(s.toLowerCase()));
-    // Also map the other direction: if w appears in any synonym list, include the key
     for (const [key, list] of Object.entries(SYNONYMS)) {
       if (list.some((s) => s.toLowerCase() === w)) terms.add(key);
     }
@@ -534,12 +546,24 @@ function expandQuery(q: string): string[] {
   return Array.from(terms);
 }
 
-function articleMatches(entry: ArticleIndexEntry, terms: string[]): boolean {
+function articleMatchesPhrase(entry: ArticleIndexEntry, phrase: string): boolean {
+  const haystack = `${entry.title}\n${entry.body}\n${entry.tip}\n${entry.note}`.toLowerCase();
+  return haystack.includes(phrase);
+}
+
+function articleMatchesAny(entry: ArticleIndexEntry, terms: string[]): boolean {
+  if (terms.length === 0) return false;
   const haystack = `${entry.title}\n${entry.body}\n${entry.tip}\n${entry.note}`.toLowerCase();
   return terms.some((t) => haystack.includes(t));
 }
 
-function faqMatches(faq: { q: string; a: string }, terms: string[]): boolean {
+function faqMatchesPhrase(faq: { q: string; a: string }, phrase: string): boolean {
+  const haystack = `${faq.q}\n${faq.a}`.toLowerCase();
+  return haystack.includes(phrase);
+}
+
+function faqMatchesAny(faq: { q: string; a: string }, terms: string[]): boolean {
+  if (terms.length === 0) return false;
   const haystack = `${faq.q}\n${faq.a}`.toLowerCase();
   return terms.some((t) => haystack.includes(t));
 }
@@ -548,16 +572,21 @@ function Highlight({ text, query }: { text: string; query: string }) {
   const q = query.trim();
   if (q.length < 2) return <>{text}</>;
 
-  // Highlight the full query, individual query words, and any of their synonyms.
-  const tokens = Array.from(
-    new Set(expandQuery(q).filter((t) => t.length >= 2)),
-  ).sort((a, b) => b.length - a.length); // longest first
+  // Highlight: full phrase + meaningful tokens (no stop words) + their synonyms.
+  const tokens = meaningfulTokens(q);
+  const expanded = expandTokens(tokens);
+  const all = new Set<string>(expanded);
+  all.add(q.toLowerCase());
 
-  if (tokens.length === 0) return <>{text}</>;
+  const list = Array.from(all)
+    .filter((t) => t.length >= 2)
+    .sort((a, b) => b.length - a.length); // longest first
 
-  const re = new RegExp(`(${tokens.map(escapeRegExp).join('|')})`, 'ig');
+  if (list.length === 0) return <>{text}</>;
+
+  const re = new RegExp(`(${list.map(escapeRegExp).join('|')})`, 'ig');
   const parts = text.split(re);
-  const matchSet = new Set(tokens.map((t) => t.toLowerCase()));
+  const matchSet = new Set(list.map((t) => t.toLowerCase()));
 
   return (
     <>
@@ -584,27 +613,38 @@ const HelpCenter = () => {
   const [showTop, setShowTop] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  // Filtered content (synonym-aware substring search)
+  // Search: try whole-phrase match first; fall back to meaningful tokens (+ synonyms).
   const q = query.trim();
-  const filteredSections = useMemo(() => {
-    if (q.length < 2) return HELP_SECTIONS;
-    const terms = expandQuery(q);
-    const matchedIds = new Set(
-      ARTICLE_INDEX.filter((e) => articleMatches(e, terms)).map((e) => e.articleId),
+  const { filteredSections, filteredFaqs } = useMemo(() => {
+    if (q.length < 2) {
+      return { filteredSections: HELP_SECTIONS, filteredFaqs: FAQS };
+    }
+    const phrase = q.toLowerCase();
+
+    // 1. Whole-phrase match
+    let matchedIds = new Set(
+      ARTICLE_INDEX.filter((e) => articleMatchesPhrase(e, phrase)).map((e) => e.articleId),
     );
-    if (matchedIds.size === 0) return [];
-    return HELP_SECTIONS
+    let faqs = FAQS.filter((f) => faqMatchesPhrase(f, phrase));
+
+    // 2. Fallback: meaningful tokens + synonyms
+    if (matchedIds.size === 0 && faqs.length === 0) {
+      const tokens = meaningfulTokens(q);
+      const terms = expandTokens(tokens);
+      matchedIds = new Set(
+        ARTICLE_INDEX.filter((e) => articleMatchesAny(e, terms)).map((e) => e.articleId),
+      );
+      faqs = FAQS.filter((f) => faqMatchesAny(f, terms));
+    }
+
+    const sections = HELP_SECTIONS
       .map((s) => ({
         ...s,
         articles: s.articles.filter((a) => matchedIds.has(a.id)),
       }))
       .filter((s) => s.articles.length > 0);
-  }, [q]);
 
-  const filteredFaqs = useMemo(() => {
-    if (q.length < 2) return FAQS;
-    const terms = expandQuery(q);
-    return FAQS.filter((f) => faqMatches(f, terms));
+    return { filteredSections: sections, filteredFaqs: faqs };
   }, [q]);
 
   const hasResults = filteredSections.length > 0 || filteredFaqs.length > 0;
