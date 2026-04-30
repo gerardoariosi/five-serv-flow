@@ -150,9 +150,12 @@ const Login = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+          <div className="mt-6 text-center space-y-2">
+            <Link to="/forgot-password" className="block text-sm text-primary hover:underline">
               Forgot Password?
+            </Link>
+            <Link to="/help" className="block text-sm text-muted-foreground hover:text-foreground">
+              Help Center
             </Link>
           </div>
         </div>
