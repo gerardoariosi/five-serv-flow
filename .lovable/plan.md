@@ -1,116 +1,119 @@
-# Analysis Report — PWA Icon + Technician Email
+# Help Center — Implementation Plan
 
-## ISSUE 1 — Desktop PWA Icon Not Showing
+Build a complete, public, searchable Help Center for FiveServ Operations, with all content provided, plus entry points from the Login page and the navigation drawer.
 
-### Root cause confirmed
-The single PNG referenced in `public/manifest.json` is **708×248 pixels** (a wide logo, not square). Chrome desktop PWA installer requires actual square PNG files at exactly 192×192 and 512×512. The manifest currently lies about the dimensions:
+## 1. New page — `src/pages/HelpCenter.tsx`
 
-```json
-{ "src": "/FiveServ_Logo_2_No_BG.png", "sizes": "192x192", ... }
-{ "src": "/FiveServ_Logo_2_No_BG.png", "sizes": "512x512", ... }
+A single self-contained page (route `/help`, public, no auth) using the existing dark-mode design tokens (`bg-background`, `text-foreground`, `text-primary` for gold, `bg-card`, `border-border`, `text-muted-foreground`, `fs-card`, `fs-section-title`, etc.) and the existing shadcn components: `Card`, `Input`, `Button`, `Badge`, `Collapsible` (`CollapsibleTrigger`, `CollapsibleContent`), `Accordion` from `@/components/ui/accordion`, plus `lucide-react` icons.
+
+### Layout
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ Sticky top bar: FiveServ wordmark · "Help Center"  · Back  │
+├────────────────────────────────────────────────────────────┤
+│ Hero: title + subtitle + Search input (with /Search icon)  │
+│       Breadcrumb: Help Center › <current section>          │
+├──────────────┬─────────────────────────────────────────────┤
+│ Sidebar      │ Content                                     │
+│ (sticky,     │  - Section header (gold number badge)       │
+│  desktop ≥md)│  - Articles (cards) with steps, tips, notes │
+│ Section list │  - FAQ accordion at bottom                  │
+│ active = gold│                                             │
+│ left border  │                                             │
+└──────────────┴─────────────────────────────────────────────┘
+                                  Floating "Back to top" (gold, after scroll>400px)
 ```
 
-Chrome inspects the actual pixel dimensions, sees 708×248, rejects the icon as invalid for installability, and falls back to the generic page-screenshot icon.
+- **Desktop (≥ md):** two-column grid `md:grid-cols-[240px_1fr]` with sticky sidebar (`sticky top-20`).
+- **Mobile (< md):** sidebar replaced by a `Collapsible` "Browse sections" panel. Each section is a `Collapsible` so subsections accordion in/out.
 
-### Files in `/public/` today
-| File | Actual size | Notes |
-|---|---|---|
-| `FiveServ_Logo_2_No_BG.png` | 708×248 | Wide logo, transparent bg |
-| `FiveServ_Logo_Black_Text.png` | 706×256 | Wide logo, black text |
-| `logo.png` | 1533×2000 | Tall portrait, not square |
-| `favicon.ico` | — | Browser favicon only |
+### Content data structure
 
-**No square 192×192 or 512×512 PNG exists.** That's why the desktop icon is broken.
+A single in-file constant `HELP_SECTIONS` with the full content from the prompt (Sections 1–6, all articles 1.1 → 6.4). Each article has: `id`, `title`, `kind` ("steps" | "prose" | "list"), `body` (string[] for steps, string for prose, `{label, description}[]` for definition lists), optional `tip` and `note`.
 
-### Fix required
-1. Generate two new square PNGs from `logo.png` (or the wordmark on a dark `#1A1A1A` square canvas with padding):
-   - `/public/icon-192.png` — exactly 192×192
-   - `/public/icon-512.png` — exactly 512×512
-   - `/public/icon-512-maskable.png` — exactly 512×512 with safe-zone padding (~20%) and full-bleed `#1A1A1A` background, `purpose: "maskable"`
-2. Update `public/manifest.json` to reference these three files with correct `sizes` and explicit `purpose` values (`"any"` for the first two, `"maskable"` for the third).
-3. Optionally update `index.html` `<link rel="apple-touch-icon">` to point to `/icon-512.png` for nicer iOS home-screen icons.
+A second constant `FAQS` with the 7 Q&A items.
 
-No code/route changes — purely asset generation + manifest update.
+### Search behavior
 
----
+- Controlled `query` state; trimmed lowercase.
+- `useMemo`-filtered sections: an article matches if its title OR any body line OR tip/note contains the query. A section is shown if any of its articles match (or the section title matches). FAQ filtered the same way.
+- Matching substrings highlighted with a `<mark>` styled `bg-primary/30 text-foreground rounded px-0.5` via a small `Highlight` component.
+- Empty state: card with `"No results for "<query>" — Contact your Admin if you need more help."` plus a button linking to `mailto:` (placeholder) — actually we'll just show muted text per spec. Use existing `EmptyState` component if convenient; otherwise plain card to match prompt copy exactly.
 
-## ISSUE 2 — Technician Assignment Email Has Broken Variables & Buttons
+### Behaviors
 
-### Template confirmed in DB
-`email_templates.template_key = 'technician_assigned'` references **8 variables**:
+- Smooth scroll on sidebar click: `document.getElementById(id)?.scrollIntoView({behavior: 'smooth', block: 'start'})`.
+- Active section tracking via `IntersectionObserver` on each section heading; highlights the matching sidebar item with `border-l-2 border-primary pl-[10px] text-foreground`.
+- Breadcrumb shows `Help Center › {activeSectionTitle}`.
+- Back-to-top button: appears when `window.scrollY > 400`; fixed bottom-right, gold circular button (`bg-primary text-primary-foreground rounded-full h-11 w-11 shadow-[var(--gold-glow)]`).
+- Inline anchor on each article (id = `article-2-3` style) for deep linking via hash.
+- "Tip:" rendered in a callout: `bg-primary/10 border-l-2 border-primary text-foreground/90 text-sm p-3 rounded-r`.
+- "Note:" rendered the same way but with `border-amber-500/70 bg-amber-500/10`.
+- Section number badge: small `Badge` with `bg-primary text-primary-foreground` showing `1`, `2`, etc. Article number badge: muted `1.1`, `1.2` chip in `text-primary` on `bg-primary/10`.
 
-```
-{{technician_name}}  {{fs_number}}  {{property_name}}  {{property_address}}
-{{unit}}             {{work_type}}  {{appointment_date}} {{appointment_time}}
-{{job_description}}  {{app_url}}    {{directions_url}}
-```
+### Content audit fixes vs. real codebase
 
-### Caller call sites
-Both call sites only pass **6 variables** (`fs_number`, `property_name`, `work_type`, `appointment_time`, `technician_name`):
+While writing the content, auto-correct these wording mismatches I confirmed against the routes/menu:
 
-| File | Line | Trigger |
-|---|---|---|
-| `src/pages/tickets/TicketForm.tsx` | 306–320 | New ticket created with technician |
-| `src/pages/tickets/TicketDetail.tsx` | 206–220 | Tech assigned to existing ticket |
+- "Click Tickets in the navigation menu" — accurate (DrawerMenu has Tickets).
+- "Go to Settings → User Management" — accurate (`/settings/users`).
+- Technician menu: replace generic "Dashboard" wording in 4.1 with **"My Work"** (`/my-work`) since that is the real technician landing page in the drawer.
+- Calendar: technicians have **"My Calendar"** (`/my-calendar`); preserve as-is in 4.1.
+- "Active Role at the bottom of the menu" (article 6.4) — drawer actually shows a **"Switch Role" chip group near the top** (visible only when user has multiple roles). Update wording to: *"Open the navigation menu and use the **Switch Role** chips at the top to switch between your assigned roles. The Dashboard and menu update automatically. You can also change your active role from your Profile page."*
+- "Quick Ticket button (gold + floating button on Dashboard)" (article 2.4): keep, matches existing FAB pattern.
+- Inspection PDF export wording (3.6): keep both options ("Internal Report" / "PM Version") — matches `inspectionPdf.ts`.
+- Add a small "Estimate / PM Approval Portals" mention under section 3.5 noting the same mechanism is used for the Estimate Portal in tickets (since `EstimatePortal.tsx` exists).
 
-### Missing variables → why they render as literal `{{...}}`
-The `send-business-email` edge function (lines 99–113 of `supabase/functions/send-business-email/index.ts`) does a literal `template.replace(/\{\{(\w+)\}\}/g, ...)` and **leaves any unmatched token unchanged**. So every variable not passed in shows up as `{{property_address}}` etc. in the recipient's inbox.
+No other content changes — all article steps and FAQ entries kept verbatim.
 
-| Token | Source data needed |
-|---|---|
-| `{{property_address}}` | `properties.address` — not currently fetched in either caller |
-| `{{unit}}` | `tickets.unit` — column exists, never passed |
-| `{{job_description}}` | `tickets.description` — never passed |
-| `{{appointment_date}}` | Currently only `appointment_time` is sent (combined date+time string). Template wants date and time as **separate** lines |
-| `{{app_url}}` | Never passed → "Open in App" button has empty `href` |
-| `{{directions_url}}` | Never passed → "Get Directions" button has empty `href` |
+## 2. Login page entry point — `src/pages/Login.tsx`
 
-### Fix required (per call site)
+Add a small link below the **Sign In** button (above or alongside the existing "Forgot Password?" link) inside the same centered footer area:
 
-**TicketForm.tsx (line 306–320)** — add to the `variables` object:
-```
-property_address: prop?.address ?? '',
-unit: form.unit ?? '',
-job_description: form.description ?? '',
-appointment_date: form.appointment_time
-  ? new Date(form.appointment_time).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday:'short', month:'short', day:'numeric', year:'numeric' })
-  : 'Not scheduled',
-appointment_time: form.appointment_time
-  ? new Date(form.appointment_time).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour:'numeric', minute:'2-digit' })
-  : '',
-app_url: `https://app.fiveserv.net/tickets/${ticketId}`,
-directions_url: prop?.address
-  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prop.address)}`
-  : '',
+```tsx
+<Link to="/help" className="block mt-3 text-sm text-muted-foreground hover:text-foreground">
+  Help Center
+</Link>
 ```
 
-**TicketDetail.tsx (line 206–220)** — same additions, but using existing context:
-- `property_address` ← `properties[ticket.property_id]?.address`
-- `unit` ← `ticket.unit`
-- `job_description` ← `ticket.description`
-- `appointment_date` ← split formatter on `ticket.appointment_time`
-- `appointment_time` ← time-only formatter
-- `app_url` ← `https://app.fiveserv.net/tickets/${id}`
-- `directions_url` ← `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(properties[ticket.property_id]?.address ?? '')}`
+No other Login changes.
 
-### Also verify
-- `TicketForm.tsx` `properties` array must include `address` in its select. Let me note: if the `properties` list was loaded with `select('id, name')` only, `prop?.address` will be `undefined`. The fix should also widen the properties query to include `address` (and `unit` is on ticket, not property).
-- `TicketDetail.tsx` `properties` lookup map — same check; ensure `address` is loaded.
+## 3. Drawer entry point — `src/components/layout/DrawerMenu.tsx`
 
-### No edge function changes needed
-`send-business-email` is generic — it substitutes whatever tokens are passed. The fix is **entirely client-side** in the two call sites.
+- Import `HelpCircle` from `lucide-react`.
+- Add a new group at the very bottom of every role's `navGroupsByRole` array (admin, supervisor, technician, accounting):
 
----
+```ts
+{ title: 'SUPPORT', items: [
+  { label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' },
+]},
+```
 
-## Summary of Changes (when approved)
+This re-uses the existing nav rendering and active-state styling, keeps the "available to all roles" requirement, and matches the design system.
 
-**Issue 1 — Assets + manifest**
-- Generate `public/icon-192.png` (192×192), `public/icon-512.png` (512×512), `public/icon-512-maskable.png` (512×512 maskable) from `logo.png`
-- Update `public/manifest.json` icons array to reference the three new files
-- Optionally update `<link rel="apple-touch-icon">` in `index.html`
+## 4. Routing — `src/App.tsx`
 
-**Issue 2 — Technician email payload**
-- `src/pages/tickets/TicketForm.tsx` (≈line 310): add 7 missing variables; ensure `properties` query includes `address`
-- `src/pages/tickets/TicketDetail.tsx` (≈line 210): add 7 missing variables; ensure `properties` map includes `address`
-- No edge function changes
-- No DB / template changes (template is already correct)
+Add a public route alongside the other public ones (next to `/portal/:token`):
+
+```tsx
+<Route path="/help" element={<HelpCenter />} />
+```
+
+Plus the import `import HelpCenter from "./pages/HelpCenter";`.
+
+## Design constraints honored
+
+- Dark + light mode automatic via existing CSS variables; no hard-coded colors except `text-primary` (gold) which is already the brand token.
+- Only existing UI primitives used: `Card`, `Input`, `Button`, `Badge`, `Collapsible`, `Accordion`, `Separator`. No new dependencies.
+- Spacing/typography classes mirror existing pages (e.g. `fs-page-title`, `fs-section-title`, `fs-card`).
+- Page works without the `AppLayout` (so it's accessible while logged out) — it owns its own minimal sticky header that links back to `/login` if unauthenticated, or to `/dashboard` if `useAuthStore().user` exists.
+
+## Files touched
+
+- **Add:** `src/pages/HelpCenter.tsx`
+- **Edit:** `src/App.tsx` (import + route)
+- **Edit:** `src/pages/Login.tsx` (Help Center link)
+- **Edit:** `src/components/layout/DrawerMenu.tsx` (Support → Help Center entry on every role)
+
+No DB, edge function, or backend changes required.
