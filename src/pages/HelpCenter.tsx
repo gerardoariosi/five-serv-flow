@@ -686,7 +686,7 @@ const HelpCenter = () => {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search articles, steps, FAQs…"
+            placeholder="Search guides, or ask a question..."
             className="pl-9 bg-white border-gray-200 text-gray-900 focus-visible:border-[#FFD700]"
           />
         </div>
