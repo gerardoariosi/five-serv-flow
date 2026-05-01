@@ -209,3 +209,15 @@
     transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
   }
 }
+
+@layer base {
+  /* Premium focus ring — subtle gold outline on all inputs */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="combobox"]:focus-visible {
+    border-color: hsl(var(--primary) / 0.5);
+    outline: none;
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.5);
+  }
+}
