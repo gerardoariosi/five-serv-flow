@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -11,6 +10,7 @@ import { Search, Plus, MoreVertical, Trash2, Ticket as TicketIcon } from 'lucide
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
+import StatusPill from '@/components/ui/StatusPill';
 import { toast } from 'sonner';
 
 const workTypeBorder: Record<string, string> = {
@@ -52,7 +52,7 @@ const TicketList = () => {
   const [filterType, setFilterType] = useState('all');
   const [filterZone, setFilterZone] = useState('all');
   const [clients, setClients] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
+  const [properties, setProperties] = useState<Record<string, { name: string; address: string; current_pm_id: string | null }>>({});
   const [zones, setZones] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
@@ -61,16 +61,16 @@ const TicketList = () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
     ]);
     setTickets(ticketRes.data ?? []);
     const cMap: Record<string, string> = {};
-    (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
+    (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? c.contact_name ?? ''; });
     setClients(cMap);
-    const pMap: Record<string, { name: string; address: string }> = {};
-    (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
+    const pMap: Record<string, { name: string; address: string; current_pm_id: string | null }> = {};
+    (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '', current_pm_id: p.current_pm_id ?? null }; });
     setProperties(pMap);
     setZones(zoneRes.data ?? []);
     const uMap: Record<string, string> = {};
@@ -228,38 +228,45 @@ const TicketList = () => {
           filtered.map((ticket: any) => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
             const leftBorder = workTypeBorder[ticket.work_type ?? 'repair'] ?? 'border-l-muted-foreground';
+            const property = ticket.property_id ? properties[ticket.property_id] : null;
+            const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
               <div key={ticket.id} className="flex items-start gap-1">
                 <button
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
-                  className={`flex-1 text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 active:scale-[0.99] transition-transform duration-100 space-y-1.5`}
+                  className={`flex-1 text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
                 >
-                  {/* Zone 1 */}
+                  {/* Line 1 */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>
-                    <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-                    <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
+                    <StatusPill className={colors.badge}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</StatusPill>
+                    <StatusPill className={statusColors[ticket.status ?? 'draft']}>{statusLabels[ticket.status ?? 'draft']}</StatusPill>
                     {ticket.priority && ticket.priority !== 'normal' && (
-                      <Badge className={`text-[10px] ring-1 ring-current/20 ${
+                      <StatusPill className={
                         ticket.priority === 'urgent' ? 'bg-destructive text-destructive-foreground'
                         : ticket.priority === 'high' ? 'bg-orange-500 text-white'
                         : 'bg-muted text-muted-foreground'
-                      }`}>
+                      }>
                         {ticket.priority.toUpperCase()}
-                      </Badge>
+                      </StatusPill>
                     )}
                   </div>
 
-                  {/* Zone 2 */}
+                  {/* Line 2: property · unit · PM */}
                   <p className="text-sm truncate">
-                    {ticket.property_id && (
-                      <span className="font-semibold text-foreground">{properties[ticket.property_id]?.name}</span>
+                    {property && (
+                      <span className="font-semibold text-foreground">{property.name}</span>
                     )}
                     {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
-                    {ticket.client_id && <span className="text-muted-foreground"> · {clients[ticket.client_id]}</span>}
+                    {pmName && <span className="text-muted-foreground"> · {pmName}</span>}
                   </p>
 
-                  {/* Zone 3 */}
+                  {/* Line 3: address */}
+                  {property?.address && (
+                    <p className="text-xs text-muted-foreground truncate">{property.address}</p>
+                  )}
+
+                  {/* Line 4: technician + appointment */}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
                       {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
