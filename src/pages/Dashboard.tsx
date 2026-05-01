@@ -3,12 +3,12 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
+import StatusPill from '@/components/ui/StatusPill';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,7 +61,7 @@ const Dashboard = () => {
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [clients, setClients] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
+  const [properties, setProperties] = useState<Record<string, { name: string; address: string; current_pm_id: string | null }>>({});
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
   const [technicianIds, setTechnicianIds] = useState<string[]>([]);
@@ -82,17 +82,17 @@ const Dashboard = () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
       supabase.from('user_roles').select('user_id').eq('role', 'technician'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
-    (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
+    (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? c.contact_name ?? ''; });
     setClients(cMap);
-    const pMap: Record<string, { name: string; address: string }> = {};
-    (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
+    const pMap: Record<string, { name: string; address: string; current_pm_id: string | null }> = {};
+    (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '', current_pm_id: p.current_pm_id ?? null }; });
     setProperties(pMap);
     const zMap: Record<string, string> = {};
     (zoneRes.data ?? []).forEach((z: any) => { zMap[z.id] = z.name ?? ''; });
