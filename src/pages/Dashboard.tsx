@@ -3,12 +3,12 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
+import StatusPill from '@/components/ui/StatusPill';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,7 +61,7 @@ const Dashboard = () => {
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [clients, setClients] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
+  const [properties, setProperties] = useState<Record<string, { name: string; address: string; current_pm_id: string | null }>>({});
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
   const [technicianIds, setTechnicianIds] = useState<string[]>([]);
@@ -82,17 +82,17 @@ const Dashboard = () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
       supabase.from('tickets').select('*').order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
       supabase.from('user_roles').select('user_id').eq('role', 'technician'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
-    (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
+    (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? c.contact_name ?? ''; });
     setClients(cMap);
-    const pMap: Record<string, { name: string; address: string }> = {};
-    (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
+    const pMap: Record<string, { name: string; address: string; current_pm_id: string | null }> = {};
+    (propRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '', current_pm_id: p.current_pm_id ?? null }; });
     setProperties(pMap);
     const zMap: Record<string, string> = {};
     (zoneRes.data ?? []).forEach((z: any) => { zMap[z.id] = z.name ?? ''; });
@@ -238,13 +238,13 @@ const Dashboard = () => {
       {/* Metric cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {metricCards.map((m) => (
-          <div key={m.label} className="fs-card p-3 flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-md ${m.bg} flex items-center justify-center shrink-0`}>
+          <div key={m.label} className="fs-card p-4 flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
               <m.icon className={`w-4 h-4 ${m.color}`} />
             </div>
             <div className="min-w-0 flex flex-col">
-              <span className={`text-2xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
-              <span className="fs-data-label mt-1 truncate">{m.label}</span>
+              <span className={`text-3xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
+              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5 truncate">{m.label}</span>
             </div>
           </div>
         ))}
@@ -294,46 +294,53 @@ const Dashboard = () => {
           filteredTickets.map((ticket) => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
             const leftBorder = workTypeBorder[ticket.work_type ?? 'repair'] ?? 'border-l-muted-foreground';
+            const property = ticket.property_id ? properties[ticket.property_id] : null;
+            const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
               <button
                 key={ticket.id}
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
-                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 active:scale-[0.99] transition-transform duration-100 space-y-1.5`}
+                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
               >
-                {/* Zone 1: identity + badges */}
+                {/* Line 1: identity + badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>
-                  <Badge className={`text-[10px] ring-1 ring-current/20 ${colors.badge}`}>
+                  <StatusPill className={colors.badge}>
                     {(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}
-                  </Badge>
-                  <Badge className={`text-[10px] ring-1 ring-current/20 ${statusColors[ticket.status ?? 'draft']}`}>
+                  </StatusPill>
+                  <StatusPill className={statusColors[ticket.status ?? 'draft']}>
                     {statusLabels[ticket.status ?? 'draft']}
-                  </Badge>
+                  </StatusPill>
                   {ticket.priority && ticket.priority !== 'normal' && (
-                    <Badge
-                      className={`text-[10px] ring-1 ring-current/20 ${
+                    <StatusPill
+                      className={
                         ticket.priority === 'urgent'
                           ? 'bg-destructive text-destructive-foreground'
                           : ticket.priority === 'high'
                           ? 'bg-orange-500 text-white'
                           : 'bg-muted text-muted-foreground'
-                      }`}
+                      }
                     >
                       {ticket.priority.toUpperCase()}
-                    </Badge>
+                    </StatusPill>
                   )}
                 </div>
 
-                {/* Zone 2: location */}
+                {/* Line 2: property · unit · PM */}
                 <p className="text-sm truncate">
-                  {ticket.property_id && (
-                    <span className="font-semibold text-foreground">{properties[ticket.property_id]?.name}</span>
+                  {property && (
+                    <span className="font-semibold text-foreground">{property.name}</span>
                   )}
                   {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
-                  {ticket.client_id && <span className="text-muted-foreground"> · {clients[ticket.client_id]}</span>}
+                  {pmName && <span className="text-muted-foreground"> · {pmName}</span>}
                 </p>
 
-                {/* Zone 3: technician + appointment */}
+                {/* Line 3: address */}
+                {property?.address && (
+                  <p className="text-xs text-muted-foreground truncate">{property.address}</p>
+                )}
+
+                {/* Line 4: technician + appointment */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
                     {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
