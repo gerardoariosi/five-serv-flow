@@ -65,6 +65,7 @@ const Dashboard = () => {
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
   const [technicianIds, setTechnicianIds] = useState<string[]>([]);
+  const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
 
   // Quick-create modal state
   const canQuickCreate = activeRole === 'admin' || activeRole === 'supervisor';
@@ -85,7 +86,7 @@ const Dashboard = () => {
       supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
-      supabase.from('user_roles').select('user_id').eq('role', 'technician'),
+      supabase.from('user_roles').select('user_id, role'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
@@ -100,7 +101,13 @@ const Dashboard = () => {
     const uMap: Record<string, string> = {};
     (userRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
-    setTechnicianIds(((techRolesRes.data ?? []) as any[]).map((r) => r.user_id));
+    const rolesMap: Record<string, string[]> = {};
+    ((techRolesRes.data ?? []) as any[]).forEach((r) => {
+      if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+      rolesMap[r.user_id].push(r.role);
+    });
+    setUserRoles(rolesMap);
+    setTechnicianIds(Object.keys(uMap));
     setLoading(false);
   }, []);
 
@@ -188,8 +195,13 @@ const Dashboard = () => {
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
 
+  const formatRole = (r: string) => r.charAt(0).toUpperCase() + r.slice(1);
   const technicianOptions = technicianIds
-    .map((id) => ({ id, name: users[id] || 'Unnamed' }))
+    .map((id) => {
+      const roles = userRoles[id] ?? [];
+      const roleLabel = roles.length ? roles.map(formatRole).join(', ') : 'User';
+      return { id, name: `${users[id] || 'Unnamed'} (${roleLabel})` };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const propertyOptionsList = (() => {
