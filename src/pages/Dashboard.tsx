@@ -101,7 +101,13 @@ const Dashboard = () => {
     const uMap: Record<string, string> = {};
     (userRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
     setUsers(uMap);
-    setTechnicianIds(((techRolesRes.data ?? []) as any[]).map((r) => r.user_id));
+    const rolesMap: Record<string, string[]> = {};
+    ((techRolesRes.data ?? []) as any[]).forEach((r) => {
+      if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+      rolesMap[r.user_id].push(r.role);
+    });
+    setUserRoles(rolesMap);
+    setTechnicianIds(Object.keys(uMap));
     setLoading(false);
   }, []);
 
