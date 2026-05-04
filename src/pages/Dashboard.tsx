@@ -65,6 +65,7 @@ const Dashboard = () => {
   const [zones, setZones] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
   const [technicianIds, setTechnicianIds] = useState<string[]>([]);
+  const [userRoles, setUserRoles] = useState<Record<string, string[]>>({});
 
   // Quick-create modal state
   const canQuickCreate = activeRole === 'admin' || activeRole === 'supervisor';
