@@ -61,18 +61,30 @@ const TicketForm = () => {
   // Fetch options
   useEffect(() => {
     const fetchOptions = async () => {
-      const [cRes, pRes, zRes, uRes, iRes, wtRes] = await Promise.all([
+      const [cRes, pRes, zRes, uRes, urRes, iRes, wtRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
         supabase.from('properties').select('id, name, address, zone_id, current_pm_id').eq('status', 'active'),
         supabase.from('zones').select('id, name').eq('status', 'active'),
-        supabase.from('users').select('id, full_name, roles').filter('roles', 'cs', '{"technician"}'),
+        supabase.rpc('get_user_directory'),
+        supabase.from('user_roles').select('user_id, role'),
         supabase.from('inspections').select('id, ins_number, property_id').in('status', ['draft', 'pending']),
         supabase.from('work_types').select('key, label'),
       ]);
       setClients(cRes.data ?? []);
       setProperties(pRes.data ?? []);
       setZones(zRes.data ?? []);
-      setTechnicians(uRes.data ?? []);
+      const rolesMap: Record<string, string[]> = {};
+      ((urRes.data ?? []) as any[]).forEach((r) => {
+        if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+        rolesMap[r.user_id].push(r.role);
+      });
+      const formatRole = (r: string) => r.charAt(0).toUpperCase() + r.slice(1);
+      const techList = (uRes.data ?? []).map((u: any) => {
+        const roles = rolesMap[u.id] ?? [];
+        const roleLabel = roles.length ? roles.map(formatRole).join(', ') : 'User';
+        return { id: u.id, full_name: u.full_name, display_name: `${u.full_name || 'Unnamed'} (${roleLabel})` };
+      }).sort((a: any, b: any) => a.display_name.localeCompare(b.display_name));
+      setTechnicians(techList);
       setInspections(iRes.data ?? []);
       setWorkTypes((wtRes.data ?? []).length > 0 ? wtRes.data! : [
         { key: 'make-ready', label: 'Make-Ready' },
