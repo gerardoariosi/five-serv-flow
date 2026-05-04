@@ -85,7 +85,7 @@ const Dashboard = () => {
       supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
-      supabase.from('user_roles').select('user_id').eq('role', 'technician'),
+      supabase.from('user_roles').select('user_id, role'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
     const cMap: Record<string, string> = {};
