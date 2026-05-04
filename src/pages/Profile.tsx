@@ -10,6 +10,7 @@ import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import PasswordStrength, { passwordIsValid } from '@/components/auth/PasswordStrength';
 import Spinner from '@/components/ui/Spinner';
+import { compressImage } from '@/lib/imageCompression';
 
 const Profile = () => {
   const { user, setUser, activeRole, setActiveRole } = useAuthStore();
@@ -92,12 +93,13 @@ const Profile = () => {
     if (!file || !user) return;
 
     setUploading(true);
-    const ext = file.name.split('.').pop();
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split('.').pop();
     const path = `${user.id}/avatar.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('profile-photos')
-      .upload(path, file, { upsert: true });
+      .upload(path, compressed, { upsert: true });
 
     if (uploadError) {
       toast.error('Failed to upload photo.');
