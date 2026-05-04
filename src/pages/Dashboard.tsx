@@ -195,8 +195,13 @@ const Dashboard = () => {
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
 
+  const formatRole = (r: string) => r.charAt(0).toUpperCase() + r.slice(1);
   const technicianOptions = technicianIds
-    .map((id) => ({ id, name: users[id] || 'Unnamed' }))
+    .map((id) => {
+      const roles = userRoles[id] ?? [];
+      const roleLabel = roles.length ? roles.map(formatRole).join(', ') : 'User';
+      return { id, name: `${users[id] || 'Unnamed'} (${roleLabel})` };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const propertyOptionsList = (() => {
