@@ -37,15 +37,22 @@ const resolveInitialRole = (user: UserProfile | null): AppRole | null => {
   return user.roles[0];
 };
 
+const syncStoredRole = (role: AppRole | null) => {
+  try {
+    if (role) localStorage.setItem(ACTIVE_ROLE_KEY, role);
+    else localStorage.removeItem(ACTIVE_ROLE_KEY);
+  } catch { /* ignore */ }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   activeRole: null,
   isLoading: true,
-  setUser: (user) =>
-    set({
-      user,
-      activeRole: resolveInitialRole(user),
-    }),
+  setUser: (user) => {
+    const activeRole = resolveInitialRole(user);
+    syncStoredRole(activeRole);
+    set({ user, activeRole });
+  },
   setActiveRole: (role) => {
     try { localStorage.setItem(ACTIVE_ROLE_KEY, role); } catch { /* ignore */ }
     set({ activeRole: role });
