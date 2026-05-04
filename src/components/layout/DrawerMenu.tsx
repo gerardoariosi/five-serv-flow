@@ -117,7 +117,7 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
   const initials = (user?.full_name ?? 'U')
     .split(' ').map(w => w.charAt(0)).join('').toUpperCase().slice(0, 2);
 
-  const groups = navGroupsByRole[activeRole ?? 'technician'] ?? navGroupsByRole.technician;
+  const groups = activeRole ? (navGroupsByRole[activeRole] ?? []) : [];
 
   return (
     <>
