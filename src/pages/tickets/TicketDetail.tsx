@@ -74,7 +74,7 @@ const TicketDetail = () => {
 
   const fetchTicket = useCallback(async () => {
     if (!id) return;
-    const [tRes, tlRes, phRes, cRes, pRes, zRes, uRes, techRes] = await Promise.all([
+    const [tRes, tlRes, phRes, cRes, pRes, zRes, uRes, urRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('id', id).single(),
       supabase.from('ticket_timeline').select('*').eq('ticket_id', id).order('created_at', { ascending: false }),
       supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: false }),
@@ -82,13 +82,24 @@ const TicketDetail = () => {
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
       supabase.from('users').select('id, full_name, email'),
-      supabase.from('users').select('id, full_name, email, roles').filter('roles', 'cs', '{"technician"}'),
+      supabase.from('user_roles').select('user_id, role'),
     ]);
 
     setTicket(tRes.data);
     setTimeline(tlRes.data ?? []);
     setPhotos(phRes.data ?? []);
-    setTechnicians(techRes.data ?? []);
+    const rolesMap: Record<string, string[]> = {};
+    ((urRes.data ?? []) as any[]).forEach((r) => {
+      if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+      rolesMap[r.user_id].push(r.role);
+    });
+    const formatRole = (r: string) => r.charAt(0).toUpperCase() + r.slice(1);
+    const techList = (uRes.data ?? []).map((u: any) => {
+      const roles = rolesMap[u.id] ?? [];
+      const roleLabel = roles.length ? roles.map(formatRole).join(', ') : 'User';
+      return { id: u.id, full_name: u.full_name, email: u.email, display_name: `${u.full_name || 'Unnamed'} (${roleLabel})` };
+    }).sort((a: any, b: any) => a.display_name.localeCompare(b.display_name));
+    setTechnicians(techList);
 
     const cMap: Record<string, { name: string; email: string }> = {};
     (cRes.data ?? []).forEach((c: any) => { cMap[c.id] = { name: c.company_name ?? '', email: c.email ?? '' }; });
