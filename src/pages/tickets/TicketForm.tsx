@@ -500,7 +500,7 @@ const TicketForm = () => {
                 <SelectValue placeholder="Assign technician" />
               </SelectTrigger>
               <SelectContent>
-                {technicians.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+                {technicians.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.display_name ?? t.full_name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
