@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Camera, Pause, Play, CheckCircle, MapPin, Navigation, Wifi, WifiOff, Send, AlertTriangle, Clock, FileText } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import Spinner from '@/components/ui/Spinner';
+import { compressImage } from '@/lib/imageCompression';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getChecklistFor } from '@/lib/workChecklists';
 
@@ -193,8 +194,9 @@ const TicketWork = () => {
       return;
     }
 
-    const path = `${id}/${Date.now()}-${f.name}`;
-    const { error } = await supabase.storage.from('ticket-photos').upload(path, f);
+    const compressed = await compressImage(f);
+    const path = `${id}/${Date.now()}-${compressed.name}`;
+    const { error } = await supabase.storage.from('ticket-photos').upload(path, compressed);
     if (error) { toast.error('Upload failed'); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('ticket-photos').getPublicUrl(path);
     await supabase.from('ticket_photos').insert({

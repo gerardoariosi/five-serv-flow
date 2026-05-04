@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner';
 import { ArrowLeft, Camera, FileText, AlertTriangle, X } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
+import { compressImage } from '@/lib/imageCompression';
 
 const TEMPLATES = [
   { label: 'Make-Ready Standard', work_type: 'make-ready', priority: 'normal', description: 'Full make-ready service: paint, clean, minor repairs, appliance check.' },
@@ -280,7 +281,8 @@ const TicketForm = () => {
 
       // Upload initial photos
       if (initialPhotos.length > 0) {
-        for (const file of initialPhotos) {
+        for (const rawFile of initialPhotos) {
+          const file = await compressImage(rawFile);
           const path = `${ticketId}/${Date.now()}-${file.name}`;
           const { error: upErr } = await supabase.storage.from('ticket-photos').upload(path, file);
           if (!upErr) {

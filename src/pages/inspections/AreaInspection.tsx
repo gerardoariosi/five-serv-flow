@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot, X, Plus
 import { Input } from '@/components/ui/input';
 import { buildAreas } from '@/lib/inspectionAreas';
 import Spinner from '@/components/ui/Spinner';
+import { compressImage } from '@/lib/imageCompression';
 
 type ItemStatus = 'good' | 'needs_repair' | 'urgent';
 
@@ -188,7 +189,7 @@ const AreaInspection = () => {
 
     for (let i = 0; i < files.length; i++) {
       setUploadProgress({ current: i + 1, total });
-      const file = files[i];
+      const file = await compressImage(files[i]);
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `inspections/${id}/${currentArea.key}/${Date.now()}-${safeName}`;
       const { error } = await supabase.storage.from('inspection-photos').upload(path, file, { contentType: file.type || 'image/jpeg' });
