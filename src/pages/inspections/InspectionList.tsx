@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Search, Plus, FileEdit, Clock, MoreVertical, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import BulkActionBar from '@/components/ui/BulkActionBar';
+import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
