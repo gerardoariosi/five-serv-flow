@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileDown, Mail, MoreVertical, Trash2 } from 'lucide-react';
+import { Search, FileDown, Mail, MoreVertical, Trash2, CheckSquare, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -42,6 +42,9 @@ const AccountingList = () => {
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
   const [singleDelete, setSingleDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const canSelect = canBulkUpdate || canDelete;
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['accounting-tickets'],
@@ -128,7 +131,14 @@ const AccountingList = () => {
   const selectedNames = filtered.filter((t: any) => selected.has(t.id)).map((t: any) => t.fs_number || '—');
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-4 pb-28">
-      <h1 className="text-xl font-bold text-foreground">Accounting</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-foreground">Accounting</h1>
+        {canSelect && (
+          <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+            {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+          </Button>
+        )}
+      </div>
 
       {/* Search */}
       <div className="relative">
@@ -162,10 +172,12 @@ const AccountingList = () => {
       </div>
 
       {/* Select All */}
-      <div className="flex items-center gap-2">
-        <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
-        <span className="text-xs text-muted-foreground">Select all ({filtered.length})</span>
-      </div>
+      {selectMode && (
+        <div className="flex items-center gap-2 animate-fade-in">
+          <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
+          <span className="text-xs text-muted-foreground">Select all ({filtered.length})</span>
+        </div>
+      )}
 
       {/* List */}
       <div className="space-y-2">
@@ -178,12 +190,14 @@ const AccountingList = () => {
               className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:border-primary/40 transition-colors"
               style={{ borderLeftColor: color, borderLeftWidth: 3 }}
             >
-              <Checkbox
-                checked={selected.has(ticket.id)}
-                onCheckedChange={() => toggleSelect(ticket.id)}
-                className="mt-1"
-                onClick={(e) => e.stopPropagation()}
-              />
+              {selectMode && (
+                <Checkbox
+                  checked={selected.has(ticket.id)}
+                  onCheckedChange={() => toggleSelect(ticket.id)}
+                  className="mt-1 animate-fade-in"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/accounting/${ticket.id}`)}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-bold text-foreground">{ticket.fs_number || '—'}</span>
@@ -226,7 +240,7 @@ const AccountingList = () => {
       </div>
 
       {/* Floating Bulk Action Bar */}
-      {selected.size > 0 && (
+      {selectMode && selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
           <span className="text-sm font-medium">{selected.size} ticket{selected.size === 1 ? '' : 's'} selected</span>
           {canBulkUpdate && (
@@ -244,7 +258,7 @@ const AccountingList = () => {
               <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
             </Button>
           )}
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => setSelected(new Set())}>
+          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={exitSelectMode}>
             Clear
           </Button>
         </div>
