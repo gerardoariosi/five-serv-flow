@@ -11,6 +11,9 @@ import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
 import StatusPill from '@/components/ui/StatusPill';
+import { Checkbox } from '@/components/ui/checkbox';
+import BulkActionBar from '@/components/ui/BulkActionBar';
+import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
 
 const workTypeBorder: Record<string, string> = {
