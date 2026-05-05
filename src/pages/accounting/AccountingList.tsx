@@ -31,6 +31,7 @@ const AccountingList = () => {
   const queryClient = useQueryClient();
   const { activeRole } = useAuthStore();
   const canBulkUpdate = activeRole === 'admin' || activeRole === 'accounting';
+  const canDelete = activeRole === 'admin';
   const [search, setSearch] = useState('');
   const [billingFilter, setBillingFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
