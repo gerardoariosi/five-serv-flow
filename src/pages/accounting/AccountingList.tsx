@@ -39,6 +39,9 @@ const AccountingList = () => {
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [emailDialog, setEmailDialog] = useState<string | null>(null);
   const [emailTo, setEmailTo] = useState('');
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
+  const [singleDelete, setSingleDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['accounting-tickets'],
