@@ -207,6 +207,18 @@ const AccountingList = () => {
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEmailDialog(ticket.id); }}>
                   <Mail className="w-3.5 h-3.5" />
                 </Button>
+                {canDelete && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"><MoreVertical className="w-3.5 h-3.5" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: ticket.id, name: ticket.fs_number || '—' })}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           );
@@ -214,20 +226,46 @@ const AccountingList = () => {
       </div>
 
       {/* Floating Bulk Action Bar */}
-      {canBulkUpdate && selected.size > 0 && (
+      {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
           <span className="text-sm font-medium">{selected.size} ticket{selected.size === 1 ? '' : 's'} selected</span>
-          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('invoiced')}>
-            Mark as Invoiced
-          </Button>
-          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('paid')}>
-            Mark as Paid
-          </Button>
+          {canBulkUpdate && (
+            <>
+              <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('invoiced')}>
+                Mark as Invoiced
+              </Button>
+              <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('paid')}>
+                Mark as Paid
+              </Button>
+            </>
+          )}
+          {canDelete && (
+            <Button size="sm" disabled={deleting} onClick={() => setBulkDeleteDialog(true)} className="bg-red-600 hover:bg-red-700 text-white border-0">
+              <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
         </div>
       )}
+
+      <BulkDeleteDialog
+        open={!!singleDelete}
+        onOpenChange={(o) => !o && setSingleDelete(null)}
+        itemNames={singleDelete ? [singleDelete.name] : []}
+        totalCount={1}
+        loading={deleting}
+        onConfirm={async () => { if (!singleDelete) return; const ok = await performDelete([singleDelete.id]); if (ok) setSingleDelete(null); }}
+      />
+      <BulkDeleteDialog
+        open={bulkDeleteDialog}
+        onOpenChange={setBulkDeleteDialog}
+        itemNames={selectedNames}
+        totalCount={selected.size}
+        loading={deleting}
+        onConfirm={async () => { const ok = await performDelete(Array.from(selected)); if (ok) { setSelected(new Set()); setBulkDeleteDialog(false); } }}
+      />
 
       {/* Email Dialog */}
       <Dialog open={!!emailDialog} onOpenChange={() => { setEmailDialog(null); setEmailTo(''); }}>
