@@ -49,6 +49,7 @@ const AccountingList = () => {
       const { data, error } = await supabase
         .from('tickets')
         .select('*, clients(company_name, contact_name), properties(name, address), zones(name)')
+        .eq('is_deleted', false)
         .neq('status', 'draft')
         .order('closed_at', { ascending: false, nullsFirst: false });
       if (error) throw error;
