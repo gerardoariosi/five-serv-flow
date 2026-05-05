@@ -170,7 +170,24 @@ const InspectionList = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 pb-28">
+      <BulkDeleteDialog
+        open={bulkDialog}
+        onOpenChange={setBulkDialog}
+        itemNames={selectedNames}
+        totalCount={selected.size}
+        loading={bulkDeleting}
+        onConfirm={handleBulkDelete}
+      />
+      {canDelete && (
+        <BulkActionBar
+          count={selected.size}
+          itemNoun="inspection"
+          deleting={bulkDeleting}
+          onDelete={() => setBulkDialog(true)}
+          onClear={() => setSelected(new Set())}
+        />
+      )}
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
