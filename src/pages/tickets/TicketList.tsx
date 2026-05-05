@@ -242,7 +242,13 @@ const TicketList = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-28">
+        {canDelete && filtered.length > 0 && (
+          <div className="flex items-center gap-2 pb-1">
+            <Checkbox checked={selected.size > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
+            <span className="text-xs text-muted-foreground">Select all ({filtered.length})</span>
+          </div>
+        )}
         {loading ? (
           <SkeletonCard count={6} />
         ) : filtered.length === 0 ? (
@@ -260,12 +266,18 @@ const TicketList = () => {
             const property = ticket.property_id ? properties[ticket.property_id] : null;
             const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
-              <div key={ticket.id} className="flex items-start gap-1">
+              <div key={ticket.id} className="flex items-start gap-1 group">
+                {canDelete && (
+                  <Checkbox
+                    checked={selected.has(ticket.id)}
+                    onCheckedChange={() => toggleSelect(ticket.id)}
+                    className="mt-3 ml-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                  />
+                )}
                 <button
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
                   className={`flex-1 text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
                 >
-                  {/* Line 1 */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>
                     <StatusPill className={colors.badge}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</StatusPill>
@@ -280,22 +292,12 @@ const TicketList = () => {
                       </StatusPill>
                     )}
                   </div>
-
-                  {/* Line 2: property · unit · PM */}
                   <p className="text-sm truncate">
-                    {property && (
-                      <span className="font-semibold text-foreground">{property.name}</span>
-                    )}
+                    {property && (<span className="font-semibold text-foreground">{property.name}</span>)}
                     {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
                     {pmName && <span className="text-muted-foreground"> · {pmName}</span>}
                   </p>
-
-                  {/* Line 3: address */}
-                  {property?.address && (
-                    <p className="text-xs text-muted-foreground truncate">{property.address}</p>
-                  )}
-
-                  {/* Line 4: technician + appointment */}
+                  {property?.address && (<p className="text-xs text-muted-foreground truncate">{property.address}</p>)}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
                       {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
@@ -307,7 +309,7 @@ const TicketList = () => {
                     )}
                   </div>
                 </button>
-                {activeRole === 'admin' && (ticket.status === 'draft' || ticket.status === 'cancelled') && (
+                {canDelete && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="shrink-0 mt-1">
@@ -326,6 +328,24 @@ const TicketList = () => {
           })
         )}
       </div>
+
+      <BulkDeleteDialog
+        open={bulkDialog}
+        onOpenChange={setBulkDialog}
+        itemNames={selectedNames}
+        totalCount={selected.size}
+        loading={bulkDeleting}
+        onConfirm={handleBulkDelete}
+      />
+      {canDelete && (
+        <BulkActionBar
+          count={selected.size}
+          itemNoun="ticket"
+          deleting={bulkDeleting}
+          onDelete={() => setBulkDialog(true)}
+          onClear={() => setSelected(new Set())}
+        />
+      )}
     </div>
   );
 };
