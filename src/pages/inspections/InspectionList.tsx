@@ -73,14 +73,36 @@ const InspectionList = () => {
   const canDelete = activeRole === 'admin' || activeRole === 'supervisor';
 
   const handleDeleteInspection = async (ins: any) => {
-    await supabase.from('inspection_items').delete().eq('inspection_id', ins.id);
-    await supabase.from('inspection_photos').delete().eq('inspection_id', ins.id);
-    await supabase.from('inspection_tickets').delete().eq('inspection_id', ins.id);
-    await supabase.from('inspections').delete().eq('id', ins.id);
+    if (ins.status === 'draft') {
+      await supabase.from('inspection_items').delete().eq('inspection_id', ins.id);
+      await supabase.from('inspection_photos').delete().eq('inspection_id', ins.id);
+      await supabase.from('inspection_tickets').delete().eq('inspection_id', ins.id);
+      await supabase.from('inspections').delete().eq('id', ins.id);
+    } else {
+      await supabase.from('inspections').update({ is_deleted: true, deleted_at: new Date().toISOString() }).eq('id', ins.id);
+    }
     toast.success('Inspection deleted');
     setDeleteTarget(null);
     fetchData();
   };
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('inspections').update({ is_deleted: true, deleted_at: new Date().toISOString() }).in('id', ids);
+    setBulkDeleting(false);
+    if (error) { toast.error('Delete failed'); return; }
+    toast.success(`${ids.length} inspection${ids.length === 1 ? '' : 's'} deleted`);
+    setSelected(new Set());
+    setBulkDialog(false);
+    fetchData();
+  };
+
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allVisible = useMemo(() => [...drafts, ...active], [drafts, active]);
+  const toggleAll = () => setSelected(p => p.size === allVisible.length ? new Set() : new Set(allVisible.map(i => i.id)));
+  const selectedNames = allVisible.filter(i => selected.has(i.id)).map(i => i.ins_number ?? 'No INS#');
 
   const InspectionCard = ({ ins }: { ins: any }) => {
     const isSent = ins.status === 'sent';
