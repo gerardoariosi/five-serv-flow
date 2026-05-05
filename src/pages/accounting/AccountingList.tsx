@@ -115,6 +115,17 @@ const AccountingList = () => {
     queryClient.invalidateQueries({ queryKey: ['accounting-tickets'] });
   };
 
+  const performDelete = async (ids: string[]) => {
+    setDeleting(true);
+    const { error } = await supabase.from('tickets').update({ is_deleted: true, deleted_at: new Date().toISOString() }).in('id', ids);
+    setDeleting(false);
+    if (error) { toast.error('Delete failed'); return false; }
+    toast.success(`${ids.length} ticket${ids.length === 1 ? '' : 's'} deleted`);
+    queryClient.invalidateQueries({ queryKey: ['accounting-tickets'] });
+    return true;
+  };
+
+  const selectedNames = filtered.filter((t: any) => selected.has(t.id)).map((t: any) => t.fs_number || '—');
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-4 pb-28">
       <h1 className="text-xl font-bold text-foreground">Accounting</h1>
