@@ -125,13 +125,35 @@ const TicketList = () => {
   }, [tickets, search, filterStatus, filterType, filterZone, activeRole, clients, properties, users]);
 
   const handleDeleteTicket = async (ticket: any) => {
-    await supabase.from('ticket_photos').delete().eq('ticket_id', ticket.id);
-    await supabase.from('ticket_timeline').delete().eq('ticket_id', ticket.id);
-    await supabase.from('tickets').delete().eq('id', ticket.id);
+    // Hard delete only for draft/cancelled, soft delete otherwise
+    if (ticket.status === 'draft' || ticket.status === 'cancelled') {
+      await supabase.from('ticket_photos').delete().eq('ticket_id', ticket.id);
+      await supabase.from('ticket_timeline').delete().eq('ticket_id', ticket.id);
+      await supabase.from('tickets').delete().eq('id', ticket.id);
+    } else {
+      await supabase.from('tickets').update({ is_deleted: true, deleted_at: new Date().toISOString() }).eq('id', ticket.id);
+    }
     toast.success('Ticket deleted');
     setDeleteTarget(null);
     fetchData();
   };
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('tickets').update({ is_deleted: true, deleted_at: new Date().toISOString() }).in('id', ids);
+    setBulkDeleting(false);
+    if (error) { toast.error('Delete failed'); return; }
+    toast.success(`${ids.length} ticket${ids.length === 1 ? '' : 's'} deleted`);
+    setSelected(new Set());
+    setBulkDialog(false);
+    fetchData();
+  };
+
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setSelected(p => p.size === filtered.length ? new Set() : new Set(filtered.map((t: any) => t.id)));
+  const selectedNames = filtered.filter((t: any) => selected.has(t.id)).map((t: any) => t.fs_number ?? 'No FS#');
 
   return (
     <div className="flex flex-col h-full">
