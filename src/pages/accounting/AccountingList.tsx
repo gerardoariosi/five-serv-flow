@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileDown, Mail } from 'lucide-react';
+import { Search, FileDown, Mail, MoreVertical, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
 import { getTicketColor } from '@/lib/ticketColors';
 
@@ -29,6 +31,7 @@ const AccountingList = () => {
   const queryClient = useQueryClient();
   const { activeRole } = useAuthStore();
   const canBulkUpdate = activeRole === 'admin' || activeRole === 'accounting';
+  const canDelete = activeRole === 'admin';
   const [search, setSearch] = useState('');
   const [billingFilter, setBillingFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -36,6 +39,9 @@ const AccountingList = () => {
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [emailDialog, setEmailDialog] = useState<string | null>(null);
   const [emailTo, setEmailTo] = useState('');
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState(false);
+  const [singleDelete, setSingleDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: tickets = [] } = useQuery({
     queryKey: ['accounting-tickets'],
@@ -43,6 +49,7 @@ const AccountingList = () => {
       const { data, error } = await supabase
         .from('tickets')
         .select('*, clients(company_name, contact_name), properties(name, address), zones(name)')
+        .eq('is_deleted', false)
         .neq('status', 'draft')
         .order('closed_at', { ascending: false, nullsFirst: false });
       if (error) throw error;
@@ -108,6 +115,17 @@ const AccountingList = () => {
     queryClient.invalidateQueries({ queryKey: ['accounting-tickets'] });
   };
 
+  const performDelete = async (ids: string[]) => {
+    setDeleting(true);
+    const { error } = await supabase.from('tickets').update({ is_deleted: true, deleted_at: new Date().toISOString() }).in('id', ids);
+    setDeleting(false);
+    if (error) { toast.error('Delete failed'); return false; }
+    toast.success(`${ids.length} ticket${ids.length === 1 ? '' : 's'} deleted`);
+    queryClient.invalidateQueries({ queryKey: ['accounting-tickets'] });
+    return true;
+  };
+
+  const selectedNames = filtered.filter((t: any) => selected.has(t.id)).map((t: any) => t.fs_number || '—');
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-4 pb-28">
       <h1 className="text-xl font-bold text-foreground">Accounting</h1>
@@ -189,6 +207,18 @@ const AccountingList = () => {
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEmailDialog(ticket.id); }}>
                   <Mail className="w-3.5 h-3.5" />
                 </Button>
+                {canDelete && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"><MoreVertical className="w-3.5 h-3.5" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: ticket.id, name: ticket.fs_number || '—' })}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           );
@@ -196,20 +226,46 @@ const AccountingList = () => {
       </div>
 
       {/* Floating Bulk Action Bar */}
-      {canBulkUpdate && selected.size > 0 && (
+      {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
           <span className="text-sm font-medium">{selected.size} ticket{selected.size === 1 ? '' : 's'} selected</span>
-          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('invoiced')}>
-            Mark as Invoiced
-          </Button>
-          <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('paid')}>
-            Mark as Paid
-          </Button>
+          {canBulkUpdate && (
+            <>
+              <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('invoiced')}>
+                Mark as Invoiced
+              </Button>
+              <Button size="sm" variant="secondary" disabled={bulkUpdating} onClick={() => handleBulkUpdate('paid')}>
+                Mark as Paid
+              </Button>
+            </>
+          )}
+          {canDelete && (
+            <Button size="sm" disabled={deleting} onClick={() => setBulkDeleteDialog(true)} className="bg-red-600 hover:bg-red-700 text-white border-0">
+              <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
         </div>
       )}
+
+      <BulkDeleteDialog
+        open={!!singleDelete}
+        onOpenChange={(o) => !o && setSingleDelete(null)}
+        itemNames={singleDelete ? [singleDelete.name] : []}
+        totalCount={1}
+        loading={deleting}
+        onConfirm={async () => { if (!singleDelete) return; const ok = await performDelete([singleDelete.id]); if (ok) setSingleDelete(null); }}
+      />
+      <BulkDeleteDialog
+        open={bulkDeleteDialog}
+        onOpenChange={setBulkDeleteDialog}
+        itemNames={selectedNames}
+        totalCount={selected.size}
+        loading={deleting}
+        onConfirm={async () => { const ok = await performDelete(Array.from(selected)); if (ok) { setSelected(new Set()); setBulkDeleteDialog(false); } }}
+      />
 
       {/* Email Dialog */}
       <Dialog open={!!emailDialog} onOpenChange={() => { setEmailDialog(null); setEmailTo(''); }}>

@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Search, Plus, FileEdit, Clock, MoreVertical, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import BulkActionBar from '@/components/ui/BulkActionBar';
+import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
@@ -24,11 +27,14 @@ const InspectionList = () => {
   const [clients, setClients] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [iRes, cRes, pRes] = await Promise.all([
-      supabase.from('inspections').select('*').order('created_at', { ascending: false }),
+      supabase.from('inspections').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name'),
     ]);
@@ -67,14 +73,36 @@ const InspectionList = () => {
   const canDelete = activeRole === 'admin' || activeRole === 'supervisor';
 
   const handleDeleteInspection = async (ins: any) => {
-    await supabase.from('inspection_items').delete().eq('inspection_id', ins.id);
-    await supabase.from('inspection_photos').delete().eq('inspection_id', ins.id);
-    await supabase.from('inspection_tickets').delete().eq('inspection_id', ins.id);
-    await supabase.from('inspections').delete().eq('id', ins.id);
+    if (ins.status === 'draft') {
+      await supabase.from('inspection_items').delete().eq('inspection_id', ins.id);
+      await supabase.from('inspection_photos').delete().eq('inspection_id', ins.id);
+      await supabase.from('inspection_tickets').delete().eq('inspection_id', ins.id);
+      await supabase.from('inspections').delete().eq('id', ins.id);
+    } else {
+      await supabase.from('inspections').update({ is_deleted: true, deleted_at: new Date().toISOString() }).eq('id', ins.id);
+    }
     toast.success('Inspection deleted');
     setDeleteTarget(null);
     fetchData();
   };
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('inspections').update({ is_deleted: true, deleted_at: new Date().toISOString() }).in('id', ids);
+    setBulkDeleting(false);
+    if (error) { toast.error('Delete failed'); return; }
+    toast.success(`${ids.length} inspection${ids.length === 1 ? '' : 's'} deleted`);
+    setSelected(new Set());
+    setBulkDialog(false);
+    fetchData();
+  };
+
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allVisible = useMemo(() => [...drafts, ...active], [drafts, active]);
+  const toggleAll = () => setSelected(p => p.size === allVisible.length ? new Set() : new Set(allVisible.map(i => i.id)));
+  const selectedNames = allVisible.filter(i => selected.has(i.id)).map(i => i.ins_number ?? 'No INS#');
 
   const InspectionCard = ({ ins }: { ins: any }) => {
     const isSent = ins.status === 'sent';
@@ -82,7 +110,14 @@ const InspectionList = () => {
     const daysPending = isSent ? daysSinceSent(ins.created_at) : 0;
 
     return (
-      <div className="flex items-start gap-0">
+      <div className="flex items-start gap-1 group">
+        {canDelete && (
+          <Checkbox
+            checked={selected.has(ins.id)}
+            onCheckedChange={() => toggleSelect(ins.id)}
+            className="mt-5 ml-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+          />
+        )}
         <button
           onClick={() => navigate(`/inspections/${ins.id}`)}
           className="flex-1 text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
@@ -135,7 +170,24 @@ const InspectionList = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 pb-28">
+      <BulkDeleteDialog
+        open={bulkDialog}
+        onOpenChange={setBulkDialog}
+        itemNames={selectedNames}
+        totalCount={selected.size}
+        loading={bulkDeleting}
+        onConfirm={handleBulkDelete}
+      />
+      {canDelete && (
+        <BulkActionBar
+          count={selected.size}
+          itemNoun="inspection"
+          deleting={bulkDeleting}
+          onDelete={() => setBulkDialog(true)}
+          onClear={() => setSelected(new Set())}
+        />
+      )}
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>

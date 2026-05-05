@@ -11,6 +11,9 @@ import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
 import StatusPill from '@/components/ui/StatusPill';
+import { Checkbox } from '@/components/ui/checkbox';
+import BulkActionBar from '@/components/ui/BulkActionBar';
+import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
 
 const workTypeBorder: Record<string, string> = {
@@ -56,10 +59,14 @@ const TicketList = () => {
   const [zones, setZones] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const canDelete = activeRole === 'admin';
 
   const fetchData = useCallback(async () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
-      supabase.from('tickets').select('*').order('created_at', { ascending: false }),
+      supabase.from('tickets').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
@@ -118,13 +125,35 @@ const TicketList = () => {
   }, [tickets, search, filterStatus, filterType, filterZone, activeRole, clients, properties, users]);
 
   const handleDeleteTicket = async (ticket: any) => {
-    await supabase.from('ticket_photos').delete().eq('ticket_id', ticket.id);
-    await supabase.from('ticket_timeline').delete().eq('ticket_id', ticket.id);
-    await supabase.from('tickets').delete().eq('id', ticket.id);
+    // Hard delete only for draft/cancelled, soft delete otherwise
+    if (ticket.status === 'draft' || ticket.status === 'cancelled') {
+      await supabase.from('ticket_photos').delete().eq('ticket_id', ticket.id);
+      await supabase.from('ticket_timeline').delete().eq('ticket_id', ticket.id);
+      await supabase.from('tickets').delete().eq('id', ticket.id);
+    } else {
+      await supabase.from('tickets').update({ is_deleted: true, deleted_at: new Date().toISOString() }).eq('id', ticket.id);
+    }
     toast.success('Ticket deleted');
     setDeleteTarget(null);
     fetchData();
   };
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from('tickets').update({ is_deleted: true, deleted_at: new Date().toISOString() }).in('id', ids);
+    setBulkDeleting(false);
+    if (error) { toast.error('Delete failed'); return; }
+    toast.success(`${ids.length} ticket${ids.length === 1 ? '' : 's'} deleted`);
+    setSelected(new Set());
+    setBulkDialog(false);
+    fetchData();
+  };
+
+  const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setSelected(p => p.size === filtered.length ? new Set() : new Set(filtered.map((t: any) => t.id)));
+  const selectedNames = filtered.filter((t: any) => selected.has(t.id)).map((t: any) => t.fs_number ?? 'No FS#');
 
   return (
     <div className="flex flex-col h-full">
@@ -213,7 +242,13 @@ const TicketList = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-28">
+        {canDelete && filtered.length > 0 && (
+          <div className="flex items-center gap-2 pb-1">
+            <Checkbox checked={selected.size > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
+            <span className="text-xs text-muted-foreground">Select all ({filtered.length})</span>
+          </div>
+        )}
         {loading ? (
           <SkeletonCard count={6} />
         ) : filtered.length === 0 ? (
@@ -231,12 +266,18 @@ const TicketList = () => {
             const property = ticket.property_id ? properties[ticket.property_id] : null;
             const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
-              <div key={ticket.id} className="flex items-start gap-1">
+              <div key={ticket.id} className="flex items-start gap-1 group">
+                {canDelete && (
+                  <Checkbox
+                    checked={selected.has(ticket.id)}
+                    onCheckedChange={() => toggleSelect(ticket.id)}
+                    className="mt-3 ml-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                  />
+                )}
                 <button
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
                   className={`flex-1 text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
                 >
-                  {/* Line 1 */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>
                     <StatusPill className={colors.badge}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</StatusPill>
@@ -251,22 +292,12 @@ const TicketList = () => {
                       </StatusPill>
                     )}
                   </div>
-
-                  {/* Line 2: property · unit · PM */}
                   <p className="text-sm truncate">
-                    {property && (
-                      <span className="font-semibold text-foreground">{property.name}</span>
-                    )}
+                    {property && (<span className="font-semibold text-foreground">{property.name}</span>)}
                     {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
                     {pmName && <span className="text-muted-foreground"> · {pmName}</span>}
                   </p>
-
-                  {/* Line 3: address */}
-                  {property?.address && (
-                    <p className="text-xs text-muted-foreground truncate">{property.address}</p>
-                  )}
-
-                  {/* Line 4: technician + appointment */}
+                  {property?.address && (<p className="text-xs text-muted-foreground truncate">{property.address}</p>)}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
                       {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
@@ -278,7 +309,7 @@ const TicketList = () => {
                     )}
                   </div>
                 </button>
-                {activeRole === 'admin' && (ticket.status === 'draft' || ticket.status === 'cancelled') && (
+                {canDelete && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="shrink-0 mt-1">
@@ -297,6 +328,24 @@ const TicketList = () => {
           })
         )}
       </div>
+
+      <BulkDeleteDialog
+        open={bulkDialog}
+        onOpenChange={setBulkDialog}
+        itemNames={selectedNames}
+        totalCount={selected.size}
+        loading={bulkDeleting}
+        onConfirm={handleBulkDelete}
+      />
+      {canDelete && (
+        <BulkActionBar
+          count={selected.size}
+          itemNoun="ticket"
+          deleting={bulkDeleting}
+          onDelete={() => setBulkDialog(true)}
+          onClear={() => setSelected(new Set())}
+        />
+      )}
     </div>
   );
 };

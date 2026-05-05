@@ -157,8 +157,10 @@ export type Database = {
           company_name: string | null
           contact_name: string | null
           created_at: string | null
+          deleted_at: string | null
           email: string | null
           id: string
+          is_deleted: boolean
           phone: string | null
           status: string | null
           type: string | null
@@ -168,8 +170,10 @@ export type Database = {
           company_name?: string | null
           contact_name?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
+          is_deleted?: boolean
           phone?: string | null
           status?: string | null
           type?: string | null
@@ -179,8 +183,10 @@ export type Database = {
           company_name?: string | null
           contact_name?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
+          is_deleted?: boolean
           phone?: string | null
           status?: string | null
           type?: string | null
@@ -502,11 +508,13 @@ export type Database = {
           bedrooms: number | null
           client_id: string | null
           created_at: string | null
+          deleted_at: string | null
           has_exterior: boolean | null
           has_garage: boolean | null
           has_laundry: boolean | null
           id: string
           ins_number: string | null
+          is_deleted: boolean
           link_expires_at: string | null
           link_opened_count: number | null
           living_rooms: number | null
@@ -526,11 +534,13 @@ export type Database = {
           bedrooms?: number | null
           client_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           has_exterior?: boolean | null
           has_garage?: boolean | null
           has_laundry?: boolean | null
           id?: string
           ins_number?: string | null
+          is_deleted?: boolean
           link_expires_at?: string | null
           link_opened_count?: number | null
           living_rooms?: number | null
@@ -550,11 +560,13 @@ export type Database = {
           bedrooms?: number | null
           client_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           has_exterior?: boolean | null
           has_garage?: boolean | null
           has_laundry?: boolean | null
           id?: string
           ins_number?: string | null
+          is_deleted?: boolean
           link_expires_at?: string | null
           link_opened_count?: number | null
           living_rooms?: number | null
@@ -640,7 +652,9 @@ export type Database = {
         Row: {
           address: string | null
           current_pm_id: string | null
+          deleted_at: string | null
           id: string
+          is_deleted: boolean
           name: string | null
           pm_changed_at: string | null
           previous_pm_id: string | null
@@ -650,7 +664,9 @@ export type Database = {
         Insert: {
           address?: string | null
           current_pm_id?: string | null
+          deleted_at?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string | null
           pm_changed_at?: string | null
           previous_pm_id?: string | null
@@ -660,7 +676,9 @@ export type Database = {
         Update: {
           address?: string | null
           current_pm_id?: string | null
+          deleted_at?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string | null
           pm_changed_at?: string | null
           previous_pm_id?: string | null
@@ -797,9 +815,11 @@ export type Database = {
         Row: {
           company_name: string | null
           contact_name: string | null
+          deleted_at: string | null
           email: string | null
           id: string
           insurance_info: string | null
+          is_deleted: boolean
           license_number: string | null
           notes: string | null
           phone: string | null
@@ -811,9 +831,11 @@ export type Database = {
         Insert: {
           company_name?: string | null
           contact_name?: string | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
           insurance_info?: string | null
+          is_deleted?: boolean
           license_number?: string | null
           notes?: string | null
           phone?: string | null
@@ -825,9 +847,11 @@ export type Database = {
         Update: {
           company_name?: string | null
           contact_name?: string | null
+          deleted_at?: string | null
           email?: string | null
           id?: string
           insurance_info?: string | null
+          is_deleted?: boolean
           license_number?: string | null
           notes?: string | null
           phone?: string | null
@@ -1009,6 +1033,7 @@ export type Database = {
           client_id: string | null
           closed_at: string | null
           created_at: string | null
+          deleted_at: string | null
           description: string | null
           estimate_expires_at: string | null
           estimate_link_opened_count: number | null
@@ -1024,6 +1049,7 @@ export type Database = {
           fs_number: string | null
           id: string
           internal_note: string | null
+          is_deleted: boolean
           is_draft_auto_saved: boolean | null
           priority: string | null
           property_id: string | null
@@ -1050,6 +1076,7 @@ export type Database = {
           client_id?: string | null
           closed_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           estimate_expires_at?: string | null
           estimate_link_opened_count?: number | null
@@ -1065,6 +1092,7 @@ export type Database = {
           fs_number?: string | null
           id?: string
           internal_note?: string | null
+          is_deleted?: boolean
           is_draft_auto_saved?: boolean | null
           priority?: string | null
           property_id?: string | null
@@ -1091,6 +1119,7 @@ export type Database = {
           client_id?: string | null
           closed_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           estimate_expires_at?: string | null
           estimate_link_opened_count?: number | null
@@ -1106,6 +1135,7 @@ export type Database = {
           fs_number?: string | null
           id?: string
           internal_note?: string | null
+          is_deleted?: boolean
           is_draft_auto_saved?: boolean | null
           priority?: string | null
           property_id?: string | null
@@ -1267,10 +1297,12 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           dark_mode: boolean | null
+          deleted_at: string | null
           email: string | null
           failed_login_attempts: number | null
           full_name: string | null
           id: string
+          is_deleted: boolean
           is_locked: boolean | null
           language: string | null
           last_active_at: string | null
@@ -1283,10 +1315,12 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
+          deleted_at?: string | null
           email?: string | null
           failed_login_attempts?: number | null
           full_name?: string | null
           id?: string
+          is_deleted?: boolean
           is_locked?: boolean | null
           language?: string | null
           last_active_at?: string | null
@@ -1299,10 +1333,12 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           dark_mode?: boolean | null
+          deleted_at?: string | null
           email?: string | null
           failed_login_attempts?: number | null
           full_name?: string | null
           id?: string
+          is_deleted?: boolean
           is_locked?: boolean | null
           language?: string | null
           last_active_at?: string | null
@@ -1337,19 +1373,25 @@ export type Database = {
       zones: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
           id: string
+          is_deleted: boolean
           name: string | null
           status: string | null
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string | null
           status?: string | null
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string | null
           status?: string | null
         }
