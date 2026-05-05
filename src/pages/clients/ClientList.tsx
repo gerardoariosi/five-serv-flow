@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreVertical, Building2, User as UserIcon, Mail, Phone, Archive, Download, Trash2 } from 'lucide-react';
+import { Plus, Search, MoreVertical, Building2, User as UserIcon, Mail, Phone, Archive, Download, Trash2, CheckSquare, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -35,6 +35,8 @@ const ClientList = () => {
   const [bulkArchiving, setBulkArchiving] = useState(false);
   const [hardDeleteConfirm, setHardDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   const { data, isLoading } = useQuery({
     queryKey: ['clients', search, typeFilter, statusFilter, page],
@@ -125,9 +127,16 @@ const ClientList = () => {
     <div className="p-4 max-w-4xl mx-auto pb-28">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Clients</h1>
-        <Button onClick={() => navigate('/clients/new')} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
+        <div className="flex items-center gap-2">
+          {canDelete && (
+            <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+              {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+            </Button>
+          )}
+          <Button onClick={() => navigate('/clients/new')} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Plus className="w-4 h-4 mr-1" /> New
+          </Button>
+        </div>
       </div>
 
       <div className="relative mb-4">
@@ -151,8 +160,8 @@ const ClientList = () => {
         ))}
       </div>
 
-      {canDelete && clients.length > 0 && (
-        <div className="flex items-center gap-2 mb-2">
+      {canDelete && selectMode && clients.length > 0 && (
+        <div className="flex items-center gap-2 mb-2 animate-fade-in">
           <Checkbox checked={selected.size > 0 && selected.size === clients.length} onCheckedChange={toggleAll} />
           <span className="text-xs text-muted-foreground">Select all ({clients.length})</span>
         </div>
@@ -167,11 +176,11 @@ const ClientList = () => {
           {clients.map(client => (
             <div key={client.id} className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors group">
               <div className="flex items-start justify-between gap-3">
-                {canDelete && (
+                {canDelete && selectMode && (
                   <Checkbox
                     checked={selected.has(client.id)}
                     onCheckedChange={() => toggleSelect(client.id)}
-                    className="mt-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                    className="mt-1 animate-fade-in"
                   />
                 )}
                 <div className="flex-1 cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
@@ -270,13 +279,13 @@ const ClientList = () => {
         }}
       />
 
-      {canDelete && (
+      {canDelete && selectMode && (
         <BulkActionBar
           count={selected.size}
           itemNoun="client"
           deleting={deleting || bulkArchiving}
           onDelete={() => setBulkDeleteDialog(true)}
-          onClear={() => setSelected(new Set())}
+          onClear={exitSelectMode}
           extraActions={
             <Button
               size="sm"

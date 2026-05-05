@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Plus, FileEdit, Clock, MoreVertical, Trash2 } from 'lucide-react';
+import { Search, Plus, FileEdit, Clock, MoreVertical, Trash2, CheckSquare, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
@@ -30,6 +30,8 @@ const InspectionList = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDialog, setBulkDialog] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -111,11 +113,11 @@ const InspectionList = () => {
 
     return (
       <div className="flex items-start gap-1 group">
-        {canDelete && (
+        {canDelete && selectMode && (
           <Checkbox
             checked={selected.has(ins.id)}
             onCheckedChange={() => toggleSelect(ins.id)}
-            className="mt-5 ml-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+            className="mt-5 ml-1 animate-fade-in"
           />
         )}
         <button
@@ -179,13 +181,13 @@ const InspectionList = () => {
         loading={bulkDeleting}
         onConfirm={handleBulkDelete}
       />
-      {canDelete && (
+      {canDelete && selectMode && (
         <BulkActionBar
           count={selected.size}
           itemNoun="inspection"
           deleting={bulkDeleting}
           onDelete={() => setBulkDialog(true)}
-          onClear={() => setSelected(new Set())}
+          onClear={exitSelectMode}
         />
       )}
       {/* Delete confirmation dialog */}
@@ -208,11 +210,18 @@ const InspectionList = () => {
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Inspections</h1>
-        {(activeRole === 'admin' || activeRole === 'supervisor') && (
-          <Button size="sm" onClick={() => navigate('/inspections/new')}>
-            <Plus className="w-4 h-4 mr-1" /> New Inspection
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canDelete && (
+            <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+              {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+            </Button>
+          )}
+          {(activeRole === 'admin' || activeRole === 'supervisor') && (
+            <Button size="sm" onClick={() => navigate('/inspections/new')}>
+              <Plus className="w-4 h-4 mr-1" /> New Inspection
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="active">

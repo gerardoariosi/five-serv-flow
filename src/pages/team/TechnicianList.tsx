@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, User, MoreVertical, Archive, RotateCcw, Trash2 } from 'lucide-react';
+import { Plus, Search, User, MoreVertical, Archive, RotateCcw, Trash2, CheckSquare, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
@@ -25,6 +25,8 @@ const TechnicianList = () => {
   const [bulkDialog, setBulkDialog] = useState(false);
   const [singleDelete, setSingleDelete] = useState<{ id: string; name: string; type: 'user' | 'vendor' } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const exitSelectMode = () => { setSelectMode(false); setSelectedUsers(new Set()); setSelectedVendors(new Set()); };
 
   const { data: users = [], refetch: refetchUsers } = useQuery({
     queryKey: ['team-users'],
@@ -130,9 +132,16 @@ const TechnicianList = () => {
     <div className="p-4 max-w-2xl mx-auto space-y-4 pb-28">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Team</h1>
-        <Button size="sm" onClick={() => navigate(tab === 'users' ? '/team/users/new' : '/team/vendors/new')} className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="w-4 h-4 mr-1" /> Add
-        </Button>
+        <div className="flex items-center gap-2">
+          {canDelete && (
+            <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+              {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+            </Button>
+          )}
+          <Button size="sm" onClick={() => navigate(tab === 'users' ? '/team/users/new' : '/team/vendors/new')} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Plus className="w-4 h-4 mr-1" /> Add
+          </Button>
+        </div>
       </div>
 
       <div className="relative">
@@ -147,8 +156,8 @@ const TechnicianList = () => {
         </TabsList>
 
         <TabsContent value="users" className="space-y-2 mt-4">
-          {canDelete && filteredUsers.length > 0 && (
-            <div className="flex items-center gap-2">
+          {canDelete && selectMode && filteredUsers.length > 0 && (
+            <div className="flex items-center gap-2 animate-fade-in">
               <Checkbox checked={selectedUsers.size > 0 && selectedUsers.size === filteredUsers.length} onCheckedChange={toggleAll} />
               <span className="text-xs text-muted-foreground">Select all ({filteredUsers.length})</span>
             </div>
@@ -157,12 +166,12 @@ const TechnicianList = () => {
           {filteredUsers.map((user) => (
             <div key={user.id} className="p-3 rounded-lg border border-border bg-card hover:border-primary/40 transition-colors group">
               <div className="flex items-center gap-3">
-                {canDelete && (
+                {canDelete && selectMode && (
                   <Checkbox
                     checked={selectedUsers.has(user.id)}
                     onCheckedChange={() => toggleSelect(user.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                    className="animate-fade-in"
                   />
                 )}
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/team/users/${user.id}`)}>
@@ -209,8 +218,8 @@ const TechnicianList = () => {
         </TabsContent>
 
         <TabsContent value="vendors" className="space-y-2 mt-4">
-          {canDelete && filteredVendors.length > 0 && (
-            <div className="flex items-center gap-2">
+          {canDelete && selectMode && filteredVendors.length > 0 && (
+            <div className="flex items-center gap-2 animate-fade-in">
               <Checkbox checked={selectedVendors.size > 0 && selectedVendors.size === filteredVendors.length} onCheckedChange={toggleAll} />
               <span className="text-xs text-muted-foreground">Select all ({filteredVendors.length})</span>
             </div>
@@ -218,12 +227,12 @@ const TechnicianList = () => {
           {filteredVendors.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No vendors found</p>}
           {filteredVendors.map((vendor) => (
             <div key={vendor.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:border-primary/40 transition-colors group">
-              {canDelete && (
+              {canDelete && selectMode && (
                 <Checkbox
                   checked={selectedVendors.has(vendor.id)}
                   onCheckedChange={() => toggleSelect(vendor.id)}
                   onClick={(e) => e.stopPropagation()}
-                  className="md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                  className="animate-fade-in"
                 />
               )}
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/team/vendors/${vendor.id}`)}>
@@ -287,13 +296,13 @@ const TechnicianList = () => {
         }}
       />
 
-      {canDelete && (
+      {canDelete && selectMode && (
         <BulkActionBar
           count={currentSelected.size}
           itemNoun={isUserTab ? 'user' : 'vendor'}
           deleting={deleting}
           onDelete={() => setBulkDialog(true)}
-          onClear={() => setCurrentSelected(new Set())}
+          onClear={exitSelectMode}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MapPin, Building2, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, MoreVertical, Trash2, CheckSquare, X } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,6 +27,8 @@ const PropertyList = () => {
   const [bulkDialog, setBulkDialog] = useState(false);
   const [singleDelete, setSingleDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   const { data: zones } = useQuery({
     queryKey: ['zones-list'],
@@ -74,9 +76,16 @@ const PropertyList = () => {
     <div className="p-4 max-w-4xl mx-auto pb-28">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Properties</h1>
-        <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => navigate('/properties/new')}>
-          <Plus className="w-4 h-4 mr-1" /> New
-        </Button>
+        <div className="flex items-center gap-2">
+          {canDelete && (
+            <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+              {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+            </Button>
+          )}
+          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => navigate('/properties/new')}>
+            <Plus className="w-4 h-4 mr-1" /> New
+          </Button>
+        </div>
       </div>
 
       <div className="relative mb-4">
@@ -100,8 +109,8 @@ const PropertyList = () => {
         ))}
       </div>
 
-      {canDelete && properties && properties.length > 0 && (
-        <div className="flex items-center gap-2 mb-2">
+      {canDelete && selectMode && properties && properties.length > 0 && (
+        <div className="flex items-center gap-2 mb-2 animate-fade-in">
           <Checkbox checked={selected.size > 0 && selected.size === properties.length} onCheckedChange={toggleAll} />
           <span className="text-xs text-muted-foreground">Select all ({properties.length})</span>
         </div>
@@ -115,11 +124,11 @@ const PropertyList = () => {
         <div className="flex flex-col gap-3">
           {properties?.map(p => (
             <div key={p.id} className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors group flex gap-3">
-              {canDelete && (
+              {canDelete && selectMode && (
                 <Checkbox
                   checked={selected.has(p.id)}
                   onCheckedChange={() => toggleSelect(p.id)}
-                  className="mt-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                  className="mt-1 animate-fade-in"
                   onClick={(e) => e.stopPropagation()}
                 />
               )}
@@ -183,13 +192,13 @@ const PropertyList = () => {
         }}
       />
 
-      {canDelete && (
+      {canDelete && selectMode && (
         <BulkActionBar
           count={selected.size}
           itemNoun="property"
           deleting={deleting}
           onDelete={() => setBulkDialog(true)}
-          onClear={() => setSelected(new Set())}
+          onClear={exitSelectMode}
         />
       )}
     </div>

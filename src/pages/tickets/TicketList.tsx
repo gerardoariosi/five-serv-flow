@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Plus, MoreVertical, Trash2, Ticket as TicketIcon } from 'lucide-react';
+import { Search, Plus, MoreVertical, Trash2, Ticket as TicketIcon, CheckSquare, X } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -62,7 +62,9 @@ const TicketList = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDialog, setBulkDialog] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
   const canDelete = activeRole === 'admin';
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   const fetchData = useCallback(async () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
@@ -175,11 +177,18 @@ const TicketList = () => {
             <h1 className="fs-page-title">Tickets</h1>
             <span className="text-sm font-medium text-muted-foreground">({filtered.length})</span>
           </div>
-          {(activeRole === 'admin' || activeRole === 'supervisor') && (
-            <Button size="sm" onClick={() => navigate('/tickets/new')}>
-              <Plus className="w-4 h-4 mr-1" /> New Ticket
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canDelete && (
+              <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+                {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+              </Button>
+            )}
+            {(activeRole === 'admin' || activeRole === 'supervisor') && (
+              <Button size="sm" onClick={() => navigate('/tickets/new')}>
+                <Plus className="w-4 h-4 mr-1" /> New Ticket
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="relative">
@@ -243,8 +252,8 @@ const TicketList = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-28">
-        {canDelete && filtered.length > 0 && (
-          <div className="flex items-center gap-2 pb-1">
+        {canDelete && selectMode && filtered.length > 0 && (
+          <div className="flex items-center gap-2 pb-1 animate-fade-in">
             <Checkbox checked={selected.size > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
             <span className="text-xs text-muted-foreground">Select all ({filtered.length})</span>
           </div>
@@ -267,11 +276,11 @@ const TicketList = () => {
             const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
               <div key={ticket.id} className="flex items-start gap-1 group">
-                {canDelete && (
+                {canDelete && selectMode && (
                   <Checkbox
                     checked={selected.has(ticket.id)}
                     onCheckedChange={() => toggleSelect(ticket.id)}
-                    className="mt-3 ml-1 md:opacity-0 md:group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+                    className="mt-3 ml-1 animate-fade-in"
                   />
                 )}
                 <button
@@ -337,13 +346,13 @@ const TicketList = () => {
         loading={bulkDeleting}
         onConfirm={handleBulkDelete}
       />
-      {canDelete && (
+      {canDelete && selectMode && (
         <BulkActionBar
           count={selected.size}
           itemNoun="ticket"
           deleting={bulkDeleting}
           onDelete={() => setBulkDialog(true)}
-          onClear={() => setSelected(new Set())}
+          onClear={exitSelectMode}
         />
       )}
     </div>
