@@ -27,11 +27,14 @@ const InspectionList = () => {
   const [clients, setClients] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDialog, setBulkDialog] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [iRes, cRes, pRes] = await Promise.all([
-      supabase.from('inspections').select('*').order('created_at', { ascending: false }),
+      supabase.from('inspections').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name'),
     ]);
