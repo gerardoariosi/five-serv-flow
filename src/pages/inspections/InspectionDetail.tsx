@@ -287,7 +287,7 @@ const InspectionDetail = () => {
         : generatePmVersionPdf({ inspection, items, photos, clients, properties });
 
       const reportType = emailType === 'fiveserv' ? 'FiveServ Internal Report' : 'PM Version Report';
-      const propertyName = inspection.property_id ? properties[inspection.property_id] ?? '' : '';
+      const propertyName = propertyLabel(inspection.property_id);
       const filename = `${inspection.ins_number ?? 'inspection'}-${emailType === 'fiveserv' ? 'fiveserv' : 'pm'}-report.pdf`;
 
       // Convert PDF to blob and upload to storage
