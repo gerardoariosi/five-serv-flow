@@ -119,6 +119,7 @@ const CalendarPage = () => {
       const { data, error } = await supabase
         .from('tickets')
         .select('id, fs_number, work_type, status, appointment_time, technician_id, property_id, unit, zone_id, properties(name, address), work_started_at')
+        .eq('is_deleted', false)
         .neq('status', 'draft')
         .not('appointment_time', 'is', null)
         .order('appointment_time');
@@ -133,6 +134,7 @@ const CalendarPage = () => {
       const { data, error } = await supabase
         .from('inspections')
         .select('id, ins_number, visit_date, status, property_id, properties(name, address)')
+        .eq('is_deleted', false)
         .in('status', ['draft', 'scheduled', 'inspecting', 'pricing', 'sent'])
         .not('visit_date', 'is', null);
       if (error) throw error;
