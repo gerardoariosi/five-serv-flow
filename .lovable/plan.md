@@ -1,45 +1,58 @@
-## Goal
+# Delete Bugs — Root Cause Analysis
 
-Replace the substring-matching search in `src/pages/HelpCenter.tsx` with weighted fuzzy search using `fuse.js`, so users can find articles even when wording doesn't match exactly (e.g. "create job" → "How to Create a Ticket"). Existing UI, highlight rendering, and all other behavior stay identical.
+## BUG 1 — Client email blocked after soft delete
 
-## Changes
+**Root cause:** Two layers blocking reuse:
 
-### 1. Add dependency
-- Install `fuse.js` (not currently in `package.json`).
+1. **DB constraint** `clients_email_key UNIQUE (email)` on `public.clients` — a soft-deleted row (`is_deleted = true`) keeps occupying the email, so inserting a new client with the same email fails at the database level.
+2. **App-level duplicate check** `src/pages/clients/ClientForm.tsx:49` — queries existing clients by email without filtering `is_deleted = false`, so the form shows "This email is already registered" even when the only match is a deleted client.
 
-### 2. `src/pages/HelpCenter.tsx`
+**Fix:**
+- Migration: drop `clients_email_key` and replace with a **partial unique index**:
+  ```sql
+  ALTER TABLE public.clients DROP CONSTRAINT clients_email_key;
+  CREATE UNIQUE INDEX clients_email_active_unique
+    ON public.clients (lower(email)) WHERE is_deleted = false;
+  ```
+- `src/pages/clients/ClientForm.tsx` line 49: add `.eq('is_deleted', false)` to the duplicate-check query.
 
-**Build searchable indexes (module scope, computed once):**
-- Flatten `HELP_SECTIONS` into a list of `{ sectionId, article, title, body, tip, note }` records, where `body` is normalized to a single string:
-  - `string` → as-is
-  - `string[]` → joined with `\n`
-  - `DefItem[]` → `label + ' ' + description` joined with `\n`
-- Create two Fuse instances:
-  - **Articles Fuse** — keys: `[{ name: 'title', weight: 0.4 }, { name: 'body', weight: 0.4 }, { name: 'tip', weight: 0.1 }, { name: 'note', weight: 0.1 }]`
-  - **FAQ Fuse** — keys: `[{ name: 'q', weight: 0.5 }, { name: 'a', weight: 0.5 }]`
-- Shared options: `threshold: 0.4`, `includeMatches: true`, `minMatchCharLength: 2`, `ignoreLocation: true` (so matches work anywhere in the field).
+---
 
-**Replace `articleMatches` + `filteredSections` / `filteredFaqs` logic:**
-- When `q.length < 2` → return original `HELP_SECTIONS` / `FAQS` unchanged (preserves "no query" behavior; avoids Fuse running on 1 char).
-- When `q.length >= 2`:
-  - Run `articlesFuse.search(q)` → collect matched article ids → rebuild `filteredSections` preserving original section order and original article order, keeping only matched articles, dropping empty sections.
-  - Run `faqsFuse.search(q)` → rebuild `filteredFaqs` preserving original order.
+## BUG 2 — Deleted tickets still in Dashboard & Calendar
 
-**Highlighting (keep visual behavior, make it fuzzy-aware):**
-- Keep `<Highlight>` component signature `({ text, query })` so all existing call sites work unchanged.
-- Update its internals: if `query` has length ≥ 2, split `text` on a case-insensitive regex of escaped `query`; if no substring match (common with fuzzy hits), also try highlighting each whitespace-separated token of length ≥ 2. Render matches inside the existing `<mark className="bg-primary/30 text-foreground rounded px-0.5">`.
-- This preserves the current look and gracefully handles fuzzy results where the exact query string isn't present.
+Tickets use soft delete via `is_deleted` (and hard delete for draft/cancelled). Neither page filters it.
 
-**Untouched:**
-- All content (`HELP_SECTIONS`, `FAQS`).
-- Layout, sidebar, scroll-spy, breadcrumbs, back-to-top, Login / DrawerMenu entry points.
-- Light/white styling and gold accents.
+**Files / lines / fixes:**
+- `src/pages/Dashboard.tsx:84` — `supabase.from('tickets').select('*')…`
+  Add `.eq('is_deleted', false)` to the chain.
+- `src/pages/calendar/CalendarPage.tsx:120-124` — tickets query.
+  Add `.eq('is_deleted', false)` before `.order(...)`.
 
-### Technical notes
-- Fuse instances are created at module scope (outside the component) so they're built once, not on every render.
-- `ignoreLocation: true` is added because article bodies are long; without it Fuse heavily penalizes matches far from the start of the string and "forgot password" wouldn't reliably hit the reset-password article.
-- Article matching is by stable `article.id` to avoid duplicate-title collisions.
+(The tickets query in `TicketList.tsx` already filters correctly — use it as the reference pattern.)
 
-## Files
-- `package.json` — add `fuse.js`
-- `src/pages/HelpCenter.tsx` — fuzzy search + updated `Highlight`
+---
+
+## BUG 3 — Deleted inspections still in Calendar (and elsewhere)
+
+Inspections also have `is_deleted`; only `InspectionList` filters it.
+
+**Files / lines / fixes:**
+- `src/pages/calendar/CalendarPage.tsx:130-141` — inspections query.
+  Add `.eq('is_deleted', false)` before the closing `.not(...)`.
+- `src/pages/Dashboard.tsx` does **not** query inspections directly, so no change needed there for inspections. (Confirmed via grep — only `tickets`, `clients`, `properties`, `zones`, `user_roles`, and `get_user_directory` are fetched.)
+
+Optional hardening (not required by the bug but worth noting): `InspectionDetail.tsx`, `PMPortal.tsx`, and any inspection-related selects that should also exclude deleted records — but these are accessed by ID and gated by tokens, so they are lower risk. Recommend leaving out of this fix unless requested.
+
+---
+
+## Summary table
+
+| Bug | File | Line(s) | Change |
+|---|---|---|---|
+| 1a | DB migration | — | Replace `clients_email_key` with partial unique index where `is_deleted = false` |
+| 1b | `src/pages/clients/ClientForm.tsx` | 49 | Add `.eq('is_deleted', false)` |
+| 2a | `src/pages/Dashboard.tsx` | 84 | Add `.eq('is_deleted', false)` |
+| 2b | `src/pages/calendar/CalendarPage.tsx` | 120-124 | Add `.eq('is_deleted', false)` |
+| 3  | `src/pages/calendar/CalendarPage.tsx` | 130-141 | Add `.eq('is_deleted', false)` |
+
+No code changes made yet — awaiting approval.
