@@ -15,6 +15,8 @@ import { ArrowLeft, Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
 import { pushToUsers } from '@/lib/pushNotifications';
+import { sendInspectionAssignedEmail } from '@/lib/inspectionAssignmentEmail';
+import { formatAddress } from '@/lib/propertyAddress';
 
 const CreateInspection = () => {
   const navigate = useNavigate();
