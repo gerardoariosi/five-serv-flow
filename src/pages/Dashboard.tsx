@@ -67,6 +67,7 @@ const Dashboard = () => {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [inspections, setInspections] = useState<InspectionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
