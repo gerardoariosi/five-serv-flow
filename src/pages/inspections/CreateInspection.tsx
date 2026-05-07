@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
+import { pushToUsers } from '@/lib/pushNotifications';
 
 const CreateInspection = () => {
   const navigate = useNavigate();
