@@ -42,7 +42,7 @@ const PropertyList = () => {
     queryKey: ['properties', search, zoneFilter, statusFilter],
     queryFn: async () => {
       let query = supabase.from('properties').select('*, zones(name), clients!properties_current_pm_id_fkey(company_name)').eq('is_deleted', false);
-      if (search) query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%`);
+      if (search) query = query.or(`name.ilike.%${search}%,full_address.ilike.%${search}%,street_address.ilike.%${search}%,city.ilike.%${search}%,zip_code.ilike.%${search}%`);
       if (zoneFilter !== 'all') query = query.eq('zone_id', zoneFilter);
       query = query.eq('status', statusFilter).order('name');
 
