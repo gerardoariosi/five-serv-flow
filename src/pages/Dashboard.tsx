@@ -271,15 +271,23 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Greeting */}
+      <div className="mb-4">
+        <h1 className="text-lg font-bold text-foreground">Good {timeOfDay}, {firstName}</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
       {/* Metric cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {metricCards.map((m) => (
-          <div key={m.label} className="fs-card p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
-              <m.icon className={`w-4 h-4 ${m.color}`} />
+          <div key={m.label} className={`fs-card p-3 flex items-center gap-3 border-t-2 ${m.border}`}>
+            <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
+              <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
             </div>
             <div className="min-w-0 flex flex-col">
-              <span className={`text-3xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
+              <span className={`text-xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
               <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5 truncate">{m.label}</span>
             </div>
           </div>
