@@ -32,6 +32,16 @@ interface TicketRow {
   internal_note: string | null;
 }
 
+interface InspectionRow {
+  id: string;
+  ins_number: string | null;
+  status: string | null;
+  property_id: string | null;
+  assigned_to: string | null;
+  visit_date: string | null;
+  created_at: string | null;
+}
+
 const workTypeBorder: Record<string, string> = {
   emergency: 'border-l-[#ef4444]',
   'make-ready': 'border-l-[#f97316]',
