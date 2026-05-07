@@ -195,17 +195,27 @@ const Dashboard = () => {
       paused: tickets.filter(t => t.status === 'paused').length,
       emergencies: active.filter(t => t.work_type === 'emergency').length,
       pmNotResponding: tickets.filter(t => t.status === 'ready_for_review').length,
+      insScheduled: inspections.filter(i => i.status === 'scheduled').length,
+      insPending: inspections.filter(i => i.status === 'sent').length,
+      insResponded: inspections.filter(i => i.status === 'responded').length,
     };
-  }, [tickets]);
+  }, [tickets, inspections]);
 
   const metricCards = [
-    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10' },
-    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40' },
-    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10' },
-    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10' },
-    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10' },
-    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10' },
+    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10',        border: 'border-t-primary' },
+    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40',          border: 'border-t-border' },
+    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10',     border: 'border-t-orange-400' },
+    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10',     border: 'border-t-yellow-400' },
+    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10',    border: 'border-t-destructive' },
+    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
+    { label: 'Scheduled',   value: metrics.insScheduled,    icon: CalendarDays,   color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
+    { label: 'Pending PM',  value: metrics.insPending,      icon: Clock,          color: 'text-blue-400',         bg: 'bg-blue-400/10',       border: 'border-t-blue-400' },
+    { label: 'Responded',   value: metrics.insResponded,    icon: ClipboardCheck, color: 'text-green-400',        bg: 'bg-green-400/10',      border: 'border-t-green-400' },
   ];
+
+  const hours = new Date().getHours();
+  const timeOfDay = hours < 12 ? 'morning' : hours < 18 ? 'afternoon' : 'evening';
+  const firstName = (user?.full_name ?? '').split(' ')[0] || 'there';
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
 
