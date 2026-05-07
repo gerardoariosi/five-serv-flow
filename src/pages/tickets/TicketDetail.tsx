@@ -81,7 +81,7 @@ const TicketDetail = () => {
       supabase.from('clients').select('id, company_name, email'),
       supabase.from('properties').select('id, name, address'),
       supabase.from('zones').select('id, name'),
-      supabase.from('users').select('id, full_name, email'),
+      supabase.from('users').select('id, full_name, email').eq('is_deleted', false).or('is_locked.is.null,is_locked.eq.false'),
       supabase.from('user_roles').select('user_id, role'),
     ]);
 
