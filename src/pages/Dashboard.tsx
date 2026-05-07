@@ -81,7 +81,7 @@ const Dashboard = () => {
 
   const fetchData = useCallback(async () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
-      supabase.from('tickets').select('*').order('created_at', { ascending: false }),
+      supabase.from('tickets').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),

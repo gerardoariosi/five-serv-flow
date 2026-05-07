@@ -46,7 +46,7 @@ const ClientForm = () => {
   useEffect(() => {
     if (!form.email) { setEmailError(''); return; }
     const t = setTimeout(async () => {
-      let query = supabase.from('clients').select('id').eq('email', form.email.toLowerCase());
+      let query = supabase.from('clients').select('id').eq('email', form.email.toLowerCase()).eq('is_deleted', false);
       if (isEdit) query = query.neq('id', id!);
       const { data } = await query.limit(1);
       setEmailError(data && data.length > 0 ? 'This email is already registered' : '');
