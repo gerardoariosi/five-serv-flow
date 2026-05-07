@@ -116,16 +116,16 @@ const PropertyDetail = () => {
       <div className="bg-card border border-border rounded-lg p-5 mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground mb-2">{property.name || property.address}</h1>
+            <h1 className="text-lg font-bold text-foreground mb-2">{formatAddress(property as any) || property.name || 'Unnamed'}</h1>
             <div className="flex flex-col gap-1 text-sm text-muted-foreground">
               <span>Zone: {(property.zones as any)?.name ?? 'None'}</span>
               <span>PM: {pm?.company_name ?? 'None'}</span>
               {prevPm?.company_name && property.pm_changed_at && (
                 <span className="text-primary">Previous PM: {prevPm.company_name} until {new Date(property.pm_changed_at).toLocaleDateString()}</span>
               )}
-              {property.address && (
-                <a href={`https://maps.google.com/?q=${encodeURIComponent(property.address)}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary">
-                  <MapPin className="w-3 h-3" />{property.address}
+              {formatAddress(property as any) && (
+                <a href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress(property as any))}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary">
+                  <MapPin className="w-3 h-3" />{formatAddress(property as any)}
                 </a>
               )}
             </div>
