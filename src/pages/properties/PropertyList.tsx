@@ -70,7 +70,7 @@ const PropertyList = () => {
 
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => setSelected(p => p.size === (properties?.length ?? 0) ? new Set() : new Set((properties ?? []).map(x => x.id)));
-  const selectedNames = useMemo(() => (properties ?? []).filter(p => selected.has(p.id)).map(p => p.name ?? p.address ?? ''), [properties, selected]);
+  const selectedNames = useMemo(() => (properties ?? []).filter(p => selected.has(p.id)).map(p => formatAddress(p as any) || p.name || ''), [properties, selected]);
 
   return (
     <div className="p-4 max-w-4xl mx-auto pb-28">
