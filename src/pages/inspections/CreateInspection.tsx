@@ -263,7 +263,7 @@ const CreateInspection = () => {
                       disabled={hasActive}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${hasActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <span className="font-medium text-foreground">{p.address || p.name}</span>
+                      <span className="font-medium text-foreground">{p.full_address || p.address || p.name}</span>
                       {hasActive && <span className="text-destructive ml-2 text-xs">(active inspection)</span>}
                     </button>
                   );
