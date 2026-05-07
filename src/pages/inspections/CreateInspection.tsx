@@ -349,6 +349,15 @@ const CreateInspection = () => {
                 <Label className="text-xs">Time</Label>
                 <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
               </div>
+              <div className="col-span-2">
+                <Label className="text-xs">Assign to (optional)</Label>
+                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                  <SelectContent>
+                    {users.map(u => <SelectItem key={u.id} value={u.id}>{u.display_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </div>
