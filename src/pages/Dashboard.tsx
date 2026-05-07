@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus } from 'lucide-react';
+import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus, CalendarDays, ClipboardCheck, ClipboardList } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
