@@ -7,13 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send, Play, Plus, Minus, UserCheck } from 'lucide-react';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
 import { generateFiveServPdf, generatePmVersionPdf, downloadPdf } from '@/lib/inspectionPdf';
+import { sendInspectionAssignedEmail } from '@/lib/inspectionAssignmentEmail';
+import { pushToUsers } from '@/lib/pushNotifications';
+import { formatAddress } from '@/lib/propertyAddress';
 
 const InspectionDetail = () => {
   const { id } = useParams();
@@ -25,8 +31,9 @@ const InspectionDetail = () => {
   const [photos, setPhotos] = useState<any[]>([]);
   const [linkedTickets, setLinkedTickets] = useState<any[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<Record<string, string>>({});
+  const [properties, setProperties] = useState<Record<string, any>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
+  const [usersList, setUsersList] = useState<{ id: string; full_name: string }[]>([]);
 
   // Convert modal
   const [showConvert, setShowConvert] = useState(false);
@@ -41,6 +48,15 @@ const InspectionDetail = () => {
   const [emailType, setEmailType] = useState<'fiveserv' | 'pm'>('fiveserv');
   const [emailTo, setEmailTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Start (config-confirm) modal
+  const [showStart, setShowStart] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startConfig, setStartConfig] = useState({
+    bedrooms: 1, bathrooms: 1, living_rooms: 1,
+    has_garage: false, has_laundry: false, has_exterior: false,
+    tech_initial_note: '',
+  });
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -61,7 +77,7 @@ const InspectionDetail = () => {
       }),
       supabase.from('inspection_tickets').select('*, tickets(*)').eq('inspection_id', id),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name'),
+      supabase.from('properties').select('id, name, address, full_address, street_address, city, state, zip_code'),
       supabase.rpc('get_user_directory'),
     ]);
     setInspection(insRes.data);
@@ -72,29 +88,37 @@ const InspectionDetail = () => {
     const cMap: Record<string, string> = {};
     (cRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
     setClients(cMap);
-    const pMap: Record<string, string> = {};
-    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = p.name ?? ''; });
+    const pMap: Record<string, any> = {};
+    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = p; });
     setProperties(pMap);
     const uMap: Record<string, string> = {};
-    (uRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
+    const uList: { id: string; full_name: string }[] = [];
+    (uRes.data ?? []).forEach((u: any) => {
+      uMap[u.id] = u.full_name ?? '';
+      uList.push({ id: u.id, full_name: u.full_name ?? '' });
+    });
     setUsers(uMap);
+    setUsersList(uList.sort((a, b) => a.full_name.localeCompare(b.full_name)));
+
+    // Pre-fill the Start config dialog from current inspection values
+    if (insRes.data) {
+      setStartConfig({
+        bedrooms: insRes.data.bedrooms ?? 1,
+        bathrooms: insRes.data.bathrooms ?? 1,
+        living_rooms: insRes.data.living_rooms ?? 1,
+        has_garage: !!insRes.data.has_garage,
+        has_laundry: !!insRes.data.has_laundry,
+        has_exterior: !!insRes.data.has_exterior,
+        tech_initial_note: (insRes.data as any).tech_initial_note ?? '',
+      });
+    }
 
     setLoading(false);
   }, [id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Auto-activate scheduled inspections when their date has arrived
-  useEffect(() => {
-    if (!inspection || inspection.status !== 'scheduled') return;
-    const visit = inspection.visit_date ? new Date(inspection.visit_date) : null;
-    if (!visit) return;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (visit <= today) {
-      supabase.from('inspections').update({ status: 'draft' }).eq('id', id).then(() => fetchData());
-    }
-  }, [inspection, id, fetchData]);
+  // Note: scheduled inspections remain 'scheduled' until a tech taps "Start Inspection".
 
   const handleDeleteInspection = async () => {
     await supabase.from('inspection_items').delete().eq('inspection_id', id);
@@ -109,6 +133,62 @@ const InspectionDetail = () => {
     await supabase.from('inspections').update({ status: 'estimate_approved' }).eq('id', id);
     toast.success('Estimate approved');
     fetchData();
+  };
+
+  const propertyLabel = useCallback((pid?: string | null) => {
+    if (!pid) return '';
+    const p = properties[pid];
+    if (!p) return '';
+    return p.full_address || formatAddress(p) || p.address || p.name || '';
+  }, [properties]);
+
+  const handleStartInspection = async () => {
+    setStarting(true);
+    try {
+      await supabase.from('inspections').update({
+        status: 'draft',
+        bedrooms: startConfig.bedrooms,
+        bathrooms: startConfig.bathrooms,
+        living_rooms: startConfig.living_rooms,
+        has_garage: startConfig.has_garage,
+        has_laundry: startConfig.has_laundry,
+        has_exterior: startConfig.has_exterior,
+        tech_initial_note: startConfig.tech_initial_note || null,
+      } as any).eq('id', id);
+      setShowStart(false);
+      navigate(`/inspections/${id}/inspect`);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to start');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleReassign = async (newAssignee: string) => {
+    if (!newAssignee || newAssignee === inspection?.assigned_to) return;
+    try {
+      const { error } = await supabase.from('inspections').update({ assigned_to: newAssignee }).eq('id', id);
+      if (error) throw error;
+      toast.success('Inspection reassigned');
+      try {
+        await pushToUsers(
+          [newAssignee],
+          'New Inspection Assigned',
+          `${inspection?.ins_number ?? 'Inspection'}${inspection?.visit_date ? ` on ${inspection.visit_date}` : ''}`,
+          `/inspections/${id}`
+        );
+      } catch (e) { console.error('push failed', e); }
+      await sendInspectionAssignedEmail({
+        inspectionId: id!,
+        insNumber: inspection?.ins_number ?? null,
+        assignedTo: newAssignee,
+        visitDate: inspection?.visit_date ?? null,
+        propertyAddress: propertyLabel(inspection?.property_id),
+      });
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Reassign failed');
+    }
   };
 
   const handleConvertToTickets = async () => {
@@ -207,7 +287,7 @@ const InspectionDetail = () => {
         : generatePmVersionPdf({ inspection, items, photos, clients, properties });
 
       const reportType = emailType === 'fiveserv' ? 'FiveServ Internal Report' : 'PM Version Report';
-      const propertyName = inspection.property_id ? properties[inspection.property_id] ?? '' : '';
+      const propertyName = propertyLabel(inspection.property_id);
       const filename = `${inspection.ins_number ?? 'inspection'}-${emailType === 'fiveserv' ? 'fiveserv' : 'pm'}-report.pdf`;
 
       // Convert PDF to blob and upload to storage
@@ -288,6 +368,46 @@ const InspectionDetail = () => {
 
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-5">
+      {/* Start (config-confirm) modal */}
+      <Dialog open={showStart} onOpenChange={setShowStart}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Confirm Property Configuration</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Verify the unit details before starting.</p>
+          <div className="space-y-4 py-2">
+            {(['bedrooms', 'bathrooms', 'living_rooms'] as const).map(field => (
+              <div key={field} className="flex items-center justify-between">
+                <Label className="capitalize">{field.replace('_', ' ')}</Label>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStartConfig(c => ({ ...c, [field]: Math.max(0, c[field] - 1) }))}><Minus className="w-4 h-4" /></Button>
+                  <span className="text-foreground font-bold w-6 text-center">{startConfig[field]}</span>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStartConfig(c => ({ ...c, [field]: c[field] + 1 }))}><Plus className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            ))}
+            {([
+              { key: 'has_garage' as const, label: 'Garage' },
+              { key: 'has_laundry' as const, label: 'Laundry' },
+              { key: 'has_exterior' as const, label: 'Exterior / Patio' },
+            ]).map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <Label>{label}</Label>
+                <Switch checked={startConfig[key]} onCheckedChange={v => setStartConfig(c => ({ ...c, [key]: v }))} />
+              </div>
+            ))}
+            <div>
+              <Label>Initial Note (optional)</Label>
+              <Textarea value={startConfig.tech_initial_note} onChange={e => setStartConfig(c => ({ ...c, tech_initial_note: e.target.value }))} placeholder="Anything to record before you start?" rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStart(false)} disabled={starting}>Cancel</Button>
+            <Button onClick={handleStartInspection} disabled={starting}>
+              {starting ? <Spinner size="sm" /> : <><Play className="w-4 h-4 mr-1" /> Start</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirm */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
@@ -432,7 +552,7 @@ const InspectionDetail = () => {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-muted-foreground">Property</span>
-            <p className="text-foreground font-medium">{inspection.property_id ? properties[inspection.property_id] : '—'}</p>
+            <p className="text-foreground font-medium">{propertyLabel(inspection.property_id) || '—'}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Client / PM</span>
@@ -450,6 +570,23 @@ const InspectionDetail = () => {
               {inspection.has_laundry ? ' · Laundry' : ''}
               {inspection.has_exterior ? ' · Exterior' : ''}
             </p>
+          </div>
+          <div className="col-span-2">
+            <span className="text-muted-foreground">Assigned to</span>
+            {(activeRole === 'admin' || activeRole === 'supervisor') ? (
+              <Select value={inspection.assigned_to ?? ''} onValueChange={handleReassign}>
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  {usersList.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-foreground font-medium">{inspection.assigned_to ? (users[inspection.assigned_to] || '—') : '—'}</p>
+            )}
           </div>
         </div>
       </div>
@@ -481,6 +618,13 @@ const InspectionDetail = () => {
 
       {/* Action buttons by status */}
       <div className="flex gap-2 flex-wrap">
+        {inspection.status === 'scheduled' && (
+          inspection.assigned_to === user?.id || activeRole === 'admin' || activeRole === 'supervisor'
+        ) && (
+          <Button size="sm" onClick={() => setShowStart(true)}>
+            <Play className="w-4 h-4 mr-1" /> Start Inspection
+          </Button>
+        )}
         {inspection.status === 'draft' && (
           <Button size="sm" onClick={() => navigate(`/inspections/${id}/inspect`)}>
             <ArrowRight className="w-4 h-4 mr-1" /> Continue Inspection

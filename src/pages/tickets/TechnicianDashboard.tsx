@@ -13,19 +13,22 @@ const TechnicianDashboard = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<any[]>([]);
+  const [inspections, setInspections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [tRes, pRes] = await Promise.all([
+    const [tRes, iRes, pRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('technician_id', user.id).order('appointment_time', { ascending: true }),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('inspections').select('*').eq('assigned_to', user.id).eq('is_deleted', false).in('status', ['scheduled', 'draft']).order('visit_date', { ascending: true }),
+      supabase.from('properties').select('id, name, address, full_address'),
     ]);
     setTickets(tRes.data ?? []);
+    setInspections(iRes.data ?? []);
     const pMap: Record<string, { name: string; address: string }> = {};
-    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
+    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.full_address ?? p.address ?? '' }; });
     setProperties(pMap);
     setLoading(false);
   }, [user]);
@@ -141,6 +144,36 @@ const TechnicianDashboard = () => {
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-bold text-foreground">My Work</h1>
+
+      {inspections.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Inspections</h2>
+          {inspections.map(ins => {
+            const prop = ins.property_id ? properties[ins.property_id] : null;
+            return (
+              <button
+                key={ins.id}
+                onClick={() => navigate(`/inspections/${ins.id}`)}
+                className="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FileSearch className="w-4 h-4 text-primary" />
+                      <span className="font-mono text-sm font-bold text-foreground">{ins.ins_number ?? 'No INS#'}</span>
+                      <Badge className="text-[10px]">{ins.status}</Badge>
+                    </div>
+                    {prop && <p className="text-sm text-foreground mt-1 truncate font-medium">{prop.address || prop.name}</p>}
+                  </div>
+                  {ins.visit_date && (
+                    <span className="text-xs text-primary whitespace-nowrap">{ins.visit_date}</span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">

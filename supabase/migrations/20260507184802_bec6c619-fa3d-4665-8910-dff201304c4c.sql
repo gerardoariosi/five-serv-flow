@@ -1,0 +1,1 @@
+ALTER TABLE public.inspections ADD COLUMN IF NOT EXISTS tech_initial_note text;

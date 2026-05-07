@@ -15,6 +15,8 @@ import { ArrowLeft, Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
 import { pushToUsers } from '@/lib/pushNotifications';
+import { sendInspectionAssignedEmail } from '@/lib/inspectionAssignmentEmail';
+import { formatAddress } from '@/lib/propertyAddress';
 
 const CreateInspection = () => {
   const navigate = useNavigate();
@@ -168,7 +170,7 @@ const CreateInspection = () => {
 
       if (error) throw error;
 
-      // Push notification to assignee (in-app notification handled by DB trigger)
+      // Push + email notifications to assignee (in-app handled by DB trigger)
       if (mode === 'schedule' && assignedTo) {
         try {
           await pushToUsers(
@@ -180,6 +182,17 @@ const CreateInspection = () => {
         } catch (e) {
           console.error('Failed to send push for inspection assignment', e);
         }
+        const propAddr = selectedProperty
+          ? (selectedProperty.full_address || formatAddress(selectedProperty) || selectedProperty.address || selectedProperty.name || '')
+          : '';
+        await sendInspectionAssignedEmail({
+          inspectionId: inserted!.id,
+          insNumber: insNumber as string,
+          assignedTo,
+          visitDate,
+          visitTime: scheduleTime,
+          propertyAddress: propAddr,
+        });
       }
 
       if (mode === 'schedule') {
