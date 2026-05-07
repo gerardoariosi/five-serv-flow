@@ -31,8 +31,9 @@ const InspectionDetail = () => {
   const [photos, setPhotos] = useState<any[]>([]);
   const [linkedTickets, setLinkedTickets] = useState<any[]>([]);
   const [clients, setClients] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<Record<string, string>>({});
+  const [properties, setProperties] = useState<Record<string, any>>({});
   const [users, setUsers] = useState<Record<string, string>>({});
+  const [usersList, setUsersList] = useState<{ id: string; full_name: string }[]>([]);
 
   // Convert modal
   const [showConvert, setShowConvert] = useState(false);
@@ -47,6 +48,15 @@ const InspectionDetail = () => {
   const [emailType, setEmailType] = useState<'fiveserv' | 'pm'>('fiveserv');
   const [emailTo, setEmailTo] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Start (config-confirm) modal
+  const [showStart, setShowStart] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startConfig, setStartConfig] = useState({
+    bedrooms: 1, bathrooms: 1, living_rooms: 1,
+    has_garage: false, has_laundry: false, has_exterior: false,
+    tech_initial_note: '',
+  });
 
   const fetchData = useCallback(async () => {
     if (!id) return;
