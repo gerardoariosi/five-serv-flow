@@ -46,14 +46,29 @@ const CreateInspection = () => {
 
   useEffect(() => {
     const fetchOptions = async () => {
-      const [cRes, pRes, iRes] = await Promise.all([
+      const [cRes, pRes, iRes, uRes, urRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
-        supabase.from('properties').select('id, name, address, current_pm_id').eq('status', 'active'),
-        supabase.from('inspections').select('property_id').not('status', 'in', '("closed_internally","complete","converted")'),
+        supabase.from('properties').select('id, name, address, full_address, current_pm_id').eq('status', 'active').eq('is_deleted', false),
+        supabase.from('inspections').select('property_id').eq('is_deleted', false).not('status', 'in', '("closed_internally","complete","converted")'),
+        supabase.rpc('get_user_directory'),
+        supabase.from('user_roles').select('user_id, role'),
       ]);
       setClients(cRes.data ?? []);
       setProperties(pRes.data ?? []);
       setActiveInspectionPropertyIds((iRes.data ?? []).map((i: any) => i.property_id).filter(Boolean));
+
+      const rolesMap: Record<string, string[]> = {};
+      ((urRes.data ?? []) as any[]).forEach((r) => {
+        if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+        rolesMap[r.user_id].push(r.role);
+      });
+      const formatRole = (r: string) => r.charAt(0).toUpperCase() + r.slice(1);
+      const userList = ((uRes.data ?? []) as any[]).map((u) => {
+        const roles = rolesMap[u.id] ?? [];
+        const roleLabel = roles.length ? roles.map(formatRole).join(', ') : 'User';
+        return { id: u.id, full_name: u.full_name, display_name: `${u.full_name || 'Unnamed'} (${roleLabel})` };
+      }).sort((a, b) => a.display_name.localeCompare(b.display_name));
+      setUsers(userList);
     };
     fetchOptions();
   }, []);
