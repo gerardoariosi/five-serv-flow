@@ -77,7 +77,7 @@ const InspectionDetail = () => {
       }),
       supabase.from('inspection_tickets').select('*, tickets(*)').eq('inspection_id', id),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name'),
+      supabase.from('properties').select('id, name, address, full_address, street_address, city, state, zip_code'),
       supabase.rpc('get_user_directory'),
     ]);
     setInspection(insRes.data);
@@ -88,12 +88,30 @@ const InspectionDetail = () => {
     const cMap: Record<string, string> = {};
     (cRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? ''; });
     setClients(cMap);
-    const pMap: Record<string, string> = {};
-    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = p.name ?? ''; });
+    const pMap: Record<string, any> = {};
+    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = p; });
     setProperties(pMap);
     const uMap: Record<string, string> = {};
-    (uRes.data ?? []).forEach((u: any) => { uMap[u.id] = u.full_name ?? ''; });
+    const uList: { id: string; full_name: string }[] = [];
+    (uRes.data ?? []).forEach((u: any) => {
+      uMap[u.id] = u.full_name ?? '';
+      uList.push({ id: u.id, full_name: u.full_name ?? '' });
+    });
     setUsers(uMap);
+    setUsersList(uList.sort((a, b) => a.full_name.localeCompare(b.full_name)));
+
+    // Pre-fill the Start config dialog from current inspection values
+    if (insRes.data) {
+      setStartConfig({
+        bedrooms: insRes.data.bedrooms ?? 1,
+        bathrooms: insRes.data.bathrooms ?? 1,
+        living_rooms: insRes.data.living_rooms ?? 1,
+        has_garage: !!insRes.data.has_garage,
+        has_laundry: !!insRes.data.has_laundry,
+        has_exterior: !!insRes.data.has_exterior,
+        tech_initial_note: (insRes.data as any).tech_initial_note ?? '',
+      });
+    }
 
     setLoading(false);
   }, [id]);
