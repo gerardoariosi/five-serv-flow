@@ -12,9 +12,11 @@ export interface TemplateEntry {
 import { template as pmInspectionLink } from './pm-inspection-link.tsx'
 import { template as pmResponseReceived } from './pm-response-received.tsx'
 import { template as inspectionReport } from './inspection-report.tsx'
+import { template as inspectionAssigned } from './inspection-assigned.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'pm-inspection-link': pmInspectionLink,
   'pm-response-received': pmResponseReceived,
   'inspection-report': inspectionReport,
+  'inspection-assigned': inspectionAssigned,
 }
