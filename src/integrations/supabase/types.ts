@@ -527,6 +527,7 @@ export type Database = {
           pm_total_selected: number | null
           property_id: string | null
           status: string | null
+          tech_initial_note: string | null
           visit_date: string | null
         }
         Insert: {
@@ -554,6 +555,7 @@ export type Database = {
           pm_total_selected?: number | null
           property_id?: string | null
           status?: string | null
+          tech_initial_note?: string | null
           visit_date?: string | null
         }
         Update: {
@@ -581,6 +583,7 @@ export type Database = {
           pm_total_selected?: number | null
           property_id?: string | null
           status?: string | null
+          tech_initial_note?: string | null
           visit_date?: string | null
         }
         Relationships: [
