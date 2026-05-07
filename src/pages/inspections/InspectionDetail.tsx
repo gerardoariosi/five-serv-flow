@@ -578,6 +578,13 @@ const InspectionDetail = () => {
 
       {/* Action buttons by status */}
       <div className="flex gap-2 flex-wrap">
+        {inspection.status === 'scheduled' && (
+          inspection.assigned_to === user?.id || activeRole === 'admin' || activeRole === 'supervisor'
+        ) && (
+          <Button size="sm" onClick={() => setShowStart(true)}>
+            <Play className="w-4 h-4 mr-1" /> Start Inspection
+          </Button>
+        )}
         {inspection.status === 'draft' && (
           <Button size="sm" onClick={() => navigate(`/inspections/${id}/inspect`)}>
             <ArrowRight className="w-4 h-4 mr-1" /> Continue Inspection
