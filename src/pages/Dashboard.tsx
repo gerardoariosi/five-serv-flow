@@ -61,7 +61,7 @@ const QUICK_FILTERS = [
 type QuickFilter = typeof QUICK_FILTERS[number]['key'];
 
 const Dashboard = () => {
-  const { activeRole } = useAuthStore();
+  const { activeRole, user } = useAuthStore();
   const navigate = useNavigate();
   const isTechnician = activeRole === 'technician';
   const searchRef = useRef<HTMLInputElement>(null);
