@@ -163,9 +163,25 @@ const CreateInspection = () => {
         has_laundry: form.has_laundry,
         has_exterior: form.has_exterior,
         status: mode === 'schedule' ? 'scheduled' : 'draft',
-      }).select('id').single();
+        assigned_to: mode === 'schedule' ? (assignedTo || null) : null,
+      } as any).select('id').single();
 
       if (error) throw error;
+
+      // Push notification to assignee (in-app notification handled by DB trigger)
+      if (mode === 'schedule' && assignedTo) {
+        try {
+          await pushToUsers(
+            [assignedTo],
+            'New Inspection Assigned',
+            `${insNumber} on ${visitDate ?? 'TBD'}`,
+            `/inspections/${inserted!.id}`
+          );
+        } catch (e) {
+          console.error('Failed to send push for inspection assignment', e);
+        }
+      }
+
       if (mode === 'schedule') {
         toast.success('Inspection scheduled');
         navigate('/inspections');
