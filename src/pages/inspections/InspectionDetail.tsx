@@ -512,7 +512,7 @@ const InspectionDetail = () => {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-muted-foreground">Property</span>
-            <p className="text-foreground font-medium">{inspection.property_id ? properties[inspection.property_id] : '—'}</p>
+            <p className="text-foreground font-medium">{propertyLabel(inspection.property_id) || '—'}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Client / PM</span>
@@ -530,6 +530,23 @@ const InspectionDetail = () => {
               {inspection.has_laundry ? ' · Laundry' : ''}
               {inspection.has_exterior ? ' · Exterior' : ''}
             </p>
+          </div>
+          <div className="col-span-2">
+            <span className="text-muted-foreground">Assigned to</span>
+            {(activeRole === 'admin' || activeRole === 'supervisor') ? (
+              <Select value={inspection.assigned_to ?? ''} onValueChange={handleReassign}>
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  {usersList.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-foreground font-medium">{inspection.assigned_to ? (users[inspection.assigned_to] || '—') : '—'}</p>
+            )}
           </div>
         </div>
       </div>
