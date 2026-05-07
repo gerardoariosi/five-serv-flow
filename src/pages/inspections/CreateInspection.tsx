@@ -29,6 +29,8 @@ const CreateInspection = () => {
   const [mode, setMode] = useState<'now' | 'schedule'>('now');
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [assignedTo, setAssignedTo] = useState<string>('');
+  const [users, setUsers] = useState<{ id: string; full_name: string; display_name: string }[]>([]);
 
   const [form, setForm] = useState({
     client_id: '',
