@@ -129,6 +129,7 @@ const Dashboard = () => {
     const channel = supabase
       .channel('tickets-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => fetchData())
       .subscribe();
     const handleVisibility = () => { if (document.visibilityState === 'visible') fetchData(); };
     document.addEventListener('visibilitychange', handleVisibility);
