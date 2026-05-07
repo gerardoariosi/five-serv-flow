@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus } from 'lucide-react';
+import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus, CalendarDays, ClipboardCheck, ClipboardList } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { inspectionStatusColors, inspectionStatusLabels } from '@/lib/inspectionColors';
 
 interface TicketRow {
   id: string;
@@ -30,6 +32,16 @@ interface TicketRow {
   unit: string | null;
   created_at: string | null;
   internal_note: string | null;
+}
+
+interface InspectionRow {
+  id: string;
+  ins_number: string | null;
+  status: string | null;
+  property_id: string | null;
+  assigned_to: string | null;
+  visit_date: string | null;
+  created_at: string | null;
 }
 
 const workTypeBorder: Record<string, string> = {
@@ -51,12 +63,13 @@ const QUICK_FILTERS = [
 type QuickFilter = typeof QUICK_FILTERS[number]['key'];
 
 const Dashboard = () => {
-  const { activeRole } = useAuthStore();
+  const { activeRole, user } = useAuthStore();
   const navigate = useNavigate();
   const isTechnician = activeRole === 'technician';
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [inspections, setInspections] = useState<InspectionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
@@ -80,8 +93,9 @@ const Dashboard = () => {
   const [qcDescription, setQcDescription] = useState('');
 
   const fetchData = useCallback(async () => {
-    const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
+    const [ticketRes, inspRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
+      supabase.from('inspections').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
@@ -89,6 +103,7 @@ const Dashboard = () => {
       supabase.from('user_roles').select('user_id, role'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
+    setInspections((inspRes.data ?? []) as InspectionRow[]);
     const cMap: Record<string, string> = {};
     (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? c.contact_name ?? ''; });
     setClients(cMap);
@@ -116,6 +131,7 @@ const Dashboard = () => {
     const channel = supabase
       .channel('tickets-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => fetchData())
       .subscribe();
     const handleVisibility = () => { if (document.visibilityState === 'visible') fetchData(); };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -181,17 +197,27 @@ const Dashboard = () => {
       paused: tickets.filter(t => t.status === 'paused').length,
       emergencies: active.filter(t => t.work_type === 'emergency').length,
       pmNotResponding: tickets.filter(t => t.status === 'ready_for_review').length,
+      insScheduled: inspections.filter(i => i.status === 'scheduled').length,
+      insPending: inspections.filter(i => i.status === 'sent').length,
+      insResponded: inspections.filter(i => i.status === 'responded').length,
     };
-  }, [tickets]);
+  }, [tickets, inspections]);
 
   const metricCards = [
-    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10' },
-    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40' },
-    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10' },
-    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10' },
-    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10' },
-    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10' },
+    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10',        border: 'border-t-primary' },
+    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40',          border: 'border-t-border' },
+    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10',     border: 'border-t-orange-400' },
+    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10',     border: 'border-t-yellow-400' },
+    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10',    border: 'border-t-destructive' },
+    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
+    { label: 'Scheduled',   value: metrics.insScheduled,    icon: CalendarDays,   color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
+    { label: 'Pending PM',  value: metrics.insPending,      icon: Clock,          color: 'text-blue-400',         bg: 'bg-blue-400/10',       border: 'border-t-blue-400' },
+    { label: 'Responded',   value: metrics.insResponded,    icon: ClipboardCheck, color: 'text-green-400',        bg: 'bg-green-400/10',      border: 'border-t-green-400' },
   ];
+
+  const hours = new Date().getHours();
+  const timeOfDay = hours < 12 ? 'morning' : hours < 18 ? 'afternoon' : 'evening';
+  const firstName = (user?.full_name ?? '').split(' ')[0] || 'there';
 
   if (isTechnician) return <Navigate to="/my-work" replace />;
 
@@ -247,15 +273,23 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Greeting */}
+      <div className="mb-4">
+        <h1 className="text-lg font-bold text-foreground">Good {timeOfDay}, {firstName}</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </div>
+
       {/* Metric cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {metricCards.map((m) => (
-          <div key={m.label} className="fs-card p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
-              <m.icon className={`w-4 h-4 ${m.color}`} />
+          <div key={m.label} className={`fs-card p-3 flex items-center gap-3 border-t-2 ${m.border}`}>
+            <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
+              <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
             </div>
             <div className="min-w-0 flex flex-col">
-              <span className={`text-3xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
+              <span className={`text-xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
               <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5 truncate">{m.label}</span>
             </div>
           </div>
@@ -366,6 +400,56 @@ const Dashboard = () => {
               </button>
             );
           })
+        )}
+      </div>
+
+      {/* Inspections section */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            Inspections <span className="text-muted-foreground font-normal">({inspections.length})</span>
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/inspections')}>View all</Button>
+        </div>
+        {inspections.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title="No inspections yet"
+            description="Scheduled inspections will appear here."
+          />
+        ) : (
+          <div className="space-y-2">
+            {inspections.slice(0, 10).map((ins) => {
+              const property = ins.property_id ? properties[ins.property_id] : null;
+              return (
+                <button
+                  key={ins.id}
+                  onClick={() => navigate(`/inspections/${ins.id}`)}
+                  className="w-full text-left fs-card border-l-[3px] border-l-amber-400 py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-foreground tracking-tight">{ins.ins_number ?? 'No INS#'}</span>
+                    <Badge className={`text-[10px] ${inspectionStatusColors[ins.status ?? 'draft']}`}>
+                      {inspectionStatusLabels[ins.status ?? 'draft']}
+                    </Badge>
+                  </div>
+                  {property && (
+                    <p className="text-sm font-semibold text-foreground truncate">{property.name}</p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {ins.assigned_to ? users[ins.assigned_to] || 'Assigned' : <span className="text-destructive font-medium">Unassigned</span>}
+                    </span>
+                    {ins.visit_date && (
+                      <span>
+                        {new Date(ins.visit_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
       </div>
 
