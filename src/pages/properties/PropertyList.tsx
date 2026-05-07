@@ -14,6 +14,7 @@ import Spinner from '@/components/ui/Spinner';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
+import { formatAddress } from '@/lib/propertyAddress';
 
 const PropertyList = () => {
   const navigate = useNavigate();
