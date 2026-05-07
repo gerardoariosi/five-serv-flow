@@ -98,7 +98,7 @@ const CreateInspection = () => {
   const handleSelectProperty = (propId: string) => {
     setForm(p => ({ ...p, property_id: propId }));
     const prop = properties.find((p: any) => p.id === propId);
-    setPropertySearch(prop ? (prop.address || prop.name || '') : '');
+    setPropertySearch(prop ? (prop.full_address || prop.address || prop.name || '') : '');
     setShowPropertyDropdown(false);
   };
 
