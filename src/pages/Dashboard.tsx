@@ -403,6 +403,56 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Inspections section */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            Inspections <span className="text-muted-foreground font-normal">({inspections.length})</span>
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/inspections')}>View all</Button>
+        </div>
+        {inspections.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title="No inspections yet"
+            description="Scheduled inspections will appear here."
+          />
+        ) : (
+          <div className="space-y-2">
+            {inspections.slice(0, 10).map((ins) => {
+              const property = ins.property_id ? properties[ins.property_id] : null;
+              return (
+                <button
+                  key={ins.id}
+                  onClick={() => navigate(`/inspections/${ins.id}`)}
+                  className="w-full text-left fs-card border-l-[3px] border-l-amber-400 py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-foreground tracking-tight">{ins.ins_number ?? 'No INS#'}</span>
+                    <Badge className={`text-[10px] ${inspectionStatusColors[ins.status ?? 'draft']}`}>
+                      {inspectionStatusLabels[ins.status ?? 'draft']}
+                    </Badge>
+                  </div>
+                  {property && (
+                    <p className="text-sm font-semibold text-foreground truncate">{property.name}</p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {ins.assigned_to ? users[ins.assigned_to] || 'Assigned' : <span className="text-destructive font-medium">Unassigned</span>}
+                    </span>
+                    {ins.visit_date && (
+                      <span>
+                        {new Date(ins.visit_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Floating quick-create FAB */}
       {canQuickCreate && (
         <button
