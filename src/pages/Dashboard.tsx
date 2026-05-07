@@ -91,8 +91,9 @@ const Dashboard = () => {
   const [qcDescription, setQcDescription] = useState('');
 
   const fetchData = useCallback(async () => {
-    const [ticketRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
+    const [ticketRes, inspRes, clientRes, propRes, zoneRes, userRes, techRolesRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
+      supabase.from('inspections').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
       supabase.from('properties').select('id, name, address, current_pm_id'),
       supabase.from('zones').select('id, name'),
@@ -100,6 +101,7 @@ const Dashboard = () => {
       supabase.from('user_roles').select('user_id, role'),
     ]);
     setTickets((ticketRes.data ?? []) as TicketRow[]);
+    setInspections((inspRes.data ?? []) as InspectionRow[]);
     const cMap: Record<string, string> = {};
     (clientRes.data ?? []).forEach((c: any) => { cMap[c.id] = c.company_name ?? c.contact_name ?? ''; });
     setClients(cMap);
