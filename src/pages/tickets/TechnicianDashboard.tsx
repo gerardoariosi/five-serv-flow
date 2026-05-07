@@ -13,19 +13,22 @@ const TechnicianDashboard = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<any[]>([]);
+  const [inspections, setInspections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Record<string, { name: string; address: string }>>({});
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [tRes, pRes] = await Promise.all([
+    const [tRes, iRes, pRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('technician_id', user.id).order('appointment_time', { ascending: true }),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('inspections').select('*').eq('assigned_to', user.id).eq('is_deleted', false).in('status', ['scheduled', 'draft']).order('visit_date', { ascending: true }),
+      supabase.from('properties').select('id, name, address, full_address'),
     ]);
     setTickets(tRes.data ?? []);
+    setInspections(iRes.data ?? []);
     const pMap: Record<string, { name: string; address: string }> = {};
-    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.address ?? '' }; });
+    (pRes.data ?? []).forEach((p: any) => { pMap[p.id] = { name: p.name ?? '', address: p.full_address ?? p.address ?? '' }; });
     setProperties(pMap);
     setLoading(false);
   }, [user]);
