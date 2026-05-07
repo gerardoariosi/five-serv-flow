@@ -368,6 +368,46 @@ const InspectionDetail = () => {
 
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-5">
+      {/* Start (config-confirm) modal */}
+      <Dialog open={showStart} onOpenChange={setShowStart}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Confirm Property Configuration</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Verify the unit details before starting.</p>
+          <div className="space-y-4 py-2">
+            {(['bedrooms', 'bathrooms', 'living_rooms'] as const).map(field => (
+              <div key={field} className="flex items-center justify-between">
+                <Label className="capitalize">{field.replace('_', ' ')}</Label>
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStartConfig(c => ({ ...c, [field]: Math.max(0, c[field] - 1) }))}><Minus className="w-4 h-4" /></Button>
+                  <span className="text-foreground font-bold w-6 text-center">{startConfig[field]}</span>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStartConfig(c => ({ ...c, [field]: c[field] + 1 }))}><Plus className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            ))}
+            {([
+              { key: 'has_garage' as const, label: 'Garage' },
+              { key: 'has_laundry' as const, label: 'Laundry' },
+              { key: 'has_exterior' as const, label: 'Exterior / Patio' },
+            ]).map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <Label>{label}</Label>
+                <Switch checked={startConfig[key]} onCheckedChange={v => setStartConfig(c => ({ ...c, [key]: v }))} />
+              </div>
+            ))}
+            <div>
+              <Label>Initial Note (optional)</Label>
+              <Textarea value={startConfig.tech_initial_note} onChange={e => setStartConfig(c => ({ ...c, tech_initial_note: e.target.value }))} placeholder="Anything to record before you start?" rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStart(false)} disabled={starting}>Cancel</Button>
+            <Button onClick={handleStartInspection} disabled={starting}>
+              {starting ? <Spinner size="sm" /> : <><Play className="w-4 h-4 mr-1" /> Start</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirm */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
