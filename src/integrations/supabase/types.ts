@@ -504,6 +504,7 @@ export type Database = {
       inspections: {
         Row: {
           all_good: boolean | null
+          assigned_to: string | null
           bathrooms: number | null
           bedrooms: number | null
           client_id: string | null
@@ -530,6 +531,7 @@ export type Database = {
         }
         Insert: {
           all_good?: boolean | null
+          assigned_to?: string | null
           bathrooms?: number | null
           bedrooms?: number | null
           client_id?: string | null
@@ -556,6 +558,7 @@ export type Database = {
         }
         Update: {
           all_good?: boolean | null
+          assigned_to?: string | null
           bathrooms?: number | null
           bedrooms?: number | null
           client_id?: string | null
@@ -651,38 +654,53 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          city: string | null
           current_pm_id: string | null
           deleted_at: string | null
+          full_address: string | null
           id: string
           is_deleted: boolean
           name: string | null
           pm_changed_at: string | null
           previous_pm_id: string | null
+          state: string | null
           status: string | null
+          street_address: string | null
+          zip_code: string | null
           zone_id: string | null
         }
         Insert: {
           address?: string | null
+          city?: string | null
           current_pm_id?: string | null
           deleted_at?: string | null
+          full_address?: string | null
           id?: string
           is_deleted?: boolean
           name?: string | null
           pm_changed_at?: string | null
           previous_pm_id?: string | null
+          state?: string | null
           status?: string | null
+          street_address?: string | null
+          zip_code?: string | null
           zone_id?: string | null
         }
         Update: {
           address?: string | null
+          city?: string | null
           current_pm_id?: string | null
           deleted_at?: string | null
+          full_address?: string | null
           id?: string
           is_deleted?: boolean
           name?: string | null
           pm_changed_at?: string | null
           previous_pm_id?: string | null
+          state?: string | null
           status?: string | null
+          street_address?: string | null
+          zip_code?: string | null
           zone_id?: string | null
         }
         Relationships: [

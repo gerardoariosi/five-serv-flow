@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
+import { pushToUsers } from '@/lib/pushNotifications';
 
 const CreateInspection = () => {
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ const CreateInspection = () => {
   const [mode, setMode] = useState<'now' | 'schedule'>('now');
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [assignedTo, setAssignedTo] = useState<string>('');
+  const [users, setUsers] = useState<{ id: string; full_name: string; display_name: string }[]>([]);
 
   const [form, setForm] = useState({
     client_id: '',
@@ -43,14 +46,29 @@ const CreateInspection = () => {
 
   useEffect(() => {
     const fetchOptions = async () => {
-      const [cRes, pRes, iRes] = await Promise.all([
+      const [cRes, pRes, iRes, uRes, urRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
-        supabase.from('properties').select('id, name, address, current_pm_id').eq('status', 'active'),
-        supabase.from('inspections').select('property_id').not('status', 'in', '("closed_internally","complete","converted")'),
+        supabase.from('properties').select('id, name, address, full_address, current_pm_id').eq('status', 'active').eq('is_deleted', false),
+        supabase.from('inspections').select('property_id').eq('is_deleted', false).not('status', 'in', '("closed_internally","complete","converted")'),
+        supabase.rpc('get_user_directory'),
+        supabase.from('user_roles').select('user_id, role'),
       ]);
       setClients(cRes.data ?? []);
       setProperties(pRes.data ?? []);
       setActiveInspectionPropertyIds((iRes.data ?? []).map((i: any) => i.property_id).filter(Boolean));
+
+      const rolesMap: Record<string, string[]> = {};
+      ((urRes.data ?? []) as any[]).forEach((r) => {
+        if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+        rolesMap[r.user_id].push(r.role);
+      });
+      const formatRole = (r: string) => r.charAt(0).toUpperCase() + r.slice(1);
+      const userList = ((uRes.data ?? []) as any[]).map((u) => {
+        const roles = rolesMap[u.id] ?? [];
+        const roleLabel = roles.length ? roles.map(formatRole).join(', ') : 'User';
+        return { id: u.id, full_name: u.full_name, display_name: `${u.full_name || 'Unnamed'} (${roleLabel})` };
+      }).sort((a, b) => a.display_name.localeCompare(b.display_name));
+      setUsers(userList);
     };
     fetchOptions();
   }, []);
@@ -63,7 +81,7 @@ const CreateInspection = () => {
     if (propertySearch.trim()) {
       const q = propertySearch.toLowerCase();
       result = result.filter((p: any) =>
-        p.name?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)
+        p.name?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q) || p.full_address?.toLowerCase().includes(q)
       );
     }
     return result;
@@ -80,7 +98,7 @@ const CreateInspection = () => {
   const handleSelectProperty = (propId: string) => {
     setForm(p => ({ ...p, property_id: propId }));
     const prop = properties.find((p: any) => p.id === propId);
-    setPropertySearch(prop ? (prop.address || prop.name || '') : '');
+    setPropertySearch(prop ? (prop.full_address || prop.address || prop.name || '') : '');
     setShowPropertyDropdown(false);
   };
 
@@ -145,9 +163,25 @@ const CreateInspection = () => {
         has_laundry: form.has_laundry,
         has_exterior: form.has_exterior,
         status: mode === 'schedule' ? 'scheduled' : 'draft',
-      }).select('id').single();
+        assigned_to: mode === 'schedule' ? (assignedTo || null) : null,
+      } as any).select('id').single();
 
       if (error) throw error;
+
+      // Push notification to assignee (in-app notification handled by DB trigger)
+      if (mode === 'schedule' && assignedTo) {
+        try {
+          await pushToUsers(
+            [assignedTo],
+            'New Inspection Assigned',
+            `${insNumber} on ${visitDate ?? 'TBD'}`,
+            `/inspections/${inserted!.id}`
+          );
+        } catch (e) {
+          console.error('Failed to send push for inspection assignment', e);
+        }
+      }
+
       if (mode === 'schedule') {
         toast.success('Inspection scheduled');
         navigate('/inspections');
@@ -229,7 +263,7 @@ const CreateInspection = () => {
                       disabled={hasActive}
                       className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${hasActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <span className="font-medium text-foreground">{p.address || p.name}</span>
+                      <span className="font-medium text-foreground">{p.full_address || p.address || p.name}</span>
                       {hasActive && <span className="text-destructive ml-2 text-xs">(active inspection)</span>}
                     </button>
                   );
@@ -314,6 +348,15 @@ const CreateInspection = () => {
               <div>
                 <Label className="text-xs">Time</Label>
                 <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs">Assign to (optional)</Label>
+                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                  <SelectContent>
+                    {users.map(u => <SelectItem key={u.id} value={u.id}>{u.display_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}

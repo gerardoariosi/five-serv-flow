@@ -14,6 +14,7 @@ import Spinner from '@/components/ui/Spinner';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
+import { formatAddress } from '@/lib/propertyAddress';
 
 const PropertyList = () => {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ const PropertyList = () => {
     queryKey: ['properties', search, zoneFilter, statusFilter],
     queryFn: async () => {
       let query = supabase.from('properties').select('*, zones(name), clients!properties_current_pm_id_fkey(company_name)').eq('is_deleted', false);
-      if (search) query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%`);
+      if (search) query = query.or(`name.ilike.%${search}%,full_address.ilike.%${search}%,street_address.ilike.%${search}%,city.ilike.%${search}%,zip_code.ilike.%${search}%`);
       if (zoneFilter !== 'all') query = query.eq('zone_id', zoneFilter);
       query = query.eq('status', statusFilter).order('name');
 
@@ -70,7 +71,7 @@ const PropertyList = () => {
 
   const toggleSelect = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => setSelected(p => p.size === (properties?.length ?? 0) ? new Set() : new Set((properties ?? []).map(x => x.id)));
-  const selectedNames = useMemo(() => (properties ?? []).filter(p => selected.has(p.id)).map(p => p.name ?? p.address ?? ''), [properties, selected]);
+  const selectedNames = useMemo(() => (properties ?? []).filter(p => selected.has(p.id)).map(p => formatAddress(p as any) || p.name || ''), [properties, selected]);
 
   return (
     <div className="p-4 max-w-4xl mx-auto pb-28">
@@ -135,14 +136,14 @@ const PropertyList = () => {
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/properties/${p.id}`)}>
                 <div className="flex items-center gap-2 mb-1">
                   <Building2 className="w-4 h-4 text-primary" />
-                  <span className="font-bold text-foreground">{p.name || p.address}</span>
+                  <span className="font-bold text-foreground">{formatAddress(p as any) || p.name || 'Unnamed'}</span>
                 </div>
                 <div className="flex flex-col gap-1 text-sm text-muted-foreground ml-6">
                   <span>{(p as any).zones?.name ?? 'No zone'}</span>
                   <span>{(p as any).clients?.company_name ?? 'No PM'}</span>
-                  {p.address && (
-                    <a href={`https://maps.google.com/?q=${encodeURIComponent(p.address)}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary">
-                      <MapPin className="w-3 h-3" />{p.address}
+                  {formatAddress(p as any) && (
+                    <a href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress(p as any))}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary">
+                      <MapPin className="w-3 h-3" />{formatAddress(p as any)}
                     </a>
                   )}
                 </div>
@@ -156,7 +157,7 @@ const PropertyList = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: p.name ?? p.address ?? '' })}>
+                    <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
                       <Trash2 className="w-4 h-4 mr-2" /> Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
