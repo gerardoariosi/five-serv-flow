@@ -135,6 +135,62 @@ const InspectionDetail = () => {
     fetchData();
   };
 
+  const propertyLabel = useCallback((pid?: string | null) => {
+    if (!pid) return '';
+    const p = properties[pid];
+    if (!p) return '';
+    return p.full_address || formatAddress(p) || p.address || p.name || '';
+  }, [properties]);
+
+  const handleStartInspection = async () => {
+    setStarting(true);
+    try {
+      await supabase.from('inspections').update({
+        status: 'draft',
+        bedrooms: startConfig.bedrooms,
+        bathrooms: startConfig.bathrooms,
+        living_rooms: startConfig.living_rooms,
+        has_garage: startConfig.has_garage,
+        has_laundry: startConfig.has_laundry,
+        has_exterior: startConfig.has_exterior,
+        tech_initial_note: startConfig.tech_initial_note || null,
+      } as any).eq('id', id);
+      setShowStart(false);
+      navigate(`/inspections/${id}/inspect`);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to start');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleReassign = async (newAssignee: string) => {
+    if (!newAssignee || newAssignee === inspection?.assigned_to) return;
+    try {
+      const { error } = await supabase.from('inspections').update({ assigned_to: newAssignee }).eq('id', id);
+      if (error) throw error;
+      toast.success('Inspection reassigned');
+      try {
+        await pushToUsers(
+          [newAssignee],
+          'New Inspection Assigned',
+          `${inspection?.ins_number ?? 'Inspection'}${inspection?.visit_date ? ` on ${inspection.visit_date}` : ''}`,
+          `/inspections/${id}`
+        );
+      } catch (e) { console.error('push failed', e); }
+      await sendInspectionAssignedEmail({
+        inspectionId: id!,
+        insNumber: inspection?.ins_number ?? null,
+        assignedTo: newAssignee,
+        visitDate: inspection?.visit_date ?? null,
+        propertyAddress: propertyLabel(inspection?.property_id),
+      });
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Reassign failed');
+    }
+  };
+
   const handleConvertToTickets = async () => {
     if (selectedForTicket.size === 0) { toast.error('Select at least one item'); return; }
     setConverting(true);
