@@ -81,7 +81,7 @@ const CreateInspection = () => {
     if (propertySearch.trim()) {
       const q = propertySearch.toLowerCase();
       result = result.filter((p: any) =>
-        p.name?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q)
+        p.name?.toLowerCase().includes(q) || p.address?.toLowerCase().includes(q) || p.full_address?.toLowerCase().includes(q)
       );
     }
     return result;
