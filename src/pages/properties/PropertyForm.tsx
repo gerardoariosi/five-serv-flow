@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
+import { US_STATES, formatAddress } from '@/lib/propertyAddress';
 
 const PropertyForm = () => {
   const navigate = useNavigate();
@@ -19,7 +20,14 @@ const PropertyForm = () => {
   const isEdit = !!id;
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({ address: '', zone_id: '', current_pm_id: '' });
+  const [form, setForm] = useState({
+    street_address: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    zone_id: '',
+    current_pm_id: '',
+  });
   const [addressError, setAddressError] = useState('');
   const [newZoneDialog, setNewZoneDialog] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
@@ -53,31 +61,52 @@ const PropertyForm = () => {
 
   useEffect(() => {
     if (existing) {
-      setForm({ address: existing.address ?? existing.name ?? '', zone_id: existing.zone_id ?? '', current_pm_id: existing.current_pm_id ?? '' });
+      setForm({
+        street_address: (existing as any).street_address ?? existing.address ?? existing.name ?? '',
+        city: (existing as any).city ?? '',
+        state: (existing as any).state ?? '',
+        zip_code: (existing as any).zip_code ?? '',
+        zone_id: existing.zone_id ?? '',
+        current_pm_id: existing.current_pm_id ?? '',
+      });
     } else {
       const clientId = searchParams.get('client_id');
       if (clientId) setForm(f => ({ ...f, current_pm_id: clientId }));
     }
   }, [existing, searchParams]);
 
-  // Address uniqueness check
+  // Uniqueness check on street_address + zip_code
   useEffect(() => {
-    if (!form.address) { setAddressError(''); return; }
+    if (!form.street_address) { setAddressError(''); return; }
     const t = setTimeout(async () => {
-      let query = supabase.from('properties').select('id').eq('address', form.address);
+      let query = supabase
+        .from('properties')
+        .select('id')
+        .eq('is_deleted', false)
+        .ilike('street_address', form.street_address);
+      if (form.zip_code) query = query.eq('zip_code', form.zip_code);
       if (isEdit) query = query.neq('id', id!);
       const { data } = await query.limit(1);
       setAddressError(data && data.length > 0 ? 'This address is already registered' : '');
     }, 400);
     return () => clearTimeout(t);
-  }, [form.address, id, isEdit]);
+  }, [form.street_address, form.zip_code, id, isEdit]);
 
   const mutation = useMutation({
     mutationFn: async () => {
-      // Address is the property identifier; mirror it to `name` for backward compatibility
-      const payload = { ...form, name: form.address };
+      const fullAddress = formatAddress(form as any);
+      // Mirror to `name` and `address` for backward compatibility (trigger also syncs `address`)
+      const payload: any = {
+        street_address: form.street_address,
+        city: form.city || null,
+        state: form.state || null,
+        zip_code: form.zip_code || null,
+        zone_id: form.zone_id || null,
+        current_pm_id: form.current_pm_id || null,
+        name: fullAddress || form.street_address,
+        address: fullAddress,
+      };
       if (isEdit && existing?.current_pm_id && form.current_pm_id !== existing.current_pm_id) {
-        // PM reassignment — update property + reassign active tickets
         const { error } = await supabase.from('properties').update({
           ...payload,
           previous_pm_id: existing.current_pm_id,
@@ -128,18 +157,28 @@ const PropertyForm = () => {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
-      const addrIdx = headers.indexOf('address');
+      // Support both legacy single 'address' and split columns
+      const streetIdx = headers.indexOf('street_address') >= 0 ? headers.indexOf('street_address') : headers.indexOf('address');
+      const cityIdx = headers.indexOf('city');
+      const stateIdx = headers.indexOf('state');
+      const zipIdx = headers.indexOf('zip_code') >= 0 ? headers.indexOf('zip_code') : headers.indexOf('zip');
       const pmEmailIdx = headers.indexOf('pm_email');
       const zoneIdx = headers.indexOf('zone');
 
-      if (addrIdx === -1) throw new Error('Missing required column: address');
+      if (streetIdx === -1) throw new Error('Missing required column: street_address (or address)');
 
       const rows = lines.slice(1).map(line => {
         const cols = line.split(',').map(c => c.trim());
-        return { address: cols[addrIdx], pm_email: cols[pmEmailIdx] ?? '', zone: cols[zoneIdx] ?? '' };
+        return {
+          street_address: cols[streetIdx] ?? '',
+          city: cityIdx >= 0 ? cols[cityIdx] ?? '' : '',
+          state: stateIdx >= 0 ? cols[stateIdx] ?? '' : '',
+          zip_code: zipIdx >= 0 ? cols[zipIdx] ?? '' : '',
+          pm_email: pmEmailIdx >= 0 ? cols[pmEmailIdx] ?? '' : '',
+          zone: zoneIdx >= 0 ? cols[zoneIdx] ?? '' : '',
+        };
       });
 
-      // Resolve zones
       const uniqueZones = [...new Set(rows.map(r => r.zone).filter(Boolean))];
       const { data: existingZones } = await supabase.from('zones').select('id, name');
       const zoneMap: Record<string, string> = {};
@@ -152,26 +191,24 @@ const PropertyForm = () => {
         }
       }
 
-      // Resolve PMs
       const uniqueEmails = [...new Set(rows.map(r => r.pm_email).filter(Boolean))];
       const { data: existingClients } = await supabase.from('clients').select('id, email');
       const pmMap: Record<string, string> = {};
       existingClients?.forEach(c => { if (c.email) pmMap[c.email.toLowerCase()] = c.id; });
 
-      // Check for duplicate addresses
-      const addresses = rows.map(r => r.address);
-      const { data: existingProps } = await supabase.from('properties').select('address').in('address', addresses);
-      if (existingProps && existingProps.length > 0) {
-        throw new Error(`Duplicate addresses found: ${existingProps.map(p => p.address).join(', ')}`);
-      }
-
-      // Insert all — address is the identifier; mirror to name for backward compatibility
-      const inserts = rows.map(r => ({
-        name: r.address,
-        address: r.address,
-        zone_id: r.zone ? zoneMap[r.zone.toLowerCase()] || null : null,
-        current_pm_id: r.pm_email ? pmMap[r.pm_email.toLowerCase()] || null : null,
-      }));
+      const inserts = rows.map(r => {
+        const fullAddr = formatAddress(r as any);
+        return {
+          name: fullAddr || r.street_address,
+          address: fullAddr,
+          street_address: r.street_address,
+          city: r.city || null,
+          state: r.state || null,
+          zip_code: r.zip_code || null,
+          zone_id: r.zone ? zoneMap[r.zone.toLowerCase()] || null : null,
+          current_pm_id: r.pm_email ? pmMap[r.pm_email.toLowerCase()] || null : null,
+        };
+      });
 
       const { error } = await supabase.from('properties').insert(inserts);
       if (error) throw error;
@@ -185,7 +222,7 @@ const PropertyForm = () => {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const canSubmit = form.address && !addressError && !mutation.isPending;
+  const canSubmit = form.street_address && form.city && form.state && form.zip_code && !addressError && !mutation.isPending;
 
   if (isEdit && isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
 
@@ -209,15 +246,44 @@ const PropertyForm = () => {
 
       <div className="flex flex-col gap-4">
         <div>
-          <Label>Address *</Label>
+          <Label>Street Address *</Label>
           <Input
-            value={form.address}
-            onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-            placeholder="e.g. 123 Main St, Springfield"
+            value={form.street_address}
+            onChange={e => setForm(f => ({ ...f, street_address: e.target.value }))}
+            placeholder="e.g. 123 Main St"
             className="bg-secondary border-border"
           />
           {addressError && <p className="text-xs text-destructive mt-1">{addressError}</p>}
-          <p className="text-xs text-muted-foreground mt-1">The address identifies the property everywhere in the app.</p>
+        </div>
+        <div>
+          <Label>City *</Label>
+          <Input
+            value={form.city}
+            onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+            placeholder="e.g. Springfield"
+            className="bg-secondary border-border"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>State *</Label>
+            <Select value={form.state} onValueChange={v => setForm(f => ({ ...f, state: v }))}>
+              <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent className="max-h-64">
+                {US_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} — {s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Zip Code *</Label>
+            <Input
+              value={form.zip_code}
+              onChange={e => setForm(f => ({ ...f, zip_code: e.target.value.replace(/[^0-9-]/g, '').slice(0, 10) }))}
+              placeholder="e.g. 12345"
+              inputMode="numeric"
+              className="bg-secondary border-border"
+            />
+          </div>
         </div>
         <div>
           <Label>Zone</Label>
