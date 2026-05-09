@@ -280,76 +280,116 @@ const PricingReview = () => {
         ))}
       </div>
 
-      {allGood ? (
-        <div className="text-center py-12 space-y-4">
+      {/* Area sections (whole_unit excluded — rendered separately below) */}
+      {Object.entries(grouped).map(([area, areaItems]) => (
+        <div key={area} className="space-y-2">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            {area.replace(/_/g, ' ')}
+          </h3>
+          {areaItems.map((item: any) => (
+            <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-foreground">{item.item_name}</span>
+                <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
+                  {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-[10px]">Qty</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    min={1}
+                    value={item.quantity || ''}
+                    onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                    onFocus={e => e.target.select()}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[10px]">Unit Price ($)</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={0.01}
+                    value={item.unit_price || ''}
+                    onChange={e => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                    onFocus={e => e.target.select()}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[10px]">Subtotal</Label>
+                  <div className="h-8 flex items-center text-sm font-medium text-primary">
+                    ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {/* Whole Unit section — always visible */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{WHOLE_UNIT_LABEL}</h3>
+          <Button size="sm" variant="outline" onClick={openWholeUnitNew}>
+            <Plus className="w-3 h-3 mr-1" /> Add Whole Unit Item
+          </Button>
+        </div>
+        {wholeUnitItems.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic px-2 py-3">
+            No whole-unit items. Use this for items that apply to the entire property (e.g. full house painting, full carpet replacement, pest control).
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {wholeUnitItems.map((item: any) => (
+              <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-foreground">{item.item_name}</span>
+                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
+                        {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)} = <span className="font-semibold text-primary">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                    </p>
+                    {item.item_note && (
+                      <p className="text-xs text-muted-foreground mt-1 italic">→ {item.item_note}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openWholeUnitEdit(item)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteWholeUnitItem(item.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {noContent ? (
+        <div className="text-center py-8 space-y-4">
           <Check className="w-16 h-16 text-green-500 mx-auto" />
           <p className="text-foreground font-medium">All items are in Good condition!</p>
-          <p className="text-sm text-muted-foreground">No repairs needed. You can close this inspection internally.</p>
+          <p className="text-sm text-muted-foreground">No repairs needed. You can close this inspection internally, or add a whole-unit item above.</p>
           <Button onClick={() => setShowCloseConfirm(true)}>
             <Lock className="w-4 h-4 mr-1" /> Close Inspection Internally
           </Button>
         </div>
       ) : (
         <>
-          {/* Items grouped by area (whole_unit rendered last) */}
-          {Object.entries(grouped)
-            .sort(([a], [b]) => {
-              if (a === WHOLE_UNIT_KEY) return 1;
-              if (b === WHOLE_UNIT_KEY) return -1;
-              return 0;
-            })
-            .map(([area, areaItems]) => (
-            <div key={area} className="space-y-2">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                {area === WHOLE_UNIT_KEY ? WHOLE_UNIT_LABEL : area.replace(/_/g, ' ')}
-              </h3>
-              {areaItems.map((item: any) => (
-                <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">{item.item_name}</span>
-                    <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
-                      {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <Label className="text-[10px]">Qty</Label>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        min={1}
-                        value={item.quantity || ''}
-                        onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        onFocus={e => e.target.select()}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-[10px]">Unit Price ($)</Label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step={0.01}
-                        value={item.unit_price || ''}
-                        onChange={e => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-                        onFocus={e => e.target.select()}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-[10px]">Subtotal</Label>
-                      <div className="h-8 flex items-center text-sm font-medium text-primary">
-                        ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-
           {/* Total */}
           <div className="bg-white border-l-4 border-[#FFD700] rounded-lg p-4 flex items-center justify-between">
             <span className="text-gray-500 text-sm font-medium">Total</span>
@@ -366,6 +406,73 @@ const PricingReview = () => {
           </Button>
         </>
       )}
+
+      {/* Whole Unit dialog */}
+      <Dialog open={showWholeUnit} onOpenChange={setShowWholeUnit}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{wholeUnitForm.id ? 'Edit Whole Unit Item' : 'Add Whole Unit Item'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>Item Name</Label>
+              <Input
+                value={wholeUnitForm.item_name}
+                onChange={e => setWholeUnitForm(f => ({ ...f, item_name: e.target.value }))}
+                placeholder="e.g. Full House Painting"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={wholeUnitForm.status} onValueChange={v => setWholeUnitForm(f => ({ ...f, status: v as 'needs_repair' | 'urgent' }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="needs_repair">Needs Repair</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number" inputMode="numeric" min={1}
+                  value={wholeUnitForm.quantity || ''}
+                  onChange={e => setWholeUnitForm(f => ({ ...f, quantity: parseInt(e.target.value) || 1 }))}
+                  onFocus={e => e.target.select()}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Unit Price ($)</Label>
+                <Input
+                  type="number" inputMode="decimal" min={0} step={0.01}
+                  value={wholeUnitForm.unit_price || ''}
+                  onChange={e => setWholeUnitForm(f => ({ ...f, unit_price: parseFloat(e.target.value) || 0 }))}
+                  onFocus={e => e.target.select()}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Note (optional)</Label>
+              <Textarea
+                value={wholeUnitForm.item_note}
+                onChange={e => setWholeUnitForm(f => ({ ...f, item_note: e.target.value }))}
+                rows={3}
+                placeholder="Any details about this item..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWholeUnit(false)} disabled={savingWholeUnit}>Cancel</Button>
+            <Button onClick={handleSaveWholeUnit} disabled={savingWholeUnit || !wholeUnitForm.item_name.trim()}>
+              {savingWholeUnit ? <Spinner size="sm" /> : (wholeUnitForm.id ? 'Save' : 'Add Item')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
