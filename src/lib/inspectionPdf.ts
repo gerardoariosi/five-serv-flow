@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from './inspectionAreas';
 import {
   addBlackHeader,
   addFooter,
@@ -84,7 +85,12 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
     photosByArea[area].push(p);
   });
 
-  const allAreas = new Set([...Object.keys(itemsByArea), ...Object.keys(photosByArea)]);
+  const allAreas = Array.from(new Set([...Object.keys(itemsByArea), ...Object.keys(photosByArea)]))
+    .sort((a, b) => {
+      if (a === WHOLE_UNIT_KEY) return 1;
+      if (b === WHOLE_UNIT_KEY) return -1;
+      return 0;
+    });
 
   y = addSectionTitle(doc, y, 'Inspection Items');
 
@@ -98,7 +104,8 @@ export function generateFiveServPdf(data: InspectionData): jsPDF {
     doc.setTextColor(...DARK_TEXT);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(area.replace(/_/g, ' ').toUpperCase(), MARGIN_X + 2, y + 4);
+    const areaLabel = area === WHOLE_UNIT_KEY ? WHOLE_UNIT_LABEL.toUpperCase() : area.replace(/_/g, ' ').toUpperCase();
+    doc.text(areaLabel, MARGIN_X + 2, y + 4);
     y += 8;
 
     // Column headers
