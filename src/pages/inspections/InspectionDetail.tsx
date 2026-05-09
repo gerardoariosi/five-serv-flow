@@ -485,6 +485,74 @@ const InspectionDetail = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Whole Unit item modal */}
+      <Dialog open={showWholeUnit} onOpenChange={setShowWholeUnit}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{wholeUnitForm.id ? 'Edit Whole Unit Item' : 'Add Whole Unit Item'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label>Item Name</Label>
+              <Input
+                value={wholeUnitForm.item_name}
+                onChange={e => setWholeUnitForm(f => ({ ...f, item_name: e.target.value }))}
+                placeholder="e.g. Full House Painting"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={wholeUnitForm.status} onValueChange={v => setWholeUnitForm(f => ({ ...f, status: v as any }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="good">Good</SelectItem>
+                  <SelectItem value="needs_repair">Needs Repair</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number" inputMode="numeric" min={1}
+                  value={wholeUnitForm.quantity || ''}
+                  onChange={e => setWholeUnitForm(f => ({ ...f, quantity: parseInt(e.target.value) || 1 }))}
+                  onFocus={e => e.target.select()}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Unit Price ($)</Label>
+                <Input
+                  type="number" inputMode="decimal" min={0} step={0.01}
+                  value={wholeUnitForm.unit_price || ''}
+                  onChange={e => setWholeUnitForm(f => ({ ...f, unit_price: parseFloat(e.target.value) || 0 }))}
+                  onFocus={e => e.target.select()}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Note (optional)</Label>
+              <Textarea
+                value={wholeUnitForm.item_note}
+                onChange={e => setWholeUnitForm(f => ({ ...f, item_note: e.target.value }))}
+                rows={3}
+                placeholder="Any details about this item..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWholeUnit(false)} disabled={savingWholeUnit}>Cancel</Button>
+            <Button onClick={handleSaveWholeUnit} disabled={savingWholeUnit || !wholeUnitForm.item_name.trim()}>
+              {savingWholeUnit ? <Spinner size="sm" /> : (wholeUnitForm.id ? 'Save' : 'Add Item')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirm */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
