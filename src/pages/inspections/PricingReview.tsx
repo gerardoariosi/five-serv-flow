@@ -47,7 +47,68 @@ const PricingReview = () => {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
+  const wholeUnitItems = useMemo(() => items.filter(i => i.area === WHOLE_UNIT_KEY), [items]);
   const allGood = items.length === 0;
+  const noContent = items.length === 0 && wholeUnitItems.length === 0;
+
+  const openWholeUnitNew = () => {
+    setWholeUnitForm({ id: null, item_name: '', status: 'needs_repair', quantity: 1, unit_price: 0, item_note: '' });
+    setShowWholeUnit(true);
+  };
+
+  const openWholeUnitEdit = (item: any) => {
+    setWholeUnitForm({
+      id: item.id,
+      item_name: item.item_name ?? '',
+      status: (item.status === 'urgent' ? 'urgent' : 'needs_repair'),
+      quantity: item.quantity ?? 1,
+      unit_price: item.unit_price ?? 0,
+      item_note: item.item_note ?? '',
+    });
+    setShowWholeUnit(true);
+  };
+
+  const handleSaveWholeUnit = async () => {
+    if (!wholeUnitForm.item_name.trim()) { toast.error('Item name is required'); return; }
+    if (!id) return;
+    setSavingWholeUnit(true);
+    try {
+      const qty = wholeUnitForm.quantity || 1;
+      const price = wholeUnitForm.unit_price || 0;
+      const payload = {
+        inspection_id: id,
+        area: WHOLE_UNIT_KEY,
+        item_name: wholeUnitForm.item_name.trim(),
+        status: wholeUnitForm.status,
+        quantity: qty,
+        unit_price: price,
+        subtotal: qty * price,
+        item_note: wholeUnitForm.item_note.trim() || null,
+      };
+      if (wholeUnitForm.id) {
+        const { error } = await supabase.from('inspection_items').update(payload).eq('id', wholeUnitForm.id);
+        if (error) throw error;
+        toast.success('Item updated');
+      } else {
+        const { error } = await supabase.from('inspection_items').insert(payload);
+        if (error) throw error;
+        toast.success('Item added');
+      }
+      setShowWholeUnit(false);
+      fetchItems();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to save item');
+    } finally {
+      setSavingWholeUnit(false);
+    }
+  };
+
+  const handleDeleteWholeUnitItem = async (itemId: string) => {
+    const { error } = await supabase.from('inspection_items').delete().eq('id', itemId);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Item deleted');
+    fetchItems();
+  };
 
   const updateItem = async (itemId: string, field: string, value: any) => {
     setItems(prev => prev.map(i => {
