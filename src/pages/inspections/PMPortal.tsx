@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Shield, Lock, Mail, Check, AlertTriangle, Camera, Download, ZoomIn, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import SignaturePad from '@/components/inspections/SignaturePad';
 import Spinner from '@/components/ui/Spinner';
+import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from '@/lib/inspectionAreas';
 
 const PMPortal = () => {
   const { token } = useParams();
@@ -169,13 +170,18 @@ const PMPortal = () => {
       .reduce((sum, i) => sum + ((i.quantity ?? 1) * (i.unit_price ?? 0)), 0)
   , [items, selectedItems]);
 
-  // Get unique areas from items for grouping photos/notes
+  // Get unique areas from items for grouping photos/notes (whole_unit always last)
   const areas = useMemo(() => {
     const areaSet = new Set<string>();
     items.forEach(i => { if (i.area) areaSet.add(i.area); });
     Object.keys(photos).forEach(a => areaSet.add(a));
     Object.keys(techNotes).forEach(a => areaSet.add(a));
-    return Array.from(areaSet);
+    const arr = Array.from(areaSet);
+    return arr.sort((a, b) => {
+      if (a === WHOLE_UNIT_KEY) return 1;
+      if (b === WHOLE_UNIT_KEY) return -1;
+      return 0;
+    });
   }, [items, photos, techNotes]);
 
   const handleSubmit = async () => {
