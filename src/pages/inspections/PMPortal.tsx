@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Shield, Lock, Mail, Check, AlertTriangle, Camera, Download, ZoomIn, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import SignaturePad from '@/components/inspections/SignaturePad';
 import Spinner from '@/components/ui/Spinner';
+import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from '@/lib/inspectionAreas';
 
 const PMPortal = () => {
   const { token } = useParams();
@@ -93,24 +94,22 @@ const PMPortal = () => {
     });
     setTechNotes(notesMap);
 
-    // Fetch inspection photos
-    const { data: photosData } = await supabase.from('inspection_photos')
-      .select('*')
-      .eq('inspection_id', ins.id)
-      .order('uploaded_at', { ascending: true });
-
-    const photosMap: Record<string, any[]> = {};
-    for (const p of (photosData ?? [])) {
-      const area = p.area ?? 'other';
-      if (!photosMap[area]) photosMap[area] = [];
-      if (p.url && !p.url.startsWith('http')) {
-        const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
-        photosMap[area].push({ ...p, displayUrl: signedData?.signedUrl || p.url });
-      } else {
+    // Fetch inspection photos via signed-URL edge function (anon can't sign private bucket)
+    try {
+      const { data: signed } = await supabase.functions.invoke('sign-inspection-photos', {
+        body: { token },
+      });
+      const photosMap: Record<string, any[]> = {};
+      for (const p of (signed?.photos ?? [])) {
+        const area = p.area ?? 'other';
+        if (!photosMap[area]) photosMap[area] = [];
         photosMap[area].push({ ...p, displayUrl: p.url });
       }
+      setPhotos(photosMap);
+    } catch (err) {
+      console.error('Failed to load photos', err);
+      setPhotos({});
     }
-    setPhotos(photosMap);
 
     // Pre-select items that PM had selected (read-only mode)
     if (ins.pm_submitted_at) {
@@ -171,13 +170,18 @@ const PMPortal = () => {
       .reduce((sum, i) => sum + ((i.quantity ?? 1) * (i.unit_price ?? 0)), 0)
   , [items, selectedItems]);
 
-  // Get unique areas from items for grouping photos/notes
+  // Get unique areas from items for grouping photos/notes (whole_unit always last)
   const areas = useMemo(() => {
     const areaSet = new Set<string>();
     items.forEach(i => { if (i.area) areaSet.add(i.area); });
     Object.keys(photos).forEach(a => areaSet.add(a));
     Object.keys(techNotes).forEach(a => areaSet.add(a));
-    return Array.from(areaSet);
+    const arr = Array.from(areaSet);
+    return arr.sort((a, b) => {
+      if (a === WHOLE_UNIT_KEY) return 1;
+      if (b === WHOLE_UNIT_KEY) return -1;
+      return 0;
+    });
   }, [items, photos, techNotes]);
 
   const handleSubmit = async () => {

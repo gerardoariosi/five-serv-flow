@@ -1,5 +1,8 @@
 // Area and item definitions for inspections
 
+export const WHOLE_UNIT_KEY = 'whole_unit';
+export const WHOLE_UNIT_LABEL = 'Whole Unit';
+
 export interface AreaItemDef {
   name: string;
   defaultStatus: 'good' | 'needs_repair' | 'urgent';
