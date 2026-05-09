@@ -814,6 +814,60 @@ const InspectionDetail = () => {
               )}
             </div>
           ))}
+
+          {/* Whole Unit section — items that apply to the whole property */}
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{WHOLE_UNIT_LABEL}</h4>
+              {(activeRole === 'admin' || activeRole === 'supervisor' || inspection.assigned_to === user?.id) && (
+                <Button size="sm" variant="outline" onClick={openWholeUnitNew}>
+                  <Plus className="w-3 h-3 mr-1" /> Add Whole Unit Item
+                </Button>
+              )}
+            </div>
+            {wholeUnitItems.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic px-2 py-3">
+                No whole-unit items. Use this for items that apply to the entire property (e.g. full house painting, full carpet replacement, pest control).
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {wholeUnitItems.map((item: any) => (
+                  <div key={item.id} className="py-2 px-2 rounded-md bg-card border border-border">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-foreground font-medium">{item.item_name}</span>
+                          <Badge className={`text-[10px] ${
+                            item.status === 'good' ? 'bg-green-500/20 text-green-400' :
+                            item.status === 'urgent' ? 'bg-destructive/20 text-destructive' :
+                            'bg-orange-500/20 text-orange-400'
+                          }`}>
+                            {item.status === 'good' ? 'Good' : item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)} = <span className="font-semibold text-foreground">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                        </p>
+                        {item.item_note && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">→ {item.item_note}</p>
+                        )}
+                      </div>
+                      {(activeRole === 'admin' || activeRole === 'supervisor' || inspection.assigned_to === user?.id) && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openWholeUnitEdit(item)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteWholeUnitItem(item.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {inspection.pm_submitted_at && (
