@@ -48,8 +48,7 @@ const PricingReview = () => {
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const wholeUnitItems = useMemo(() => items.filter(i => i.area === WHOLE_UNIT_KEY), [items]);
-  const allGood = items.length === 0;
-  const noContent = items.length === 0 && wholeUnitItems.length === 0;
+  const noContent = items.length === 0;
 
   const openWholeUnitNew = () => {
     setWholeUnitForm({ id: null, item_name: '', status: 'needs_repair', quantity: 1, unit_price: 0, item_note: '' });
