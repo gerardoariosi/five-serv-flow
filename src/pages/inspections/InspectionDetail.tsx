@@ -20,7 +20,7 @@ import { generateFiveServPdf, generatePmVersionPdf, downloadPdf } from '@/lib/in
 import { sendInspectionAssignedEmail } from '@/lib/inspectionAssignmentEmail';
 import { pushToUsers } from '@/lib/pushNotifications';
 import { formatAddress } from '@/lib/propertyAddress';
-import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from '@/lib/inspectionAreas';
+import { WHOLE_UNIT_KEY } from '@/lib/inspectionAreas';
 
 const InspectionDetail = () => {
   const { id } = useParams();
