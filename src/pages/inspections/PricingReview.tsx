@@ -230,11 +230,12 @@ const PricingReview = () => {
     navigate(`/inspections/${id}`);
   };
 
-  // Group by area
+  // Group by area, excluding whole_unit (rendered separately)
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
     const sorted = [...items].sort((a, b) => (a.status === 'urgent' ? -1 : 1) - (b.status === 'urgent' ? -1 : 1));
     sorted.forEach(i => {
+      if (i.area === WHOLE_UNIT_KEY) return;
       const area = i.area ?? 'Other';
       if (!map[area]) map[area] = [];
       map[area].push(i);
