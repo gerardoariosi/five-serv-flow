@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Send, DollarSign, Lock } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
+import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from '@/lib/inspectionAreas';
 
 const PricingReview = () => {
   const { id } = useParams();
@@ -214,10 +215,18 @@ const PricingReview = () => {
         </div>
       ) : (
         <>
-          {/* Items grouped by area */}
-          {Object.entries(grouped).map(([area, areaItems]) => (
+          {/* Items grouped by area (whole_unit rendered last) */}
+          {Object.entries(grouped)
+            .sort(([a], [b]) => {
+              if (a === WHOLE_UNIT_KEY) return 1;
+              if (b === WHOLE_UNIT_KEY) return -1;
+              return 0;
+            })
+            .map(([area, areaItems]) => (
             <div key={area} className="space-y-2">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{area.replace(/_/g, ' ')}</h3>
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                {area === WHOLE_UNIT_KEY ? WHOLE_UNIT_LABEL : area.replace(/_/g, ' ')}
+              </h3>
               {areaItems.map((item: any) => (
                 <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
                   <div className="flex items-center justify-between">
