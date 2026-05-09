@@ -21,6 +21,18 @@ const PricingReview = () => {
   const [sending, setSending] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
+  // Whole Unit item modal
+  const [showWholeUnit, setShowWholeUnit] = useState(false);
+  const [savingWholeUnit, setSavingWholeUnit] = useState(false);
+  const [wholeUnitForm, setWholeUnitForm] = useState<{
+    id: string | null;
+    item_name: string;
+    status: 'needs_repair' | 'urgent';
+    quantity: number;
+    unit_price: number;
+    item_note: string;
+  }>({ id: null, item_name: '', status: 'needs_repair', quantity: 1, unit_price: 0, item_note: '' });
+
   const fetchItems = useCallback(async () => {
     if (!id) return;
     const { data } = await supabase
