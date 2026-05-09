@@ -416,74 +416,6 @@ const InspectionDetail = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Whole Unit item modal */}
-      <Dialog open={showWholeUnit} onOpenChange={setShowWholeUnit}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{wholeUnitForm.id ? 'Edit Whole Unit Item' : 'Add Whole Unit Item'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label>Item Name</Label>
-              <Input
-                value={wholeUnitForm.item_name}
-                onChange={e => setWholeUnitForm(f => ({ ...f, item_name: e.target.value }))}
-                placeholder="e.g. Full House Painting"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Status</Label>
-              <Select value={wholeUnitForm.status} onValueChange={v => setWholeUnitForm(f => ({ ...f, status: v as any }))}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="good">Good</SelectItem>
-                  <SelectItem value="needs_repair">Needs Repair</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Quantity</Label>
-                <Input
-                  type="number" inputMode="numeric" min={1}
-                  value={wholeUnitForm.quantity || ''}
-                  onChange={e => setWholeUnitForm(f => ({ ...f, quantity: parseInt(e.target.value) || 1 }))}
-                  onFocus={e => e.target.select()}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Unit Price ($)</Label>
-                <Input
-                  type="number" inputMode="decimal" min={0} step={0.01}
-                  value={wholeUnitForm.unit_price || ''}
-                  onChange={e => setWholeUnitForm(f => ({ ...f, unit_price: parseFloat(e.target.value) || 0 }))}
-                  onFocus={e => e.target.select()}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Note (optional)</Label>
-              <Textarea
-                value={wholeUnitForm.item_note}
-                onChange={e => setWholeUnitForm(f => ({ ...f, item_note: e.target.value }))}
-                rows={3}
-                placeholder="Any details about this item..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowWholeUnit(false)} disabled={savingWholeUnit}>Cancel</Button>
-            <Button onClick={handleSaveWholeUnit} disabled={savingWholeUnit || !wholeUnitForm.item_name.trim()}>
-              {savingWholeUnit ? <Spinner size="sm" /> : (wholeUnitForm.id ? 'Save' : 'Add Item')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete confirm */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
@@ -814,59 +746,6 @@ const InspectionDetail = () => {
             </div>
           ))}
 
-          {/* Whole Unit section — items that apply to the whole property */}
-          <div className="mt-2">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{WHOLE_UNIT_LABEL}</h4>
-              {(activeRole === 'admin' || activeRole === 'supervisor' || inspection.assigned_to === user?.id) && (
-                <Button size="sm" variant="outline" onClick={openWholeUnitNew}>
-                  <Plus className="w-3 h-3 mr-1" /> Add Whole Unit Item
-                </Button>
-              )}
-            </div>
-            {wholeUnitItems.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic px-2 py-3">
-                No whole-unit items. Use this for items that apply to the entire property (e.g. full house painting, full carpet replacement, pest control).
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {wholeUnitItems.map((item: any) => (
-                  <div key={item.id} className="py-2 px-2 rounded-md bg-card border border-border">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-foreground font-medium">{item.item_name}</span>
-                          <Badge className={`text-[10px] ${
-                            item.status === 'good' ? 'bg-green-500/20 text-green-400' :
-                            item.status === 'urgent' ? 'bg-destructive/20 text-destructive' :
-                            'bg-orange-500/20 text-orange-400'
-                          }`}>
-                            {item.status === 'good' ? 'Good' : item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)} = <span className="font-semibold text-foreground">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
-                        </p>
-                        {item.item_note && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">→ {item.item_note}</p>
-                        )}
-                      </div>
-                      {(activeRole === 'admin' || activeRole === 'supervisor' || inspection.assigned_to === user?.id) && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openWholeUnitEdit(item)}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteWholeUnitItem(item.id)}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </TabsContent>
 
         {inspection.pm_submitted_at && (
