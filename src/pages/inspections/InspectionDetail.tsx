@@ -59,6 +59,18 @@ const InspectionDetail = () => {
     tech_initial_note: '',
   });
 
+  // Whole Unit item modal
+  const [showWholeUnit, setShowWholeUnit] = useState(false);
+  const [savingWholeUnit, setSavingWholeUnit] = useState(false);
+  const [wholeUnitForm, setWholeUnitForm] = useState<{
+    id: string | null;
+    item_name: string;
+    status: 'good' | 'needs_repair' | 'urgent';
+    quantity: number;
+    unit_price: number;
+    item_note: string;
+  }>({ id: null, item_name: '', status: 'needs_repair', quantity: 1, unit_price: 0, item_note: '' });
+
   const fetchData = useCallback(async () => {
     if (!id) return;
     const [insRes, itemsRes, photosRes, ticketLinksRes, cRes, pRes, uRes] = await Promise.all([
