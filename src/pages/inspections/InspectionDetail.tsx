@@ -355,14 +355,9 @@ const InspectionDetail = () => {
     photosByArea[area].push(p);
   });
 
-  // Group items by area, separating Whole Unit items
+  // Group items by area
   const itemsByArea: Record<string, any[]> = {};
-  const wholeUnitItems: any[] = [];
   items.forEach(i => {
-    if (i.area === WHOLE_UNIT_KEY) {
-      wholeUnitItems.push(i);
-      return;
-    }
     const area = i.area ?? 'other';
     if (!itemsByArea[area]) itemsByArea[area] = [];
     itemsByArea[area].push(i);
