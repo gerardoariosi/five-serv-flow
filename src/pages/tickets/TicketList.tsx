@@ -275,7 +275,7 @@ const TicketList = () => {
             const property = ticket.property_id ? properties[ticket.property_id] : null;
             const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
-              <div key={ticket.id} className="flex items-start gap-1 group">
+              <div key={ticket.id} className="flex items-start gap-1 group w-full min-w-0">
                 {canDelete && selectMode && (
                   <Checkbox
                     checked={selected.has(ticket.id)}
@@ -285,7 +285,7 @@ const TicketList = () => {
                 )}
                 <button
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
-                  className={`flex-1 text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
+                  className={`flex-1 min-w-0 overflow-hidden text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ticket.fs_number ?? 'No FS#'}</span>

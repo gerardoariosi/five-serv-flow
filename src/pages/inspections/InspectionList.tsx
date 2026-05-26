@@ -112,7 +112,7 @@ const InspectionList = () => {
     const daysPending = isSent ? daysSinceSent(ins.created_at) : 0;
 
     return (
-      <div className="flex items-start gap-1 group">
+      <div className="flex items-start gap-1 group w-full min-w-0">
         {canDelete && selectMode && (
           <Checkbox
             checked={selected.has(ins.id)}
@@ -122,7 +122,7 @@ const InspectionList = () => {
         )}
         <button
           onClick={() => navigate(`/inspections/${ins.id}`)}
-          className="flex-1 text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
+          className="flex-1 min-w-0 overflow-hidden text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
