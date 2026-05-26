@@ -597,7 +597,7 @@ const TicketDetail = () => {
 
       {/* Info Card */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
           {isAdminOrSupervisor && (
             <div className="flex flex-col">
               <span className="text-muted-foreground">Client / PM</span>
