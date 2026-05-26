@@ -277,54 +277,66 @@ const Dashboard = () => {
   return (
     <div className="p-4 space-y-4">
       {/* Greeting */}
-      <div className="mb-4">
-        <h1 className="text-lg font-bold text-foreground">Good {timeOfDay}, {firstName}</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h1 className="text-base md:text-lg font-semibold text-foreground">Good {timeOfDay}, {firstName}</h1>
+        <span className="text-[11px] md:text-xs text-muted-foreground">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+        </span>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-        {metricCards.map((m) => (
-          <div key={m.label} className={`fs-card p-3 flex items-center gap-3 border-t-2 ${m.border}`}>
-            <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
-              <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
+      {/* Tickets metrics */}
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tickets</h2>
+        <div className="flex gap-2 overflow-x-auto md:overflow-visible md:grid md:grid-cols-6 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+          {ticketMetrics.map((m) => (
+            <div key={m.label} className={`fs-card shrink-0 min-w-[110px] md:min-w-0 py-2.5 px-3 border-l-2 ${m.border} flex flex-col`}>
+              <span className={`text-2xl font-bold leading-none ${m.color}`}>{m.value}</span>
+              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5">{m.label}</span>
             </div>
-            <div className="min-w-0 flex flex-col">
-              <span className={`text-xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
-              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5 truncate">{m.label}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Inspections metrics */}
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Inspections</h2>
+        <div className="flex gap-2 overflow-x-auto md:overflow-visible md:grid md:grid-cols-3 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+          {inspectionMetrics.map((m) => (
+            <div key={m.label} className={`fs-card shrink-0 min-w-[110px] md:min-w-0 py-2.5 px-3 border-l-2 ${m.border} flex flex-col`}>
+              <span className={`text-2xl font-bold leading-none ${m.color}`}>{m.value}</span>
+              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5">{m.label}</span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          ref={searchRef}
-          placeholder="Search FS#, PM, property, zone, technician, notes…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Search + filter chips */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            ref={searchRef}
+            placeholder="Search tickets..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-      {/* Quick filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-        {QUICK_FILTERS.map((f) => {
-          const active = quickFilter === f.key;
-          return (
-            <button
-              key={f.key}
-              onClick={() => setQuickFilter(f.key)}
-              className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
-            >
-              {f.label}
-            </button>
-          );
-        })}
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 scrollbar-none">
+          {QUICK_FILTERS.map((f) => {
+            const active = quickFilter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setQuickFilter(f.key)}
+                className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Ticket list */}
@@ -344,12 +356,11 @@ const Dashboard = () => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
             const leftBorder = workTypeBorder[ticket.work_type ?? 'repair'] ?? 'border-l-muted-foreground';
             const property = ticket.property_id ? properties[ticket.property_id] : null;
-            const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
               <button
                 key={ticket.id}
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
-                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
+                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-2.5 px-3 hover:bg-secondary/30 transition-colors duration-150 space-y-0.5`}
               >
                 {/* Line 1: identity + badges */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -375,36 +386,24 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* Line 2: property · unit · PM */}
-                <p className="text-sm truncate">
-                  {property && (
-                    <span className="font-semibold text-foreground">{property.name}</span>
-                  )}
-                  {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
-                  {pmName && <span className="text-muted-foreground"> · {pmName}</span>}
-                </p>
-
-                {/* Line 3: address */}
-                {property?.address && (
-                  <p className="text-xs text-muted-foreground truncate">{property.address}</p>
-                )}
-
-                {/* Line 4: technician + appointment */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
+                {/* Line 2: property + technician */}
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate min-w-0">
+                    {property && <span className="font-semibold text-foreground">{property.name}</span>}
+                    {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
                   </span>
-                  {ticket.appointment_time && (
-                    <span>
-                      {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                  )}
+                  <span className="text-xs shrink-0 truncate max-w-[40%]">
+                    {ticket.technician_id
+                      ? <span className="text-muted-foreground">{users[ticket.technician_id]}</span>
+                      : <span className="text-destructive font-medium">Unassigned</span>}
+                  </span>
                 </div>
               </button>
             );
           })
         )}
       </div>
+
 
       {/* Inspections section */}
       <div className="mt-6">
