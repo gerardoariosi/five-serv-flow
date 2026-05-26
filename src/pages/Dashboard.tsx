@@ -406,7 +406,7 @@ const Dashboard = () => {
 
 
       {/* Inspections section */}
-      <div className="mt-6">
+      <div className="mt-8 pt-6 border-t border-border">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground">
             Inspections <span className="text-muted-foreground font-normal">({inspections.length})</span>
