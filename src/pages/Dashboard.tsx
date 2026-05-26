@@ -203,16 +203,19 @@ const Dashboard = () => {
     };
   }, [tickets, inspections]);
 
-  const metricCards = [
-    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10',        border: 'border-t-primary' },
-    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40',          border: 'border-t-border' },
-    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10',     border: 'border-t-orange-400' },
-    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10',     border: 'border-t-yellow-400' },
-    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10',    border: 'border-t-destructive' },
-    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
-    { label: 'Scheduled',   value: metrics.insScheduled,    icon: CalendarDays,   color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
-    { label: 'Pending PM',  value: metrics.insPending,      icon: Clock,          color: 'text-blue-400',         bg: 'bg-blue-400/10',       border: 'border-t-blue-400' },
-    { label: 'Responded',   value: metrics.insResponded,    icon: ClipboardCheck, color: 'text-green-400',        bg: 'bg-green-400/10',      border: 'border-t-green-400' },
+  const ticketMetrics = [
+    { label: 'Active',      value: metrics.active,          color: 'text-primary',          border: 'border-l-primary' },
+    { label: 'Drafts',      value: metrics.draft,           color: 'text-muted-foreground', border: 'border-l-border' },
+    { label: 'Unassigned',  value: metrics.unassigned,      color: 'text-orange-400',       border: 'border-l-orange-400' },
+    { label: 'Paused',      value: metrics.paused,          color: 'text-yellow-400',       border: 'border-l-yellow-400' },
+    { label: 'Emergencies', value: metrics.emergencies,     color: 'text-destructive',      border: 'border-l-destructive' },
+    { label: 'For Review',  value: metrics.pmNotResponding, color: 'text-purple-400',       border: 'border-l-purple-400' },
+  ];
+
+  const inspectionMetrics = [
+    { label: 'Scheduled',  value: metrics.insScheduled, color: 'text-purple-400', border: 'border-l-purple-400' },
+    { label: 'Pending PM', value: metrics.insPending,   color: 'text-blue-400',   border: 'border-l-blue-400' },
+    { label: 'Responded',  value: metrics.insResponded, color: 'text-green-400',  border: 'border-l-green-400' },
   ];
 
   const hours = new Date().getHours();
