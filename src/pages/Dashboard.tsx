@@ -427,7 +427,7 @@ const Dashboard = () => {
                 <button
                   key={ins.id}
                   onClick={() => navigate(`/inspections/${ins.id}`)}
-                  className="w-full text-left fs-card border-l-[3px] border-l-amber-400 py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1"
+                  className="w-full text-left fs-card py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs font-bold text-foreground tracking-tight">{ins.ins_number ?? 'No INS#'}</span>
