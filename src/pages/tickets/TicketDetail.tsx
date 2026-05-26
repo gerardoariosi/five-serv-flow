@@ -599,25 +599,25 @@ const TicketDetail = () => {
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           {isAdminOrSupervisor && (
-            <div>
+            <div className="flex flex-col">
               <span className="text-muted-foreground">Client / PM</span>
               <p className="text-foreground font-medium">{ticket.client_id ? clients[ticket.client_id]?.name : '—'}</p>
             </div>
           )}
-          <div>
+          <div className="flex flex-col">
             <span className="text-muted-foreground">Property</span>
             <p className="text-foreground font-medium">{ticket.property_id ? properties[ticket.property_id]?.name : '—'}</p>
           </div>
-          <div>
+          <div className="flex flex-col">
             <span className="text-muted-foreground">Unit</span>
             <p className="text-foreground font-medium">{ticket.unit || '—'}</p>
           </div>
-          <div>
+          <div className="flex flex-col">
             <span className="text-muted-foreground">Zone</span>
             <p className="text-foreground font-medium">{ticket.zone_id ? zones[ticket.zone_id] : '—'}</p>
           </div>
           {propertyAddress && (
-            <div className="col-span-2">
+            <div className="col-span-2 flex flex-col">
               <span className="text-muted-foreground">Address</span>
               <a
                 href={`https://maps.google.com/?q=${encodeURIComponent(propertyAddress)}`}
@@ -629,24 +629,24 @@ const TicketDetail = () => {
               </a>
             </div>
           )}
-          <div>
+          <div className="flex flex-col">
             <span className="text-muted-foreground">Technician</span>
             <p className="text-foreground font-medium">
               {ticket.technician_id ? users[ticket.technician_id]?.name : <span className="text-destructive">Unassigned</span>}
             </p>
           </div>
-          <div>
+          <div className="flex flex-col">
             <span className="text-muted-foreground">Appointment</span>
             <p className="text-foreground font-medium">
               {ticket.appointment_time ? new Date(ticket.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' }) : '—'}
             </p>
           </div>
-          <div>
+          <div className="flex flex-col">
             <span className="text-muted-foreground">Priority</span>
             <p className="text-foreground font-medium capitalize">{ticket.priority ?? 'Normal'}</p>
           </div>
           {ticket.work_started_at && (
-            <div>
+            <div className="flex flex-col">
               <span className="text-muted-foreground">Work Started</span>
               <p className="text-foreground font-medium">
                 {new Date(ticket.work_started_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
