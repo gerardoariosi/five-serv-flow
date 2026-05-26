@@ -101,7 +101,7 @@ const AppLayout = () => {
       <TopNav onMenuClick={() => setDrawerOpen(true)} />
       <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <main
-        className={`flex-1 overflow-y-auto ${isTechnician ? 'pb-16 md:pb-0' : ''}`}
+        className={`flex-1 overflow-y-auto overflow-x-hidden ${isTechnician ? 'pb-16 md:pb-0' : ''}`}
         style={{ paddingBottom: isTechnician ? undefined : 'env(safe-area-inset-bottom)' }}
       >
         <Outlet />
