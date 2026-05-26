@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Ticket, FileEdit, UserX, PauseCircle, AlertTriangle, Clock, Plus, CalendarDays, ClipboardCheck, ClipboardList } from 'lucide-react';
+import { Search, Ticket, Plus, ClipboardList } from 'lucide-react';
 import { workTypeColors, statusLabels, statusColors } from '@/lib/ticketColors';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import EmptyState from '@/components/ui/EmptyState';
@@ -203,16 +203,19 @@ const Dashboard = () => {
     };
   }, [tickets, inspections]);
 
-  const metricCards = [
-    { label: 'Active',      value: metrics.active,          icon: Ticket,         color: 'text-primary',          bg: 'bg-primary/10',        border: 'border-t-primary' },
-    { label: 'Drafts',      value: metrics.draft,           icon: FileEdit,       color: 'text-muted-foreground', bg: 'bg-muted/40',          border: 'border-t-border' },
-    { label: 'Unassigned',  value: metrics.unassigned,      icon: UserX,          color: 'text-orange-400',       bg: 'bg-orange-400/10',     border: 'border-t-orange-400' },
-    { label: 'Paused',      value: metrics.paused,          icon: PauseCircle,    color: 'text-yellow-400',       bg: 'bg-yellow-400/10',     border: 'border-t-yellow-400' },
-    { label: 'Emergencies', value: metrics.emergencies,     icon: AlertTriangle,  color: 'text-destructive',      bg: 'bg-destructive/10',    border: 'border-t-destructive' },
-    { label: 'For Review',  value: metrics.pmNotResponding, icon: Clock,          color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
-    { label: 'Scheduled',   value: metrics.insScheduled,    icon: CalendarDays,   color: 'text-purple-400',       bg: 'bg-purple-400/10',     border: 'border-t-purple-400' },
-    { label: 'Pending PM',  value: metrics.insPending,      icon: Clock,          color: 'text-blue-400',         bg: 'bg-blue-400/10',       border: 'border-t-blue-400' },
-    { label: 'Responded',   value: metrics.insResponded,    icon: ClipboardCheck, color: 'text-green-400',        bg: 'bg-green-400/10',      border: 'border-t-green-400' },
+  const ticketMetrics = [
+    { label: 'Active',      value: metrics.active,          color: 'text-primary',          border: 'border-l-primary' },
+    { label: 'Drafts',      value: metrics.draft,           color: 'text-muted-foreground', border: 'border-l-border' },
+    { label: 'Unassigned',  value: metrics.unassigned,      color: 'text-orange-400',       border: 'border-l-orange-400' },
+    { label: 'Paused',      value: metrics.paused,          color: 'text-yellow-400',       border: 'border-l-yellow-400' },
+    { label: 'Emergencies', value: metrics.emergencies,     color: 'text-destructive',      border: 'border-l-destructive' },
+    { label: 'For Review',  value: metrics.pmNotResponding, color: 'text-purple-400',       border: 'border-l-purple-400' },
+  ];
+
+  const inspectionMetrics = [
+    { label: 'Scheduled',  value: metrics.insScheduled, color: 'text-purple-400', border: 'border-l-purple-400' },
+    { label: 'Pending PM', value: metrics.insPending,   color: 'text-blue-400',   border: 'border-l-blue-400' },
+    { label: 'Responded',  value: metrics.insResponded, color: 'text-green-400',  border: 'border-l-green-400' },
   ];
 
   const hours = new Date().getHours();
@@ -274,54 +277,66 @@ const Dashboard = () => {
   return (
     <div className="p-4 space-y-4">
       {/* Greeting */}
-      <div className="mb-4">
-        <h1 className="text-lg font-bold text-foreground">Good {timeOfDay}, {firstName}</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h1 className="text-base md:text-lg font-semibold text-foreground">Good {timeOfDay}, {firstName}</h1>
+        <span className="text-[11px] md:text-xs text-muted-foreground">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+        </span>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-        {metricCards.map((m) => (
-          <div key={m.label} className={`fs-card p-3 flex items-center gap-3 border-t-2 ${m.border}`}>
-            <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center shrink-0`}>
-              <m.icon className={`w-3.5 h-3.5 ${m.color}`} />
+      {/* Tickets metrics */}
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Tickets</h2>
+        <div className="flex gap-2 overflow-x-auto md:overflow-visible md:grid md:grid-cols-6 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+          {ticketMetrics.map((m) => (
+            <div key={m.label} className={`fs-card shrink-0 min-w-[110px] md:min-w-0 py-2.5 px-3 border-l-2 ${m.border} flex flex-col`}>
+              <span className={`text-2xl font-bold leading-none ${m.color}`}>{m.value}</span>
+              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5">{m.label}</span>
             </div>
-            <div className="min-w-0 flex flex-col">
-              <span className={`text-xl font-bold tracking-tight ${m.color} leading-none`}>{m.value}</span>
-              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5 truncate">{m.label}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Inspections metrics */}
+      <div>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Inspections</h2>
+        <div className="flex gap-2 overflow-x-auto md:overflow-visible md:grid md:grid-cols-3 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+          {inspectionMetrics.map((m) => (
+            <div key={m.label} className={`fs-card shrink-0 min-w-[110px] md:min-w-0 py-2.5 px-3 border-l-2 ${m.border} flex flex-col`}>
+              <span className={`text-2xl font-bold leading-none ${m.color}`}>{m.value}</span>
+              <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5">{m.label}</span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          ref={searchRef}
-          placeholder="Search FS#, PM, property, zone, technician, notes…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Search + filter chips */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            ref={searchRef}
+            placeholder="Search tickets..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-      {/* Quick filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-        {QUICK_FILTERS.map((f) => {
-          const active = quickFilter === f.key;
-          return (
-            <button
-              key={f.key}
-              onClick={() => setQuickFilter(f.key)}
-              className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
-            >
-              {f.label}
-            </button>
-          );
-        })}
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 scrollbar-none">
+          {QUICK_FILTERS.map((f) => {
+            const active = quickFilter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setQuickFilter(f.key)}
+                className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Ticket list */}
@@ -341,12 +356,11 @@ const Dashboard = () => {
             const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
             const leftBorder = workTypeBorder[ticket.work_type ?? 'repair'] ?? 'border-l-muted-foreground';
             const property = ticket.property_id ? properties[ticket.property_id] : null;
-            const pmName = property?.current_pm_id ? clients[property.current_pm_id] : null;
             return (
               <button
                 key={ticket.id}
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
-                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
+                className={`w-full text-left fs-card border-l-[3px] ${leftBorder} py-2.5 px-3 hover:bg-secondary/30 transition-colors duration-150 space-y-0.5`}
               >
                 {/* Line 1: identity + badges */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -372,30 +386,17 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* Line 2: property · unit · PM */}
-                <p className="text-sm truncate">
-                  {property && (
-                    <span className="font-semibold text-foreground">{property.name}</span>
-                  )}
-                  {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
-                  {pmName && <span className="text-muted-foreground"> · {pmName}</span>}
-                </p>
-
-                {/* Line 3: address */}
-                {property?.address && (
-                  <p className="text-xs text-muted-foreground truncate">{property.address}</p>
-                )}
-
-                {/* Line 4: technician + appointment */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>
-                    {ticket.technician_id ? users[ticket.technician_id] : <span className="text-destructive font-medium">Unassigned</span>}
+                {/* Line 2: property + technician */}
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate min-w-0">
+                    {property && <span className="font-semibold text-foreground">{property.name}</span>}
+                    {ticket.unit && <span className="text-muted-foreground"> · Unit {ticket.unit}</span>}
                   </span>
-                  {ticket.appointment_time && (
-                    <span>
-                      {new Date(ticket.appointment_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                  )}
+                  <span className="text-xs shrink-0 truncate max-w-[40%]">
+                    {ticket.technician_id
+                      ? <span className="text-muted-foreground">{users[ticket.technician_id]}</span>
+                      : <span className="text-destructive font-medium">Unassigned</span>}
+                  </span>
                 </div>
               </button>
             );
@@ -403,8 +404,9 @@ const Dashboard = () => {
         )}
       </div>
 
+
       {/* Inspections section */}
-      <div className="mt-6">
+      <div className="mt-8 pt-6 border-t border-border">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground">
             Inspections <span className="text-muted-foreground font-normal">({inspections.length})</span>
@@ -425,7 +427,7 @@ const Dashboard = () => {
                 <button
                   key={ins.id}
                   onClick={() => navigate(`/inspections/${ins.id}`)}
-                  className="w-full text-left fs-card border-l-[3px] border-l-amber-400 py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1"
+                  className="w-full text-left fs-card py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs font-bold text-foreground tracking-tight">{ins.ins_number ?? 'No INS#'}</span>
