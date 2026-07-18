@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import Spinner from '@/components/ui/Spinner';
+import { markDeviceTrusted } from '@/lib/trustedDevice';
 
 const maskEmail = (email: string): string => {
   const [local, domain] = email.split('@');
@@ -124,6 +125,10 @@ const VerifyTwoFactor = () => {
           toast.error(`Invalid code. ${3 - newAttempts} attempt(s) remaining.`);
         }
       } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          markDeviceTrusted(session.user.id);
+        }
         toast.success('Verified successfully!');
         navigate('/dashboard', { replace: true });
       }

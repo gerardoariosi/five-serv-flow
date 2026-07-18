@@ -9,6 +9,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import FiveServLogo from '@/components/auth/FiveServLogo';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
+import { isDeviceTrusted } from '@/lib/trustedDevice';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ const Login = () => {
       sessionStorage.setItem('fiveserv-session-active', '1');
     }
 
-    if (user.roles.includes('admin')) {
+    if (user.roles.includes('admin') && !isDeviceTrusted(user.id)) {
       navigate('/verify-2fa', { replace: true });
     } else {
       navigate('/dashboard', { replace: true });
