@@ -48,16 +48,13 @@ const Login = () => {
       return;
     }
 
-    // Persist remember-me preference
     if (rememberMe) {
       localStorage.setItem('fiveserv-remember-me', '1');
     } else {
       localStorage.removeItem('fiveserv-remember-me');
-      // Mark this tab as having an active session (lost on tab close)
       sessionStorage.setItem('fiveserv-session-active', '1');
     }
 
-    // Admin goes to 2FA
     if (user.roles.includes('admin')) {
       navigate('/verify-2fa', { replace: true });
     } else {
@@ -66,41 +63,43 @@ const Login = () => {
   };
 
   return (
-    <div className="dark min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Subtle gold glow background */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 600px 400px at 50% 25%, rgba(255,215,0,0.08), transparent 70%)',
-        }}
-      />
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F7F5] p-4 font-sans">
+      <div className="w-full max-w-md">
+        <div className="bg-white border border-[#E5E5E5] rounded-2xl p-10 shadow-[0_20px_50px_rgba(0,0,0,0.06)]">
+          <div className="mb-8">
+            <FiveServLogo variant="light" />
+            <div className="text-center mt-6">
+              <h1 className="text-xl font-bold text-[#1A1A1A]">Sign in to your account</h1>
+              <p className="text-sm text-[#666] mt-1.5">Welcome back to the operations portal</p>
+            </div>
+          </div>
 
-      <div className="w-full max-w-md relative">
-        <div className="relative">
-          <FiveServLogo />
-        </div>
-
-        <div className="bg-card border border-border/50 rounded-[0.625rem] p-8 shadow-[var(--card-shadow)]">
-          <h2 className="text-lg font-bold text-foreground mb-6">Sign In</h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
+              <Label
+                htmlFor="email"
+                className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#666]"
+              >
+                Email Address
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value.toLowerCase())}
-                placeholder="you@company.com"
+                placeholder="name@company.com"
                 required
-                className="bg-secondary border-border text-foreground focus-visible:border-primary"
+                className="h-11 bg-[#FAFAFA] border-[#E5E5E5] text-[#1A1A1A] placeholder:text-[#BBB] rounded-lg focus-visible:border-[#FFD700] focus-visible:ring-1 focus-visible:ring-[#FFD700]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
+              <Label
+                htmlFor="password"
+                className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#666]"
+              >
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -109,32 +108,51 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="bg-secondary border-border text-foreground pr-10 focus-visible:border-primary"
+                  className="h-11 bg-[#FAFAFA] border-[#E5E5E5] text-[#1A1A1A] placeholder:text-[#BBB] rounded-lg pr-10 focus-visible:border-[#FFD700] focus-visible:ring-1 focus-visible:ring-[#FFD700]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#1A1A1A] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Checkbox id="remember" checked={rememberMe} onCheckedChange={(c) => setRememberMe(c === true)} />
-              <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
-                Remember Me
-              </Label>
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(c) => setRememberMe(c === true)}
+                  className="border-[#D5D5D5] data-[state=checked]:bg-[#FFD700] data-[state=checked]:border-[#FFD700] data-[state=checked]:text-[#1A1A1A]"
+                />
+                <Label htmlFor="remember" className="text-sm text-[#666] cursor-pointer">
+                  Remember me
+                </Label>
+              </div>
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-[#1A1A1A] hover:text-[#B8860B] transition-colors"
+              >
+                Forgot password?
+              </Link>
             </div>
 
             {isFirstAccess && (
-              <div className="flex items-start gap-2">
-                <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(c) => setAcceptedTerms(c === true)} />
-                <Label htmlFor="terms" className="text-xs text-muted-foreground cursor-pointer leading-relaxed">
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(c) => setAcceptedTerms(c === true)}
+                  className="mt-0.5 border-[#D5D5D5] data-[state=checked]:bg-[#FFD700] data-[state=checked]:border-[#FFD700] data-[state=checked]:text-[#1A1A1A]"
+                />
+                <Label htmlFor="terms" className="text-xs text-[#666] cursor-pointer leading-relaxed">
                   I accept the{' '}
-                  <span className="text-primary underline">Terms of Service</span> and{' '}
-                  <span className="text-primary underline">Privacy Policy</span>
+                  <span className="text-[#1A1A1A] font-semibold underline decoration-[#FFD700] underline-offset-2">Terms of Service</span>{' '}
+                  and{' '}
+                  <span className="text-[#1A1A1A] font-semibold underline decoration-[#FFD700] underline-offset-2">Privacy Policy</span>
                 </Label>
               </div>
             )}
@@ -144,19 +162,19 @@ const Login = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold active:scale-95 transition-transform"
+              className="w-full h-11 bg-[#1A1A1A] hover:bg-black text-white font-bold rounded-lg shadow-[0_4px_20px_rgba(26,26,26,0.15)] active:scale-[0.98] transition-all"
             >
               {loading ? <Spinner size="sm" /> : 'Sign In'}
             </Button>
           </form>
 
-          <div className="mt-6 text-center space-y-2">
-            <Link to="/forgot-password" className="block text-sm text-primary hover:underline">
-              Forgot Password?
-            </Link>
-            <Link to="/help" className="block text-sm text-muted-foreground hover:text-foreground">
-              Help Center
-            </Link>
+          <div className="mt-8 pt-6 border-t border-[#EEEEEE] text-center">
+            <p className="text-sm text-[#666]">
+              Need help?{' '}
+              <Link to="/help" className="text-[#1A1A1A] font-semibold hover:text-[#B8860B] transition-colors">
+                Contact Support
+              </Link>
+            </p>
           </div>
         </div>
       </div>
