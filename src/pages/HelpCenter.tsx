@@ -701,7 +701,7 @@ const HelpCenter = () => {
             <span>{user ? 'Back to app' : 'Back to login'}</span>
           </button>
           <div className="flex items-center gap-2">
-            <FiveServLogo variant="dark" size="sm" showTagline={false} />
+            <FiveServLogo variant="light" size="sm" showTagline={false} />
             <span className="text-muted-foreground text-xs hidden sm:inline">Help Center</span>
           </div>
         </div>
