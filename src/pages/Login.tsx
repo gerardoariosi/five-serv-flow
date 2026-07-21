@@ -106,11 +106,29 @@ const Login = () => {
               className="text-3xl md:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-6"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
             >
-              Powering the heart of your franchise.
+              Everything your franchise operations need, in one place.
             </h2>
-            <p className="text-[#1A1A1A]/70 leading-relaxed">
-              Manage your property operations with the tools built for maintenance professionals and franchise owners.
-            </p>
+
+            <ul className="space-y-4 text-[#1A1A1A]/80">
+              <li className="flex items-start gap-3">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FFD700] shrink-0" />
+                <span className="leading-relaxed">
+                  <strong className="text-[#1A1A1A]">Work orders</strong> — create, assign, and track tickets from request to completion.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FFD700] shrink-0" />
+                <span className="leading-relaxed">
+                  <strong className="text-[#1A1A1A]">Inspections</strong> — schedule visits, capture photos, and price repairs in one flow.
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FFD700] shrink-0" />
+                <span className="leading-relaxed">
+                  <strong className="text-[#1A1A1A]">Communication</strong> — technicians, PMs, and owners stay updated automatically.
+                </span>
+              </li>
+            </ul>
           </div>
 
           <div className="relative z-10 mt-12 pt-12 border-t border-[#1A1A1A]/10">
