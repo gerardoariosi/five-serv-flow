@@ -270,7 +270,7 @@ const PricingReview = () => {
         {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
           <div key={step} className="flex items-center gap-1">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              i === 2 ? 'bg-primary text-primary-foreground' : i < 2 ? 'bg-green-500 text-white' : 'bg-secondary text-muted-foreground'
+              i === 2 ? 'bg-primary text-primary-foreground' : i < 2 ? 'bg-[hsl(142,71%,35%)] text-white' : 'bg-secondary text-muted-foreground'
             }`}>
               {i < 2 ? <Check className="w-3 h-3" /> : i + 1}
             </div>
@@ -289,7 +289,7 @@ const PricingReview = () => {
             <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">{item.item_name}</span>
-                <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
+                <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-[hsl(27,96%,45%)] text-white'}`}>
                   {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
                 </Badge>
               </div>
@@ -352,7 +352,7 @@ const PricingReview = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-foreground">{item.item_name}</span>
-                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
+                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-[hsl(27,96%,45%)] text-white'}`}>
                         {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
                       </Badge>
                     </div>

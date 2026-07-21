@@ -274,7 +274,7 @@ const AreaInspection = () => {
         {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
           <div key={step} className="flex items-center gap-1">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              i === 1 ? 'bg-primary text-primary-foreground' : i < 1 ? 'bg-green-500 text-white' : 'bg-secondary text-muted-foreground'
+              i === 1 ? 'bg-primary text-primary-foreground' : i < 1 ? 'bg-[hsl(142,71%,35%)] text-white' : 'bg-secondary text-muted-foreground'
             }`}>
               {i < 1 ? <Check className="w-3 h-3" /> : i + 1}
             </div>
@@ -293,8 +293,8 @@ const AreaInspection = () => {
             <p className="text-sm font-medium text-foreground mb-2">{item.item_name}</p>
             <div className="flex gap-2">
               {([
-                { status: 'good' as const, label: 'Good', color: 'bg-green-600 hover:bg-green-700 text-white', icon: Check },
-                { status: 'needs_repair' as const, label: 'Repair', color: 'bg-orange-500 hover:bg-orange-600 text-white', icon: CircleDot },
+                { status: 'good' as const, label: 'Good', color: 'bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white', icon: Check },
+                { status: 'needs_repair' as const, label: 'Repair', color: 'bg-[hsl(27,96%,45%)] hover:bg-[hsl(27,96%,40%)] text-white', icon: CircleDot },
                 { status: 'urgent' as const, label: 'Urgent', color: 'bg-destructive hover:bg-destructive/90 text-white', icon: AlertTriangle },
               ]).map(opt => (
                 <button

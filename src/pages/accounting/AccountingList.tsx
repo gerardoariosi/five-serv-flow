@@ -241,7 +241,7 @@ const AccountingList = () => {
 
       {/* Floating Bulk Action Bar */}
       {selectMode && selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card text-foreground border border-border rounded-xl shadow-xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center max-w-[95vw]">
           <span className="text-sm font-medium">{selected.size} ticket{selected.size === 1 ? '' : 's'} selected</span>
           {canBulkUpdate && (
             <>
@@ -254,11 +254,11 @@ const AccountingList = () => {
             </>
           )}
           {canDelete && (
-            <Button size="sm" disabled={deleting} onClick={() => setBulkDeleteDialog(true)} className="bg-red-600 hover:bg-red-700 text-white border-0">
+            <Button size="sm" disabled={deleting} onClick={() => setBulkDeleteDialog(true)} variant="destructive">
               <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
             </Button>
           )}
-          <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={exitSelectMode}>
+          <Button size="sm" variant="ghost" onClick={exitSelectMode}>
             Clear
           </Button>
         </div>
