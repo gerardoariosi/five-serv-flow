@@ -60,7 +60,7 @@ const Login = () => {
     <div className="min-h-screen w-full flex items-center justify-center bg-[#FAF9F6] p-4 md:p-8 font-sans">
       <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl shadow-[#1A1A1A]/5 flex flex-col md:flex-row overflow-hidden border border-[#E5E5E1]">
         {/* Left: Branding & Trust */}
-        <div className="hidden md:flex md:w-5/12 bg-[#F3F2EE] p-10 md:p-14 flex-col justify-between relative overflow-hidden">
+        <div className="hidden md:flex md:w-5/12 bg-[#F3F2EE] p-8 lg:p-14 flex-col justify-between relative overflow-hidden">
           {/* Subtle gold dot pattern */}
           <div
             className="absolute inset-0 opacity-40 pointer-events-none"
@@ -103,28 +103,27 @@ const Login = () => {
             </div>
 
             <h2
-              className="text-3xl md:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-4"
+              className="text-2xl lg:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-4"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
             >
               Run your properties without the chaos.
             </h2>
-            <p className="text-[#1A1A1A]/70 leading-relaxed mb-8">
+            <p className="text-sm lg:text-base text-[#1A1A1A]/70 leading-relaxed mb-8">
               Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
             </p>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
-                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A]">Work orders</div>
-              </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
-                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A]">Inspections</div>
-              </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
-                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A]">Communication</div>
-              </div>
+            <div className="grid grid-cols-3 gap-2 lg:gap-3">
+              {["Work orders", "Inspections", "Communication"].map((label) => (
+                <div
+                  key={label}
+                  className="min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-2 py-3 lg:px-4 lg:py-4 border border-[#1A1A1A]/5"
+                >
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#FFD700] mb-2 lg:mb-3" />
+                  <div className="text-[11px] lg:text-sm font-semibold text-[#1A1A1A] leading-tight">
+                    {label}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
