@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ArrowLeft, ArrowUp, ChevronDown, Search, HelpCircle, Mail } from 'lucide-react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
