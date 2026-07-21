@@ -115,18 +115,15 @@ const Login = () => {
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
                 <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A] mb-1">Work orders</div>
-                <div className="text-xs text-[#1A1A1A]/60 leading-snug">Create, assign, and track from request to completion.</div>
+                <div className="text-sm font-semibold text-[#1A1A1A]">Work orders</div>
               </div>
               <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
                 <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A] mb-1">Inspections</div>
-                <div className="text-xs text-[#1A1A1A]/60 leading-snug">Schedule visits, capture photos, and price repairs.</div>
+                <div className="text-sm font-semibold text-[#1A1A1A]">Inspections</div>
               </div>
               <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
                 <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A] mb-1">Communication</div>
-                <div className="text-xs text-[#1A1A1A]/60 leading-snug">Technicians, PMs, and owners stay updated.</div>
+                <div className="text-sm font-semibold text-[#1A1A1A]">Communication</div>
               </div>
             </div>
           </div>
