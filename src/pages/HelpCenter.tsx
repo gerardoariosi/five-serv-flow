@@ -845,14 +845,14 @@ const HelpCenter = () => {
           )}
 
           {/* Footer */}
-          <div className="mt-12 border-t border-gray-100 pt-6 text-center">
-            <p className="text-xs text-gray-600">
+          <div className="mt-12 border-t border-border pt-6 text-center">
+            <p className="text-xs text-muted-foreground">
               Still need help? Contact your Admin or email{' '}
-              <a href="mailto:info@fiveserv.net" className="text-[#FFD700] hover:underline inline-flex items-center gap-1">
+              <a href="mailto:info@fiveserv.net" className="text-primary hover:underline inline-flex items-center gap-1">
                 <Mail className="w-3 h-3" /> info@fiveserv.net
               </a>
             </p>
-            <p className="text-[10px] text-gray-400 mt-2">FiveServ Operations · Help Center</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">FiveServ Operations · Help Center</p>
           </div>
         </main>
       </div>
@@ -861,7 +861,7 @@ const HelpCenter = () => {
       {showTop && (
         <Button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-40 h-11 w-11 rounded-full bg-[#FFD700] text-[#1A1A1A] hover:bg-[#FFD700]/90 shadow-lg p-0"
+          className="fixed bottom-6 right-6 z-40 h-11 w-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg p-0"
           aria-label="Back to top"
         >
           <ArrowUp className="w-4 h-4" />
