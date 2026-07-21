@@ -166,7 +166,7 @@ const VerifyTwoFactor = () => {
                 value={digit}
                 onChange={(e) => handleDigitChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-11 h-14 text-center text-xl font-bold bg-secondary border border-border rounded-md text-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                className="w-11 h-14 text-center text-xl font-bold bg-card border-2 border-border rounded-md text-foreground focus:border-primary focus:ring-2 focus:ring-primary/30 outline-none transition-colors"
               />
             ))}
           </div>

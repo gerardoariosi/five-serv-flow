@@ -91,7 +91,7 @@ const NotificationDropdown = () => {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
+        <button className="relative p-2 text-foreground/70 hover:text-foreground transition-colors">
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">

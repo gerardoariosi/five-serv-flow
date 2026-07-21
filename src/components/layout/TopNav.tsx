@@ -86,7 +86,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           )}
           <button
             onClick={handleThemeToggle}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+            className="p-2 text-foreground/70 hover:text-foreground transition-colors active:scale-95"
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
