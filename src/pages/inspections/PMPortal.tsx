@@ -365,18 +365,15 @@ const PMPortal = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Header — black bar with FiveServ wordmark */}
+      {/* Header — branded bar with FiveServ wordmark */}
       <div className="sticky top-0 z-10 shadow-sm">
-        <div className="bg-[#1A1A1A] px-4 py-4">
+        <div className="bg-card px-4 py-4 border-b border-border">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex-1" />
-            <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.1rem' }}>
-              <span style={{ color: '#FFD700' }}>F</span>
-              <span style={{ color: '#FFFFFF' }}>iveServ</span>
-            </span>
+            <FiveServLogo variant="light" size="sm" showTagline={false} />
             <div className="flex-1 flex justify-end">
               {readOnly && (
-                <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] uppercase tracking-wider">Submitted</Badge>
+                <Badge className="bg-[hsl(142,71%,45%)]/15 text-[hsl(142,71%,35%)] border border-[hsl(142,71%,45%)]/30 text-[10px] uppercase tracking-wider">Submitted</Badge>
               )}
             </div>
           </div>
