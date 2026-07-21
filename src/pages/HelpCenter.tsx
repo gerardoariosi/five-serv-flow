@@ -709,23 +709,23 @@ const HelpCenter = () => {
 
       {/* Hero / Search */}
       <section className="max-w-6xl mx-auto px-4 pt-8 pb-4">
-        <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-          <HelpCircle className="w-3.5 h-3.5 text-[#FFD700]" />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+          <HelpCircle className="w-3.5 h-3.5 text-primary" />
           <span>Help Center</span>
           <span className="opacity-50">›</span>
-          <span className="text-gray-900">{activeSection.title}</span>
+          <span className="text-foreground">{activeSection.title}</span>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">How can we help?</h1>
-        <p className="text-sm text-gray-600 mb-5">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">How can we help?</h1>
+        <p className="text-sm text-muted-foreground mb-5">
           Browse step-by-step guides for FiveServ Operations. Search across every article below.
         </p>
         <div className="relative max-w-xl">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search guides, or ask a question..."
-            className="pl-9 bg-white border-gray-200 text-gray-900 focus-visible:border-[#FFD700]"
+            className="pl-9 bg-card border-border text-foreground focus-visible:border-primary"
           />
         </div>
       </section>
