@@ -77,7 +77,7 @@ const ResetPassword = () => {
 
   if (tokenValid === null) {
     return (
-      <div className="dark min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Spinner />
       </div>
     );
@@ -85,9 +85,9 @@ const ResetPassword = () => {
 
   if (!tokenValid) {
     return (
-      <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center">
-          <FiveServLogo />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center shadow-sm">
+          <FiveServLogo className="mb-6" />
           <h2 className="text-lg font-bold text-foreground mb-2">Link Expired</h2>
           <p className="text-sm text-muted-foreground mb-4">This reset link has expired.</p>
           <Link to="/forgot-password">
@@ -101,11 +101,11 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <FiveServLogo />
+        <FiveServLogo className="mb-6" />
 
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-bold text-foreground mb-6">Set Your Password</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">

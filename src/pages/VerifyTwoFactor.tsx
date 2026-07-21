@@ -139,10 +139,10 @@ const VerifyTwoFactor = () => {
   };
 
   return (
-    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <FiveServLogo />
-        <div className="bg-card border border-border rounded-lg p-6 text-center">
+        <FiveServLogo className="mb-6" />
+        <div className="bg-card border border-border rounded-lg p-6 text-center shadow-sm">
 
           <h2 className="text-lg font-bold text-foreground mb-2">Two-Factor Authentication</h2>
           <p className="text-sm text-muted-foreground mb-6">

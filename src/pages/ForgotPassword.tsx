@@ -38,11 +38,11 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <FiveServLogo />
+        <FiveServLogo className="mb-6" />
 
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-bold text-foreground mb-2">Forgot Password</h2>
           <p className="text-sm text-muted-foreground mb-6">
             Enter your email and we'll send you a reset link.
@@ -57,7 +57,7 @@ const ForgotPassword = () => {
                 onClick={() => { setSent(false); setEmail(''); }}
                 disabled={cooldown > 0}
                 variant="outline"
-                className="w-full border-border text-foreground"
+                className="w-full"
               >
                 {cooldown > 0 ? `Resend available in ${cooldown}s` : 'Send Again'}
               </Button>
