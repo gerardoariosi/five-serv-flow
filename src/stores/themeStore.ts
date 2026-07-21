@@ -12,7 +12,7 @@ const getInitialTheme = (): boolean => {
     const stored = localStorage.getItem('fiveserv-dark-mode');
     if (stored !== null) return stored === 'true';
   } catch {}
-  return true; // default dark
+  return false; // default light (professional theme)
 };
 
 const applyTheme = (dark: boolean) => {

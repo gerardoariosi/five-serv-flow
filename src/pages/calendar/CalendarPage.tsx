@@ -334,8 +334,8 @@ const CalendarPage = () => {
     const isCompact = view === Views.MONTH;
     return (
       <div
-        className="rounded px-1.5 py-0.5 text-white cursor-pointer overflow-hidden"
-        style={{ backgroundColor: event.color, borderLeft: `3px solid ${event.color}`, filter: 'brightness(1.05)' }}
+        className="rounded px-1.5 py-0.5 text-foreground cursor-pointer overflow-hidden border border-border"
+        style={{ backgroundColor: event.color, borderLeft: `3px solid ${event.color}` }}
         onContextMenu={(e) => { e.preventDefault(); handleRescheduleClick(event, e); }}
         onTouchStart={() => { longPressTimer = setTimeout(() => handleRescheduleClick(event), 600); }}
         onTouchEnd={() => { if (longPressTimer) clearTimeout(longPressTimer); }}

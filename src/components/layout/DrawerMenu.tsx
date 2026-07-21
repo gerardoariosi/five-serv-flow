@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, type AppRole } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 
 interface DrawerMenuProps {
   open: boolean;
@@ -30,22 +31,22 @@ const navGroupsByRole: Record<string, NavGroup[]> = {
   admin: [
     { title: 'OPERATIONS', items: [
       { label: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard',   color: 'text-primary',     shortcut: 'G D' },
-      { label: 'Tickets',     icon: Ticket,          path: '/tickets',     color: 'text-blue-400',    shortcut: 'G T' },
-      { label: 'Inspections', icon: ClipboardCheck,  path: '/inspections', color: 'text-amber-400',   shortcut: 'G I' },
-      { label: 'Calendar',    icon: CalendarDays,    path: '/calendar',    color: 'text-purple-400',  shortcut: 'G C' },
+      { label: 'Tickets',     icon: Ticket,          path: '/tickets',     color: 'text-blue-500',    shortcut: 'G T' },
+      { label: 'Inspections', icon: ClipboardCheck,  path: '/inspections', color: 'text-amber-500',   shortcut: 'G I' },
+      { label: 'Calendar',    icon: CalendarDays,    path: '/calendar',    color: 'text-purple-500',  shortcut: 'G C' },
     ]},
     { title: 'MANAGEMENT', items: [
-      { label: 'Clients',    icon: Building2,    path: '/clients',           color: 'text-emerald-400' },
-      { label: 'Properties', icon: MapPin,       path: '/properties',        color: 'text-cyan-400' },
-      { label: 'Zones',      icon: Map,          path: '/zones',             color: 'text-orange-400' },
-      { label: 'Team',       icon: Users,        path: '/team/technicians',  color: 'text-pink-400' },
-      { label: 'Accounting', icon: DollarSign,   path: '/accounting',        color: 'text-green-400' },
+      { label: 'Clients',    icon: Building2,    path: '/clients',           color: 'text-emerald-500' },
+      { label: 'Properties', icon: MapPin,       path: '/properties',        color: 'text-cyan-500' },
+      { label: 'Zones',      icon: Map,          path: '/zones',             color: 'text-orange-500' },
+      { label: 'Team',       icon: Users,        path: '/team/technicians',  color: 'text-pink-500' },
+      { label: 'Accounting', icon: DollarSign,   path: '/accounting',        color: 'text-green-500' },
     ]},
     { title: 'ANALYTICS', items: [
-      { label: 'Reports', icon: BarChart3, path: '/reports', color: 'text-indigo-400' },
+      { label: 'Reports', icon: BarChart3, path: '/reports', color: 'text-indigo-500' },
     ]},
     { title: 'COMMUNICATION', items: [
-      { label: 'Chat', icon: MessageCircle, path: '/chat', color: 'text-sky-400' },
+      { label: 'Chat', icon: MessageCircle, path: '/chat', color: 'text-sky-500' },
     ]},
     { title: 'ACCOUNT', items: [
       { label: 'Settings',   icon: Settings, path: '/settings', color: 'text-muted-foreground' },
@@ -58,37 +59,37 @@ const navGroupsByRole: Record<string, NavGroup[]> = {
   supervisor: [
     { title: 'OPERATIONS', items: [
       { label: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard',   color: 'text-primary',    shortcut: 'G D' },
-      { label: 'Tickets',     icon: Ticket,          path: '/tickets',     color: 'text-blue-400',   shortcut: 'G T' },
-      { label: 'Inspections', icon: ClipboardCheck,  path: '/inspections', color: 'text-amber-400',  shortcut: 'G I' },
-      { label: 'Calendar',    icon: CalendarDays,    path: '/calendar',    color: 'text-purple-400', shortcut: 'G C' },
+      { label: 'Tickets',     icon: Ticket,          path: '/tickets',     color: 'text-blue-500',   shortcut: 'G T' },
+      { label: 'Inspections', icon: ClipboardCheck,  path: '/inspections', color: 'text-amber-500',  shortcut: 'G I' },
+      { label: 'Calendar',    icon: CalendarDays,    path: '/calendar',    color: 'text-purple-500', shortcut: 'G C' },
     ]},
     { title: 'MANAGEMENT', items: [
-      { label: 'Clients',    icon: Building2, path: '/clients',          color: 'text-emerald-400' },
-      { label: 'Properties', icon: MapPin,    path: '/properties',       color: 'text-cyan-400' },
-      { label: 'Zones',      icon: Map,       path: '/zones',            color: 'text-orange-400' },
-      { label: 'Team',       icon: Users,     path: '/team/technicians', color: 'text-pink-400' },
+      { label: 'Clients',    icon: Building2, path: '/clients',          color: 'text-emerald-500' },
+      { label: 'Properties', icon: MapPin,    path: '/properties',       color: 'text-cyan-500' },
+      { label: 'Zones',      icon: Map,       path: '/zones',            color: 'text-orange-500' },
+      { label: 'Team',       icon: Users,     path: '/team/technicians', color: 'text-pink-500' },
     ]},
-    { title: 'ANALYTICS',     items: [{ label: 'Reports', icon: BarChart3,    path: '/reports', color: 'text-indigo-400' }] },
-    { title: 'COMMUNICATION', items: [{ label: 'Chat',    icon: MessageCircle, path: '/chat',    color: 'text-sky-400' }] },
+    { title: 'ANALYTICS',     items: [{ label: 'Reports', icon: BarChart3,    path: '/reports', color: 'text-indigo-500' }] },
+    { title: 'COMMUNICATION', items: [{ label: 'Chat',    icon: MessageCircle, path: '/chat',    color: 'text-sky-500' }] },
     { title: 'ACCOUNT',       items: [{ label: 'My Profile', icon: User, path: '/profile', color: 'text-muted-foreground' }] },
     { title: 'SUPPORT',       items: [{ label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' }] },
   ],
   technician: [
     { title: 'WORK', items: [
-      { label: 'My Work',     icon: Wrench,       path: '/my-work',     color: 'text-blue-400' },
-      { label: 'My Calendar', icon: CalendarDays, path: '/my-calendar', color: 'text-purple-400' },
+      { label: 'My Work',     icon: Wrench,       path: '/my-work',     color: 'text-blue-500' },
+      { label: 'My Calendar', icon: CalendarDays, path: '/my-calendar', color: 'text-purple-500' },
     ]},
-    { title: 'COMMUNICATION', items: [{ label: 'Chat', icon: MessageCircle, path: '/chat', color: 'text-sky-400' }] },
+    { title: 'COMMUNICATION', items: [{ label: 'Chat', icon: MessageCircle, path: '/chat', color: 'text-sky-500' }] },
     { title: 'ACCOUNT',       items: [{ label: 'My Profile', icon: User, path: '/profile', color: 'text-muted-foreground' }] },
     { title: 'SUPPORT',       items: [{ label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' }] },
   ],
   accounting: [
     { title: 'OPERATIONS', items: [
       { label: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard',  color: 'text-primary' },
-      { label: 'Accounting', icon: DollarSign,      path: '/accounting', color: 'text-green-400' },
+      { label: 'Accounting', icon: DollarSign,      path: '/accounting', color: 'text-green-500' },
     ]},
-    { title: 'ANALYTICS',     items: [{ label: 'Reports', icon: BarChart3,    path: '/reports', color: 'text-indigo-400' }] },
-    { title: 'COMMUNICATION', items: [{ label: 'Chat',    icon: MessageCircle, path: '/chat',    color: 'text-sky-400' }] },
+    { title: 'ANALYTICS',     items: [{ label: 'Reports', icon: BarChart3,    path: '/reports', color: 'text-indigo-500' }] },
+    { title: 'COMMUNICATION', items: [{ label: 'Chat',    icon: MessageCircle, path: '/chat',    color: 'text-sky-500' }] },
     { title: 'ACCOUNT',       items: [{ label: 'My Profile', icon: User, path: '/profile', color: 'text-muted-foreground' }] },
     { title: 'SUPPORT',       items: [{ label: 'Help Center', icon: HelpCircle, path: '/help', color: 'text-muted-foreground' }] },
   ],
@@ -123,39 +124,42 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
     <>
       {open && (
         <div
-          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40"
+          className="fixed inset-0 bg-foreground/10 backdrop-blur-sm z-40"
           onClick={onClose}
         />
       )}
 
       <div
-        className={`fixed top-0 left-0 h-full w-[280px] bg-background border-r border-border z-50 transform transition-transform duration-300 drawer-spring ${
+        className={`fixed top-0 left-0 h-full w-[280px] bg-card border-r border-border z-50 transform transition-transform duration-300 drawer-spring ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         <div className="flex flex-col h-full">
+          {/* Logo + close */}
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <FiveServLogo variant="light" size="sm" showTagline={false} />
+            <button onClick={onClose} className="p-1 -mr-1 text-muted-foreground hover:text-foreground active:scale-95">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Profile header */}
-          <div className="p-4 border-b border-border">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar className="w-10 h-10 border border-border">
-                  {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name ?? ''} /> : null}
-                  <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">{initials}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{user?.full_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                  {activeRole && (
-                    <span className={`inline-flex mt-1 items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-full ${roleBadgeStyles[activeRole]}`}>
-                      {roleLabels[activeRole]}
-                    </span>
-                  )}
-                </div>
+          <div className="p-4 border-b border-border bg-secondary/30">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="w-10 h-10 border border-border">
+                {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name ?? ''} /> : null}
+                <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{user?.full_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                {activeRole && (
+                  <span className={`inline-flex mt-1 items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-full ${roleBadgeStyles[activeRole]}`}>
+                    {roleLabels[activeRole]}
+                  </span>
+                )}
               </div>
-              <button onClick={onClose} className="p-1 -mr-1 text-muted-foreground hover:text-foreground active:scale-95">
-                <X className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
@@ -172,7 +176,7 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
                     onClick={() => setActiveRole(role)}
                     className={`text-left px-2.5 py-1 rounded-md text-xs font-medium transition-colors active:scale-95 ${
                       activeRole === role
-                        ? 'bg-primary text-primary-foreground'
+                        ? 'bg-foreground text-background'
                         : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                   >
@@ -199,11 +203,11 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
                         onClick={() => handleNav(item.path)}
                         className={`group relative flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors active:scale-[0.98] ${
                           isActive
-                            ? 'bg-primary/10 text-foreground font-medium border-l-2 border-primary pl-[10px]'
+                            ? 'bg-secondary text-foreground font-medium border-l-2 border-primary pl-[10px]'
                             : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                         }`}
                       >
-                        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-primary' : item.color}`} />
                         <span className="flex-1 text-left">{item.label}</span>
                         {item.shortcut && (
                           <span className="text-[10px] text-muted-foreground/50 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
@@ -221,9 +225,9 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
           {/* Footer: shortcuts hint + logout + version */}
           <div className="border-t border-border">
             <div className="px-4 py-2 text-[10px] text-muted-foreground/60 leading-relaxed">
-              Press <kbd className="px-1 py-0.5 rounded bg-muted text-foreground font-mono text-[9px]">N</kbd> · New ticket
+              Press <kbd className="px-1 py-0.5 rounded bg-secondary text-foreground font-mono text-[9px]">N</kbd> · New ticket
               {' · '}
-              <kbd className="px-1 py-0.5 rounded bg-muted text-foreground font-mono text-[9px]">/</kbd> Search
+              <kbd className="px-1 py-0.5 rounded bg-secondary text-foreground font-mono text-[9px]">/</kbd> Search
             </div>
             <button
               onClick={handleLogout}

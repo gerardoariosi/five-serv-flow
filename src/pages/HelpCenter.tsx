@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ArrowLeft, ArrowUp, ChevronDown, Search, HelpCircle, Mail } from 'lucide-react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -688,46 +689,43 @@ const HelpCenter = () => {
   const activeSection = HELP_SECTIONS.find((s) => s.id === activeId) ?? HELP_SECTIONS[0];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-[#1A1A1A] border-b border-[#FFD700]/30">
+      <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login')}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{user ? 'Back to app' : 'Back to login'}</span>
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-serif text-lg leading-none">
-              <span className="text-[#FFD700] font-bold">F</span>
-              <span className="text-white font-bold">iveServ</span>
-            </span>
-            <span className="text-gray-400 text-xs hidden sm:inline">Help Center</span>
+            <FiveServLogo variant="light" size="sm" showTagline={false} />
+            <span className="text-muted-foreground text-xs hidden sm:inline">Help Center</span>
           </div>
         </div>
       </header>
 
       {/* Hero / Search */}
       <section className="max-w-6xl mx-auto px-4 pt-8 pb-4">
-        <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-          <HelpCircle className="w-3.5 h-3.5 text-[#FFD700]" />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+          <HelpCircle className="w-3.5 h-3.5 text-primary" />
           <span>Help Center</span>
           <span className="opacity-50">›</span>
-          <span className="text-gray-900">{activeSection.title}</span>
+          <span className="text-foreground">{activeSection.title}</span>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">How can we help?</h1>
-        <p className="text-sm text-gray-600 mb-5">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">How can we help?</h1>
+        <p className="text-sm text-muted-foreground mb-5">
           Browse step-by-step guides for FiveServ Operations. Search across every article below.
         </p>
         <div className="relative max-w-xl">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search guides, or ask a question..."
-            className="pl-9 bg-white border-gray-200 text-gray-900 focus-visible:border-[#FFD700]"
+            className="pl-9 bg-card border-border text-foreground focus-visible:border-primary"
           />
         </div>
       </section>
@@ -737,7 +735,7 @@ const HelpCenter = () => {
         {/* Sidebar (desktop) */}
         <aside className="hidden md:block">
           <div className="sticky top-20">
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500 mb-3">Sections</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Sections</p>
             <nav className="flex flex-col gap-0.5">
               {HELP_SECTIONS.map((s) => {
                 const isActive = s.id === activeId;
@@ -748,18 +746,18 @@ const HelpCenter = () => {
                     className={cn(
                       'text-left text-sm rounded-md px-3 py-2 transition-colors',
                       isActive
-                        ? 'bg-[#FFD700]/10 text-gray-900 font-medium border-l-2 border-[#FFD700] pl-[10px]'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
+                        ? 'bg-primary/10 text-foreground font-medium border-l-2 border-primary pl-[10px]'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
                     )}
                   >
-                    <span className="text-[#1A1A1A] font-bold mr-2">{s.number}.</span>
+                    <span className="text-foreground font-bold mr-2">{s.number}.</span>
                     {s.title}
                   </button>
                 );
               })}
               <button
                 onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-left text-sm rounded-md px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 mt-2"
+                className="text-left text-sm rounded-md px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 mt-2"
               >
                 FAQs
               </button>
@@ -770,18 +768,18 @@ const HelpCenter = () => {
         {/* Mobile section picker */}
         <div className="md:hidden">
           <Collapsible>
-            <CollapsibleTrigger className="w-full flex items-center justify-between bg-white border border-gray-100 rounded-md px-4 py-3 text-sm text-gray-900">
+            <CollapsibleTrigger className="w-full flex items-center justify-between bg-card border border-border rounded-md px-4 py-3 text-sm text-foreground">
               <span>Browse sections</span>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 flex flex-col gap-1 bg-white border border-gray-100 rounded-md p-2">
+            <CollapsibleContent className="mt-2 flex flex-col gap-1 bg-card border border-border rounded-md p-2">
               {HELP_SECTIONS.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => scrollToSection(s.id)}
-                  className="text-left text-sm rounded px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className="text-left text-sm rounded px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 >
-                  <span className="text-[#FFD700] font-bold mr-2">{s.number}.</span>
+                  <span className="text-primary font-bold mr-2">{s.number}.</span>
                   {s.title}
                 </button>
               ))}
@@ -792,9 +790,9 @@ const HelpCenter = () => {
         {/* Content */}
         <main className="min-w-0">
           {!hasResults && (
-            <Card className="bg-white border border-gray-100 p-6 text-center shadow-none">
-              <p className="text-sm text-gray-900">
-                No results for <span className="text-[#FFD700] font-semibold">"{q}"</span> — try different words or browse the sections below
+            <Card className="bg-card border border-border p-6 text-center shadow-none">
+              <p className="text-sm text-foreground">
+                No results for <span className="text-primary font-semibold">"{q}"</span> — try different words or browse the sections below
               </p>
             </Card>
           )}
@@ -808,8 +806,8 @@ const HelpCenter = () => {
               className="scroll-mt-24 mb-10"
             >
               <div className="flex items-center gap-3 mb-4">
-                <Badge className="bg-[#FFD700] text-[#1A1A1A] rounded-md font-bold hover:bg-[#FFD700]">{section.number}</Badge>
-                <h2 className="text-xl font-bold tracking-tight text-gray-900">
+                <Badge className="bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90">{section.number}</Badge>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">
                   <Highlight text={section.title} query={q} />
                 </h2>
               </div>
@@ -826,17 +824,17 @@ const HelpCenter = () => {
           {filteredFaqs.length > 0 && (
             <section id="faq" className="scroll-mt-24 mt-12">
               <div className="flex items-center gap-3 mb-4">
-                <Badge className="bg-[#FFD700] text-[#1A1A1A] rounded-md font-bold hover:bg-[#FFD700]">FAQ</Badge>
-                <h2 className="text-xl font-bold tracking-tight text-gray-900">Frequently Asked Questions</h2>
+                <Badge className="bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90">FAQ</Badge>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">Frequently Asked Questions</h2>
               </div>
-              <Card className="bg-white border border-gray-100 p-2 shadow-none">
+              <Card className="bg-card border border-border p-2 shadow-none">
                 <Accordion type="single" collapsible className="w-full">
                   {filteredFaqs.map((f, i) => (
-                    <AccordionItem key={i} value={`faq-${i}`} className="border-gray-100">
-                      <AccordionTrigger className="text-left text-sm font-medium hover:no-underline px-3 text-gray-900">
+                    <AccordionItem key={i} value={`faq-${i}`} className="border-border">
+                      <AccordionTrigger className="text-left text-sm font-medium hover:no-underline px-3 text-foreground">
                         <Highlight text={f.q} query={q} />
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-600 px-3">
+                      <AccordionContent className="text-sm text-muted-foreground px-3">
                         <Highlight text={f.a} query={q} />
                       </AccordionContent>
                     </AccordionItem>
@@ -847,14 +845,14 @@ const HelpCenter = () => {
           )}
 
           {/* Footer */}
-          <div className="mt-12 border-t border-gray-100 pt-6 text-center">
-            <p className="text-xs text-gray-600">
+          <div className="mt-12 border-t border-border pt-6 text-center">
+            <p className="text-xs text-muted-foreground">
               Still need help? Contact your Admin or email{' '}
-              <a href="mailto:info@fiveserv.net" className="text-[#FFD700] hover:underline inline-flex items-center gap-1">
+              <a href="mailto:info@fiveserv.net" className="text-primary hover:underline inline-flex items-center gap-1">
                 <Mail className="w-3 h-3" /> info@fiveserv.net
               </a>
             </p>
-            <p className="text-[10px] text-gray-400 mt-2">FiveServ Operations · Help Center</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">FiveServ Operations · Help Center</p>
           </div>
         </main>
       </div>
@@ -863,7 +861,7 @@ const HelpCenter = () => {
       {showTop && (
         <Button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-40 h-11 w-11 rounded-full bg-[#FFD700] text-[#1A1A1A] hover:bg-[#FFD700]/90 shadow-lg p-0"
+          className="fixed bottom-6 right-6 z-40 h-11 w-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg p-0"
           aria-label="Back to top"
         >
           <ArrowUp className="w-4 h-4" />
@@ -879,18 +877,18 @@ const HelpCenter = () => {
 
 const ArticleCard = ({ article, query }: { article: Article; query: string }) => {
   return (
-    <Card id={`article-${article.id}`} className="bg-white border border-gray-100 p-5 scroll-mt-24 shadow-none">
+    <Card id={`article-${article.id}`} className="bg-card border border-border p-5 scroll-mt-24 shadow-none">
       <div className="flex items-start gap-3 mb-3">
-        <span className="shrink-0 inline-flex items-center justify-center text-[11px] font-bold px-2 py-0.5 rounded bg-[#FFD700]/15 text-[#1A1A1A]">
+        <span className="shrink-0 inline-flex items-center justify-center text-[11px] font-bold px-2 py-0.5 rounded bg-primary/15 text-foreground">
           {article.number}
         </span>
-        <h3 className="text-base font-semibold text-gray-900 tracking-tight">
+        <h3 className="text-base font-semibold text-foreground tracking-tight">
           <Highlight text={article.title} query={query} />
         </h3>
       </div>
 
       {article.kind === 'prose' && (
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <p className="text-sm text-muted-foreground leading-relaxed">
           <Highlight text={article.body as string} query={query} />
         </p>
       )}
@@ -898,8 +896,8 @@ const ArticleCard = ({ article, query }: { article: Article; query: string }) =>
       {article.kind === 'steps' && (
         <ol className="space-y-2 list-none pl-0">
           {(article.body as string[]).map((step, i) => (
-            <li key={i} className="flex gap-3 text-sm text-gray-700">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold inline-flex items-center justify-center">
+            <li key={i} className="flex gap-3 text-sm text-foreground">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-semibold inline-flex items-center justify-center">
                 {i + 1}
               </span>
               <span className="pt-0.5 leading-relaxed">
@@ -914,11 +912,11 @@ const ArticleCard = ({ article, query }: { article: Article; query: string }) =>
         <ul className="space-y-2.5">
           {(article.body as DefItem[]).map((it, i) => (
             <li key={i} className="text-sm">
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-foreground">
                 <Highlight text={it.label} query={query} />
               </span>
-              <span className="text-gray-500"> — </span>
-              <span className="text-gray-600">
+              <span className="text-muted-foreground/70"> — </span>
+              <span className="text-muted-foreground">
                 <Highlight text={it.description} query={query} />
               </span>
             </li>
@@ -927,14 +925,14 @@ const ArticleCard = ({ article, query }: { article: Article; query: string }) =>
       )}
 
       {article.tip && (
-        <div className="mt-4 bg-[#FFD700]/10 border-l-4 border-[#FFD700] text-gray-800 text-sm p-3 rounded-r">
-          <span className="text-[#1A1A1A] font-bold mr-1">Tip:</span>
+        <div className="mt-4 bg-primary/10 border-l-4 border-primary text-foreground text-sm p-3 rounded-r">
+          <span className="text-foreground font-bold mr-1">Tip:</span>
           <Highlight text={article.tip} query={query} />
         </div>
       )}
 
       {article.note && (
-        <div className="mt-4 bg-amber-50 border-l-4 border-amber-400 text-gray-800 text-sm p-3 rounded-r">
+        <div className="mt-4 bg-amber-50 border-l-4 border-amber-400 text-foreground text-sm p-3 rounded-r">
           <span className="text-amber-700 font-bold mr-1">Note:</span>
           <Highlight text={article.note} query={query} />
         </div>

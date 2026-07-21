@@ -45,11 +45,11 @@ interface InspectionRow {
 }
 
 const workTypeBorder: Record<string, string> = {
-  emergency: 'border-l-[#ef4444]',
-  'make-ready': 'border-l-[#f97316]',
-  make_ready: 'border-l-[#f97316]',
-  repair: 'border-l-[#3b82f6]',
-  capex: 'border-l-[#22c55e]',
+  emergency: 'border-l-destructive',
+  'make-ready': 'border-l-[hsl(27,96%,45%)]',
+  make_ready: 'border-l-[hsl(27,96%,45%)]',
+  repair: 'border-l-[hsl(217,91%,45%)]',
+  capex: 'border-l-[hsl(142,71%,35%)]',
 };
 
 const QUICK_FILTERS = [
@@ -204,18 +204,18 @@ const Dashboard = () => {
   }, [tickets, inspections]);
 
   const ticketMetrics = [
-    { label: 'Active',      value: metrics.active,          color: 'text-primary',          border: 'border-l-primary' },
-    { label: 'Drafts',      value: metrics.draft,           color: 'text-muted-foreground', border: 'border-l-border' },
-    { label: 'Unassigned',  value: metrics.unassigned,      color: 'text-orange-400',       border: 'border-l-orange-400' },
-    { label: 'Paused',      value: metrics.paused,          color: 'text-yellow-400',       border: 'border-l-yellow-400' },
-    { label: 'Emergencies', value: metrics.emergencies,     color: 'text-destructive',      border: 'border-l-destructive' },
-    { label: 'For Review',  value: metrics.pmNotResponding, color: 'text-purple-400',       border: 'border-l-purple-400' },
+    { label: 'Active',      value: metrics.active,          color: 'text-primary',                border: 'border-l-primary' },
+    { label: 'Drafts',      value: metrics.draft,           color: 'text-muted-foreground',       border: 'border-l-border' },
+    { label: 'Unassigned',  value: metrics.unassigned,      color: 'text-[hsl(27,96%,45%)]',      border: 'border-l-[hsl(27,96%,45%)]' },
+    { label: 'Paused',      value: metrics.paused,          color: 'text-[hsl(45,100%,40%)]',     border: 'border-l-[hsl(45,100%,40%)]' },
+    { label: 'Emergencies', value: metrics.emergencies,     color: 'text-destructive',            border: 'border-l-destructive' },
+    { label: 'For Review',  value: metrics.pmNotResponding, color: 'text-[hsl(270,60%,45%)]',     border: 'border-l-[hsl(270,60%,45%)]' },
   ];
 
   const inspectionMetrics = [
-    { label: 'Scheduled',  value: metrics.insScheduled, color: 'text-purple-400', border: 'border-l-purple-400' },
-    { label: 'Pending PM', value: metrics.insPending,   color: 'text-blue-400',   border: 'border-l-blue-400' },
-    { label: 'Responded',  value: metrics.insResponded, color: 'text-green-400',  border: 'border-l-green-400' },
+    { label: 'Scheduled',  value: metrics.insScheduled, color: 'text-[hsl(270,60%,45%)]',  border: 'border-l-[hsl(270,60%,45%)]' },
+    { label: 'Pending PM', value: metrics.insPending,   color: 'text-[hsl(217,91%,45%)]',   border: 'border-l-[hsl(217,91%,45%)]' },
+    { label: 'Responded',  value: metrics.insResponded, color: 'text-[hsl(142,71%,35%)]',   border: 'border-l-[hsl(142,71%,35%)]' },
   ];
 
   const hours = new Date().getHours();
@@ -377,7 +377,7 @@ const Dashboard = () => {
                         ticket.priority === 'urgent'
                           ? 'bg-destructive text-destructive-foreground'
                           : ticket.priority === 'high'
-                          ? 'bg-orange-500 text-white'
+                          ? 'bg-[hsl(27,96%,45%)] text-white'
                           : 'bg-muted text-muted-foreground'
                       }
                     >
@@ -460,8 +460,7 @@ const Dashboard = () => {
         <button
           onClick={() => setQuickOpen(true)}
           aria-label="Quick create ticket"
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-xl z-30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-          style={{ backgroundColor: '#FFD700', color: '#000' }}
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-xl z-30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95 bg-primary text-primary-foreground"
         >
           <Plus className="w-7 h-7" strokeWidth={2.5} />
         </button>
@@ -546,7 +545,7 @@ const Dashboard = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setQuickOpen(false); resetQuickForm(); }}>Cancel</Button>
-            <Button onClick={handleQuickCreate} disabled={creating} style={{ backgroundColor: '#FFD700', color: '#000' }}>
+            <Button onClick={handleQuickCreate} disabled={creating} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {creating ? 'Creating...' : 'Create Ticket'}
             </Button>
           </DialogFooter>

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Shield, Lock, Mail, Check, AlertTriangle, Camera, Download, ZoomIn, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import SignaturePad from '@/components/inspections/SignaturePad';
 import Spinner from '@/components/ui/Spinner';
 import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from '@/lib/inspectionAreas';
@@ -365,18 +366,15 @@ const PMPortal = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Header — black bar with FiveServ wordmark */}
+      {/* Header — branded bar with FiveServ wordmark */}
       <div className="sticky top-0 z-10 shadow-sm">
-        <div className="bg-[#1A1A1A] px-4 py-4">
+        <div className="bg-card px-4 py-4 border-b border-border">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex-1" />
-            <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.1rem' }}>
-              <span style={{ color: '#FFD700' }}>F</span>
-              <span style={{ color: '#FFFFFF' }}>iveServ</span>
-            </span>
+            <FiveServLogo variant="light" size="sm" showTagline={false} />
             <div className="flex-1 flex justify-end">
               {readOnly && (
-                <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] uppercase tracking-wider">Submitted</Badge>
+                <Badge className="bg-[hsl(142,71%,45%)]/15 text-[hsl(142,71%,35%)] border border-[hsl(142,71%,45%)]/30 text-[10px] uppercase tracking-wider">Submitted</Badge>
               )}
             </div>
           </div>
@@ -460,9 +458,9 @@ const PMPortal = () => {
           if (areaItems.length === 0 && areaPhotos.length === 0 && !areaNote) return null;
           return (
             <div key={area} className="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden">
-              {/* Area title bar — dark header with gold left accent */}
-              <div className="px-5 py-3 bg-gray-900 border-l-4 border-l-[#FFD700] flex items-center">
-                <h3 className="text-xs font-bold text-white uppercase tracking-[0.15em]">{area.replace(/_/g, ' ')}</h3>
+              {/* Area title bar — light header with gold left accent */}
+              <div className="px-5 py-3 bg-muted border-l-4 border-l-primary flex items-center">
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-[0.15em]">{area.replace(/_/g, ' ')}</h3>
               </div>
 
               {/* Items — invoice style rows */}
@@ -473,10 +471,10 @@ const PMPortal = () => {
                   return (
                     <div
                       key={item.id}
-                      className={`px-5 py-4 border-b border-gray-100 last:border-0 transition-all duration-150 ${
+                      className={`px-5 py-4 border-b border-border last:border-0 transition-all duration-150 ${
                         isSelected
-                          ? 'bg-[#FFFBEB] border-l-4 border-l-[#FFD700]'
-                          : 'bg-white border-l-4 border-l-transparent hover:bg-gray-50'
+                          ? 'bg-primary/10 border-l-4 border-l-primary'
+                          : 'bg-card border-l-4 border-l-transparent hover:bg-muted/50'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -485,11 +483,11 @@ const PMPortal = () => {
                           onClick={() => !readOnly && toggleItem(item.id)}
                           disabled={readOnly}
                           className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors mt-0.5 ${
-                            isSelected ? 'bg-[#FFD700] border-[#FFD700]' : 'border-gray-300 bg-white'
+                            isSelected ? 'bg-primary border-primary' : 'border-border bg-background'
                           } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           aria-label={isSelected ? 'Deselect item' : 'Select item'}
                         >
-                          {isSelected && <Check className="w-4 h-4 text-black" />}
+                          {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
                         </button>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
@@ -567,12 +565,12 @@ const PMPortal = () => {
         })}
 
         {/* Selected Total bar */}
-        <div className="bg-gray-900 border-t-2 border-[#FFD700] shadow-lg rounded-xl p-5 flex items-center justify-between">
+        <div className="bg-card border-t-2 border-primary shadow-lg rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Total</p>
-            <p className="text-gray-500 text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Selected Total</p>
+            <p className="text-muted-foreground text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
           </div>
-          <p className="text-3xl font-bold text-[#22c55e] tabular-nums">${total.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-[hsl(142,71%,35%)] tabular-nums">${total.toFixed(2)}</p>
         </div>
 
         {/* General note */}
@@ -616,7 +614,7 @@ const PMPortal = () => {
         {/* Submit */}
         {!readOnly && (
           <Button
-            className="w-full bg-[#1A1A1A] hover:bg-black text-white font-bold border-l-4 border-[#FFD700]"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold border-l-4 border-primary-foreground/20"
             size="lg"
             onClick={() => setShowConfirm(true)}
             disabled={!signatureData || selectedItems.size === 0}
@@ -627,18 +625,18 @@ const PMPortal = () => {
       </div>
 
       {/* Footer */}
-      <footer className="mt-12 bg-[#1A1A1A] text-white">
+      <footer className="mt-12 bg-card text-foreground border-t border-border">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <div><span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}><span style={{ color: '#FFD700' }}>F</span><span style={{ color: '#FFFFFF' }}>iveServ</span></span></div>
-          <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>One Team. One Call. Done.</p>
-          <p className="text-xs text-gray-400 mt-2">Licensed &amp; Insured · Central Florida</p>
-          <p className="text-xs text-gray-400">
-            <a href="mailto:info@fiveserv.net" className="hover:text-white">info@fiveserv.net</a>
+          <FiveServLogo variant="light" size="sm" showTagline={false} />
+          <p className="text-[10px] uppercase tracking-[0.2em] text-primary">One Team. One Call. Done.</p>
+          <p className="text-xs text-muted-foreground mt-2">Licensed &amp; Insured · Central Florida</p>
+          <p className="text-xs text-muted-foreground">
+            <a href="mailto:info@fiveserv.net" className="hover:text-foreground">info@fiveserv.net</a>
             {' · '}
-            <a href="tel:+14078814942" className="hover:text-white">(407) 881-4942</a>
+            <a href="tel:+14078814942" className="hover:text-foreground">(407) 881-4942</a>
           </p>
-          <p className="text-[10px] italic text-gray-500 pt-2">This document is confidential.</p>
+          <p className="text-[10px] italic text-muted-foreground/70 pt-2">This document is confidential.</p>
         </div>
       </footer>
 

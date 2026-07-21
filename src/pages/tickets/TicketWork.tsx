@@ -667,7 +667,7 @@ const TicketWork = () => {
               <div key={photo.id} className="rounded-lg overflow-hidden border border-border relative">
                 <img src={photo.url} alt="" className="w-full h-28 object-cover" />
                 {photo.is_pending_sync && (
-                  <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-orange-500 text-white text-[9px] font-bold rounded">PENDING</div>
+                  <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[hsl(27,96%,45%)] text-white text-[9px] font-bold rounded">PENDING</div>
                 )}
                 <div className="p-1.5">
                   <Badge variant="outline" className="text-[9px]">{photo.stage}</Badge>

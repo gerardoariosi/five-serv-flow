@@ -1,95 +1,91 @@
-# FiveServ — Color & Status System Proposal
+# Plan: Professional Light Theme Across the App
 
-## 1. Research Notes (Jobber, Housecall Pro, Buildium, ServiceTitan)
+## Goal
+Make every authenticated screen match the clean, professional light aesthetic of the redesigned Login page, using the warm off-white background (`#FAF9F6`), warm gray panels (`#F3F2EE`), charcoal text (`#1A1A1A`), and gold accents (`#FFD700`).
 
-All four converge on the same restraint pattern:
+## What we will change
 
-- **~1 brand accent, 3–4 semantic status colors, everything else neutral.** Jobber = green brand + red/amber/blue/grey status. Housecall Pro = blue brand + red/amber/green. Buildium = teal brand + red/amber/green. ServiceTitan = blue brand + red/amber/green.
-- **Numbers on stat cards are always neutral (near-black in light, near-white in dark).** Color appears only in a small delta chip or an icon, never on the number itself. FiveServ currently colors the number (orange, yellow, purple, green) which is the biggest source of "busy".
-- **Badges are one shape** — subtle rounded pill, ~11px, medium weight, tinted background + darker text of the same hue. Never solid saturated fills except for destructive/emergency.
-- **Color is reserved for state, not category.** Job types ("Repair", "Install", "Maintenance") are neutral gray text or an outlined chip. Only *status* (open / in progress / overdue / done) carries color.
-- **Left-border stripes** are rare and reserved for exceptions (overdue, emergency, unread). Default rows have a subtle bottom divider, not a colored spine.
-- **Typography**: one large bold number, small uppercase muted label, generous vertical padding. No secondary color on the label.
+### 1. Theme foundation
+- Switch the default theme from dark to light in `src/stores/themeStore.ts`.
+- Update `src/index.css` so the `:root` (default) palette matches the login:
+  - `background`: `#FAF9F6`
+  - `card`: `#FFFFFF`
+  - `secondary` / `muted`: `#F3F2EE`
+  - `border` / `input`: `#E5E5E1`
+  - `foreground`: `#1A1A1A`
+  - `muted-foreground`: `#6B6B6B`
+  - Keep primary as gold (`#FFD700`) and destructive as red.
+- Keep the `.dark` class available for users who still want dark mode, but the app will open in light mode by default.
 
-Your hypothesis is directionally correct and matches this playbook. Two pushbacks:
+### 2. Global chrome
+- `AppLayout.tsx`: set page background to `bg-background` (warm off-white).
+- `TopNav.tsx`:
+  - Remove the thick gold bottom border; replace with a subtle `border-b border-border`.
+  - Use the official FiveServ wordmark (charcoal + gold) instead of the inline `F`/`iveServ` span.
+  - Keep role badge, notifications, avatar, and theme toggle.
+- `DrawerMenu.tsx`:
+  - Background: white card with subtle right border.
+  - Active item: warm gray background (`#F3F2EE`) + gold left accent, instead of gold-filled pill.
+  - Icons: charcoal when inactive, gold when active.
+  - Profile header: cleaner spacing, role badge in charcoal/gold.
+- `MobileBottomNav.tsx`:
+  - White background, subtle top border, gold active indicator.
 
-1. **Gold as sole brand accent is fine, but reserve a "primary action" tint separate from "brand mark".** Gold on FAB + primary button is high-visibility; using the same gold on "active nav" and the logo is OK but avoid ever tinting data with it (currently `text-primary` on the Active metric does this).
-2. **Don't use colored left-borders for work-type at all.** Jobber/HCP/Buildium don't. Use a small neutral outlined chip ("Repair", "Emergency") where the *Emergency* chip is the only red one. Reserve the left-border stripe for a single meaning: **needs attention** (emergency OR overdue). This kills 4 competing border colors on the ticket list at once.
+### 3. Dashboard redesign
+- Page background: warm off-white.
+- Metric cards: white cards with soft shadow, colored top/left border accents preserved.
+- Search + filter chips: white input, gold ring on focus, chips with light gray inactive / gold active.
+- Ticket / inspection cards: white cards, subtle left border by work type, clean 2-line layout preserved.
+- Quick-create modal: white dialog with gold focus rings.
 
-## 2. Proposed Color Tokens
+### 4. List pages
+Apply the same card/input styling to:
+- `TicketList.tsx`
+- `InspectionList.tsx`
+- `ClientList.tsx`
+- `PropertyList.tsx`
+- `ZoneList.tsx`
+- `TechnicianList.tsx`
+- `AccountingList.tsx`
 
-Add semantic tokens in `index.css` — components consume names only, never hex.
+Changes per page:
+- Page background `bg-background`.
+- Cards: white with soft shadow and subtle border.
+- Search/filter inputs: white with gold focus ring.
+- Status pills and work-type badges keep their semantic colors but render on light backgrounds.
+- Bulk select checkboxes use the login checkbox style (charcoal checked state).
 
-| Token | Light | Dark | Used for |
-|---|---|---|---|
-| `--brand` | #FFD700 | #FFD700 | Logo, FAB, primary button bg, active nav indicator. **Never** on data, numbers, or borders. |
-| `--foreground` | #1A1A1A | #FFFFFF | All numbers, headings, body text by default |
-| `--muted-foreground` | #666 | #999 | Labels, secondary text, neutral chips |
-| `--border` | #E5E5E5 | #333 | All card/row borders by default |
-| `--status-urgent` | #DC2626 | #EF4444 | Emergency, overdue, error, destructive action |
-| `--status-waiting` | #B45309 | #F59E0B | Pending PM, awaiting estimate, paused, "waiting on someone" |
-| `--status-progress` | #1D4ED8 | #3B82F6 | In progress, scheduled, active work |
-| `--status-done` | #15803D | #22C55E | Completed, approved, responded, closed |
+### 5. Detail & form pages
+- `TicketDetail.tsx`, `TicketForm.tsx`
+- `InspectionDetail.tsx`, `CreateInspection.tsx`
+- `ClientDetail.tsx`, `PropertyDetail.tsx`, etc.
 
-**Retired** (remove from all screens): `text-orange-400`, `text-purple-400`, `text-yellow-400`, `text-green-400`, `text-blue-400`, hardcoded `#f97316`/`#3b82f6`/`#22c55e` left-borders, `bg-red-600` buttons.
+Changes:
+- White cards, warm gray section backgrounds, charcoal headings.
+- Inputs: white background, `#E5E3DE` border, gold focus ring.
+- Primary CTA buttons: charcoal (`#1A1A1A`) with white text + gold hover accents, matching the login "Sign in" button.
+- Secondary buttons: light gray background.
 
-Alternative directions considered:
-- **A. Mono + one accent** (Linear-style): drop `--status-progress`, fold "in progress" into neutral, keep only urgent/waiting/done. Most minimal, but loses at-a-glance triage on the ticket list.
-- **B. Two-tone status** (chosen above): 4 status colors. Matches Jobber/HCP exactly. Best balance.
-- **C. Icon-led, color-light**: status shown by icon (●○◐✓) + neutral text, color only for urgent. Very clean but requires more per-row real estate — probably overkill for a mobile-first list.
+### 6. Shared UI primitives
+- `EmptyState.tsx`, `SkeletonCard.tsx`, `StatusPill.tsx`, `BulkActionBar.tsx`, `BulkDeleteDialog.tsx`: adapt to light theme while keeping current shapes.
+- `input`, `button`, `dialog`, `select`, `textarea` shadcn components already use CSS variables, so they will inherit the new palette once variables are updated.
 
-Recommend **B**.
+### 7. Auth pages
+- `Login.tsx` is already done.
+- Apply the same light styling to `VerifyTwoFactor.tsx`, `ForgotPassword.tsx`, and any other auth flow screens.
 
-## 3. Badge / Status System
+### 8. Cleanup
+- Remove hardcoded dark backgrounds (`bg-[#1A1A1A]`, `bg-black`, etc.) in favor of semantic tokens.
+- Verify no text becomes unreadable (e.g., gold text on white backgrounds).
+- Run a build check and capture screenshots of Dashboard, a list page, and a detail page.
 
-One component, one shape everywhere:
+## What we will NOT change
+- App functionality, routes, role gating, or business logic.
+- Supabase schema or security rules.
+- The structure of pages; only colors, spacing, shadows, and borders.
 
-```
-rounded-full · px-2 py-0.5 · text-[11px] · font-medium
-bg-<status>/10  text-<status>  (no border, no shadow)
-```
+## Open question before we start
+1. **Theme toggle:** Do you want to keep the dark/light toggle in the top bar, or remove it and force the new professional light theme everywhere?
+2. **Scope priority:** Should we implement all pages in one pass, or would you prefer to start with the global shell + Dashboard + Ticket pages first, then continue with the rest?
 
-Variants map to the 4 status tokens + `neutral` (default gray). Status → variant table:
-
-| Status | Variant |
-|---|---|
-| emergency, overdue, rejected, cancelled | urgent |
-| draft, paused, pending_evaluation, pending_estimate, pending_pricing, unassigned | waiting |
-| open, in_progress, scheduled, estimate_sent | progress |
-| closed, complete, estimate_approved, pm_responded, converted | done |
-| work type labels (Repair, Make-Ready, CapEx) | neutral |
-
-Only *Emergency* work-type gets the `urgent` variant — because emergency IS a state, not just a category. All other work types render as neutral outlined chips.
-
-## 4. Dashboard Changes (Dashboard.tsx)
-
-- **Metric numbers**: remove `color: 'text-*'` entirely. Numbers render `text-foreground`. Label stays muted.
-- **Metric card left-borders**: remove all `border-l-*` colored stripes. Cards become plain neutral. Optional: keep a single accent stripe *only* on Emergencies when count > 0, using `--status-urgent`.
-- **Ticket cards in list**: drop the 4-color `workTypeBorder` map. Left-border stripe appears **only** if `work_type === 'emergency'` OR ticket is overdue — in `--status-urgent`. Everything else: no stripe, just the standard card border.
-- **Priority pill** (`bg-orange-500 text-white`): re-route through the badge system → `waiting` for high, `urgent` for emergency.
-- **Inspections divider**: keep; already added last pass.
-- **FAB / New Ticket button**: stays brand gold.
-
-## 5. Other Screens With The Same Inconsistency
-
-Grep confirms these all need the same pass:
-
-- **TicketList.tsx** (lines 19–23, 273, 287, 296) — identical `workTypeBorder` map + `bg-orange-500` priority pill. Same fix as Dashboard.
-- **TicketDetail.tsx** — status badge colors from `src/lib/ticketColors.ts` use 8 different hues (yellow/amber/indigo/emerald/purple/green/blue/orange). Collapse to the 4 status variants.
-- **InspectionList.tsx** (line 134) — inline `bg-yellow-500/20 text-yellow-400`; also uses `src/lib/inspectionColors.ts` with 6 hues. Collapse.
-- **InspectionDetail.tsx** — same inspectionColors palette.
-- **AccountingList.tsx** (line 257) — `bg-red-600 hover:bg-red-700` on bulk delete; should be `variant="destructive"` via token.
-- **AccountingDetail.tsx** — likely mirrors list; audit in same pass.
-- **DrawerMenu.tsx / TopNav.tsx** — audit for stray colored role badges / nav highlights that should be `--brand` only.
-- **Shared color libs to refactor**: `src/lib/ticketColors.ts`, `src/lib/inspectionColors.ts`, `src/pages/Dashboard.tsx` (`workTypeBorder`), `src/pages/tickets/TicketList.tsx` (`workTypeBorder`). These are the choke points — fixing the maps propagates everywhere.
-
-## Implementation Scope (when approved)
-
-1. Add 4 status tokens to `index.css` (both themes) + Tailwind config.
-2. Create `<StatusBadge variant="urgent|waiting|progress|done|neutral">` component; replace ad-hoc badges.
-3. Rewrite `ticketColors.ts` + `inspectionColors.ts` to map status → variant name (no hex, no Tailwind color classes).
-4. Remove `workTypeBorder` maps; introduce `needsAttentionBorder(ticket)` helper returning `border-l-[--status-urgent]` or `''`.
-5. Strip `text-*-400` from Dashboard metric arrays; numbers become neutral.
-6. Sweep AccountingList/InspectionList for stray hardcoded color classes.
-
-No code changes in this step — awaiting your approval on the token list and the "no color on work-type, borders reserved for urgency" calls before proceeding.
+Please confirm and we will implement.

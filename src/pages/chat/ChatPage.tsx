@@ -345,7 +345,7 @@ const ChatPage = () => {
       const type = match[1];
       const value = match[2];
       parts.push(
-        <span key={match.index} className="inline-flex items-center bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs font-medium cursor-pointer hover:bg-blue-600" onClick={() => handleMentionClick(type, value)}>
+        <span key={match.index} className="inline-flex items-center bg-[hsl(217,91%,45%)] text-white px-1.5 py-0.5 rounded text-xs font-medium cursor-pointer hover:bg-[hsl(217,91%,40%)]" onClick={() => handleMentionClick(type, value)}>
           @{type} {value}
         </span>
       );

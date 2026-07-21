@@ -14,7 +14,7 @@ const MobileBottomNav = () => {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur-sm border-t border-border z-30 flex items-center justify-around"
+      className="md:hidden fixed bottom-0 inset-x-0 bg-card/95 backdrop-blur-sm border-t border-border z-30 flex items-center justify-around"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)', minHeight: 'calc(4rem + env(safe-area-inset-bottom))' }}
     >
       {items.map((item) => {

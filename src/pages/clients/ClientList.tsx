@@ -242,7 +242,7 @@ const ClientList = () => {
             <Button variant="outline" onClick={() => archiveMutation.mutate({ clientId: archiveDialog.clientId, action: 'export_delete' })} disabled={archiveMutation.isPending}>
               <Download className="w-4 h-4 mr-2" /> Export ZIP & Delete
             </Button>
-            <Button onClick={() => archiveMutation.mutate({ clientId: archiveDialog.clientId, action: 'delete' })} disabled={archiveMutation.isPending} className="bg-red-600 hover:bg-red-700 text-white border-0">
+            <Button onClick={() => archiveMutation.mutate({ clientId: archiveDialog.clientId, action: 'delete' })} disabled={archiveMutation.isPending} variant="destructive">
               <Trash2 className="w-4 h-4 mr-2" /> Delete Without Export
             </Button>
           </DialogFooter>

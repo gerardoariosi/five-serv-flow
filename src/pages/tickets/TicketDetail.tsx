@@ -724,7 +724,7 @@ const TicketDetail = () => {
             </div>
           )}
           <div className="flex gap-2 flex-wrap pt-2">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleApproveEvaluation} disabled={changingStatus}>
+            <Button size="sm" className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={handleApproveEvaluation} disabled={changingStatus}>
               <Check className="w-4 h-4 mr-1" /> Approve to Work
             </Button>
             <Button size="sm" variant="outline" onClick={handleEstimateRequired} disabled={changingStatus}>
@@ -915,7 +915,7 @@ const TicketDetail = () => {
         {/* Approve / Reject for ready_for_review */}
         {isAdminOrSupervisor && ticket.status === 'ready_for_review' && (
           <>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => changeStatus('closed')} disabled={changingStatus}>
+            <Button size="sm" className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={() => changeStatus('closed')} disabled={changingStatus}>
               <Check className="w-4 h-4 mr-1" /> Approve
             </Button>
             <Button size="sm" variant="destructive" onClick={() => setShowRejectModal(true)}>
@@ -1035,7 +1035,7 @@ const TicketDetail = () => {
                   <div key={photo.id} className="rounded-lg overflow-hidden border border-border relative">
                     <img src={photo.url} alt="" className="w-full h-36 object-cover" />
                     {photo.is_pending_sync && (
-                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-orange-500 text-white text-[9px] font-bold rounded">PENDING</div>
+                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[hsl(27,96%,45%)] text-white text-[9px] font-bold rounded">PENDING</div>
                     )}
                     <div className="p-2">
                       <p className="text-[10px] text-muted-foreground">

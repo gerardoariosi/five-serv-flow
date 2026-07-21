@@ -13,13 +13,13 @@ export const inspectionStatusLabels: Record<string, string> = {
 
 export const inspectionStatusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
-  scheduled: 'bg-blue-500/20 text-blue-400',
-  in_progress: 'bg-blue-500/20 text-blue-400',
-  pending_pricing: 'bg-orange-500/20 text-orange-400',
+  scheduled: 'bg-[hsl(217,91%,55%)]/15 text-[hsl(217,91%,45%)]',
+  in_progress: 'bg-[hsl(217,91%,55%)]/15 text-[hsl(217,91%,45%)]',
+  pending_pricing: 'bg-[hsl(27,96%,50%)]/15 text-[hsl(27,96%,40%)]',
   sent: 'bg-primary/20 text-primary',
-  pm_responded: 'bg-purple-500/20 text-purple-400',
-  estimate_approved: 'bg-green-500/20 text-green-400',
-  converted: 'bg-green-500/20 text-green-400',
+  pm_responded: 'bg-[hsl(270,60%,55%)]/15 text-[hsl(270,60%,45%)]',
+  estimate_approved: 'bg-[hsl(142,71%,40%)]/15 text-[hsl(142,71%,30%)]',
+  converted: 'bg-[hsl(142,71%,40%)]/15 text-[hsl(142,71%,30%)]',
   closed_internally: 'bg-muted text-muted-foreground',
-  complete: 'bg-green-500/20 text-green-400',
+  complete: 'bg-[hsl(142,71%,40%)]/15 text-[hsl(142,71%,30%)]',
 };

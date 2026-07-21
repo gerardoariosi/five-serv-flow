@@ -16,11 +16,11 @@ import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
 
 const workTypeBorder: Record<string, string> = {
-  emergency: 'border-l-[#ef4444]',
-  'make-ready': 'border-l-[#f97316]',
-  make_ready: 'border-l-[#f97316]',
-  repair: 'border-l-[#3b82f6]',
-  capex: 'border-l-[#22c55e]',
+  emergency: 'border-l-destructive',
+  'make-ready': 'border-l-[hsl(27,96%,45%)]',
+  make_ready: 'border-l-[hsl(27,96%,45%)]',
+  repair: 'border-l-[hsl(217,91%,45%)]',
+  capex: 'border-l-[hsl(142,71%,35%)]',
 };
 
 const STATUS_CHIPS = [
@@ -293,7 +293,7 @@ const TicketList = () => {
                     {ticket.priority && ticket.priority !== 'normal' && (
                       <StatusPill className={
                         ticket.priority === 'urgent' ? 'bg-destructive text-destructive-foreground'
-                        : ticket.priority === 'high' ? 'bg-orange-500 text-white'
+                        : ticket.priority === 'high' ? 'bg-[hsl(27,96%,45%)] text-white'
                         : 'bg-muted text-muted-foreground'
                       }>
                         {ticket.priority.toUpperCase()}
