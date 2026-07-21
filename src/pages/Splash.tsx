@@ -81,7 +81,7 @@ const Splash = () => {
           visible ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <FiveServLogo />
+        <FiveServLogo variant="light" />
       </div>
       <Spinner size="sm" />
     </div>
