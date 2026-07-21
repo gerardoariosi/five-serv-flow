@@ -132,9 +132,17 @@ const Login = () => {
           </div>
 
           <div className="relative z-10 mt-12 pt-12 border-t border-[#1A1A1A]/10">
-            <p className="text-sm text-[#1A1A1A]/50 font-medium">
-              Trusted by 500+ franchise locations nationwide.
-            </p>
+            <div className="flex flex-wrap gap-2">
+              {['Work orders', 'Inspections', 'Vendors', 'Accounting'].map((mod) => (
+                <span
+                  key={mod}
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide text-[#1A1A1A]/70 bg-white/60 border border-[#1A1A1A]/5"
+                >
+                  <span className="w-1 h-1 rounded-full bg-[#FFD700] mr-1.5" />
+                  {mod}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
