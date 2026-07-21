@@ -392,8 +392,8 @@ const EstimatePortal = () => {
                       htmlFor={`opt-${opt.id}`}
                       className={`block rounded-xl border-2 p-5 cursor-pointer transition-all duration-150 ${
                         isSelected
-                          ? 'border-[#FFD700] bg-[#FFFBEB] shadow-md'
-                          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                          ? 'border-primary bg-primary/10 shadow-md'
+                          : 'border-border bg-card hover:border-muted-foreground/30 hover:shadow-sm'
                       } ${readOnly ? 'cursor-default' : ''}`}
                     >
                       <RadioGroupItem value={opt.id} id={`opt-${opt.id}`} className="sr-only" />
