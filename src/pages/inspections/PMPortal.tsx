@@ -565,12 +565,12 @@ const PMPortal = () => {
         })}
 
         {/* Selected Total bar */}
-        <div className="bg-gray-900 border-t-2 border-[#FFD700] shadow-lg rounded-xl p-5 flex items-center justify-between">
+        <div className="bg-card border-t-2 border-primary shadow-lg rounded-xl p-5 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Total</p>
-            <p className="text-gray-500 text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Selected Total</p>
+            <p className="text-muted-foreground text-xs mt-0.5">{selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected</p>
           </div>
-          <p className="text-3xl font-bold text-[#22c55e] tabular-nums">${total.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-[hsl(142,71%,35%)] tabular-nums">${total.toFixed(2)}</p>
         </div>
 
         {/* General note */}
