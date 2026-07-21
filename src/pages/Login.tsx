@@ -112,21 +112,15 @@ const Login = () => {
               Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
             </p>
 
-            <div className="grid grid-cols-2 gap-3 max-w-[280px]">
-              {[
-                { label: "Work orders", span: "col-span-1" },
-                { label: "Inspections", span: "col-span-1" },
-                { label: "Communication", span: "col-span-2 flex justify-center" },
-              ].map(({ label, span }) => (
-                <div
-                  key={label}
-                  className={`${span} min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-4 border border-[#1A1A1A]/5`}
+            <div className="relative z-10 flex flex-wrap gap-2">
+              {['Work orders', 'Inspections', 'Vendors', 'Accounting'].map((mod) => (
+                <span
+                  key={mod}
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide text-[#1A1A1A]/70 bg-white/60 border border-[#1A1A1A]/5"
                 >
-                  <div className="h-1.5 w-1.5 rounded-full bg-[#FFD700] mb-2.5" />
-                  <div className="text-xs lg:text-sm font-semibold text-[#1A1A1A] leading-tight">
-                    {label}
-                  </div>
-                </div>
+                  <span className="w-1 h-1 rounded-full bg-[#FFD700] mr-1.5" />
+                  {mod}
+                </span>
               ))}
             </div>
           </div>
