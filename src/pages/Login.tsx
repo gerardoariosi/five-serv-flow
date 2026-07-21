@@ -103,32 +103,32 @@ const Login = () => {
             </div>
 
             <h2
-              className="text-3xl md:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-6"
+              className="text-3xl md:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-4"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
             >
-              Everything your franchise operations need, in one place.
+              Run your properties without the chaos.
             </h2>
+            <p className="text-[#1A1A1A]/70 leading-relaxed mb-8">
+              Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
+            </p>
 
-            <ul className="space-y-4 text-[#1A1A1A]/80">
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FFD700] shrink-0" />
-                <span className="leading-relaxed">
-                  <strong className="text-[#1A1A1A]">Work orders</strong> — create, assign, and track tickets from request to completion.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FFD700] shrink-0" />
-                <span className="leading-relaxed">
-                  <strong className="text-[#1A1A1A]">Inspections</strong> — schedule visits, capture photos, and price repairs in one flow.
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#FFD700] shrink-0" />
-                <span className="leading-relaxed">
-                  <strong className="text-[#1A1A1A]">Communication</strong> — technicians, PMs, and owners stay updated automatically.
-                </span>
-              </li>
-            </ul>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
+                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
+                <div className="text-sm font-semibold text-[#1A1A1A] mb-1">Work orders</div>
+                <div className="text-xs text-[#1A1A1A]/60 leading-snug">Create, assign, and track from request to completion.</div>
+              </div>
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
+                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
+                <div className="text-sm font-semibold text-[#1A1A1A] mb-1">Inspections</div>
+                <div className="text-xs text-[#1A1A1A]/60 leading-snug">Schedule visits, capture photos, and price repairs.</div>
+              </div>
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
+                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
+                <div className="text-sm font-semibold text-[#1A1A1A] mb-1">Communication</div>
+                <div className="text-xs text-[#1A1A1A]/60 leading-snug">Technicians, PMs, and owners stay updated.</div>
+              </div>
+            </div>
           </div>
 
           <div className="relative z-10 mt-12 pt-12 border-t border-[#1A1A1A]/10">
