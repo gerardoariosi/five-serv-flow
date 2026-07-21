@@ -293,7 +293,7 @@ const TicketList = () => {
                     {ticket.priority && ticket.priority !== 'normal' && (
                       <StatusPill className={
                         ticket.priority === 'urgent' ? 'bg-destructive text-destructive-foreground'
-                        : ticket.priority === 'high' ? 'bg-orange-500 text-white'
+                        : ticket.priority === 'high' ? 'bg-[hsl(27,96%,45%)] text-white'
                         : 'bg-muted text-muted-foreground'
                       }>
                         {ticket.priority.toUpperCase()}
