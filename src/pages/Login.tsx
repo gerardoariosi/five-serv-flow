@@ -112,19 +112,18 @@ const Login = () => {
               Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
             </p>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
-                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A]">Work orders</div>
-              </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
-                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A]">Inspections</div>
-              </div>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-[#1A1A1A]/5">
-                <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3" />
-                <div className="text-sm font-semibold text-[#1A1A1A]">Communication</div>
-              </div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {["Work orders", "Inspections", "Communication"].map((label) => (
+                <div
+                  key={label}
+                  className="min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-3 py-3 sm:px-4 sm:py-4 border border-[#1A1A1A]/5 flex flex-col justify-between min-h-[80px]"
+                >
+                  <div className="h-2 w-2 rounded-full bg-[#FFD700] mb-3 shrink-0" />
+                  <div className="text-[13px] sm:text-sm font-semibold text-[#1A1A1A] leading-tight break-words">
+                    {label}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
