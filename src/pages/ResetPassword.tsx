@@ -87,7 +87,7 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-card border border-border rounded-lg p-6 text-center shadow-sm">
-          <FiveServLogo className="mb-6" />
+          <FiveServLogo variant="light" className="mb-6" />
           <h2 className="text-lg font-bold text-foreground mb-2">Link Expired</h2>
           <p className="text-sm text-muted-foreground mb-4">This reset link has expired.</p>
           <Link to="/forgot-password">
