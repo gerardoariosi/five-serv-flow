@@ -112,14 +112,18 @@ const Login = () => {
               Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
             </p>
 
-            <div className="grid grid-cols-3 gap-2 lg:gap-3">
-              {["Work orders", "Inspections", "Communication"].map((label) => (
+            <div className="grid grid-cols-2 gap-3 max-w-[280px]">
+              {[
+                { label: "Work orders", span: "col-span-1" },
+                { label: "Inspections", span: "col-span-1" },
+                { label: "Communication", span: "col-span-2 flex justify-center" },
+              ].map(({ label, span }) => (
                 <div
                   key={label}
-                  className="min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-2 py-3 lg:px-4 lg:py-4 border border-[#1A1A1A]/5"
+                  className={`${span} min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-4 border border-[#1A1A1A]/5`}
                 >
-                  <div className="h-1.5 w-1.5 rounded-full bg-[#FFD700] mb-2 lg:mb-3" />
-                  <div className="text-[11px] lg:text-sm font-semibold text-[#1A1A1A] leading-tight">
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#FFD700] mb-2.5" />
+                  <div className="text-xs lg:text-sm font-semibold text-[#1A1A1A] leading-tight">
                     {label}
                   </div>
                 </div>
