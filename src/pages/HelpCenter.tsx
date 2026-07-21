@@ -735,7 +735,7 @@ const HelpCenter = () => {
         {/* Sidebar (desktop) */}
         <aside className="hidden md:block">
           <div className="sticky top-20">
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-500 mb-3">Sections</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Sections</p>
             <nav className="flex flex-col gap-0.5">
               {HELP_SECTIONS.map((s) => {
                 const isActive = s.id === activeId;
@@ -746,18 +746,18 @@ const HelpCenter = () => {
                     className={cn(
                       'text-left text-sm rounded-md px-3 py-2 transition-colors',
                       isActive
-                        ? 'bg-[#FFD700]/10 text-gray-900 font-medium border-l-2 border-[#FFD700] pl-[10px]'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
+                        ? 'bg-primary/10 text-foreground font-medium border-l-2 border-primary pl-[10px]'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
                     )}
                   >
-                    <span className="text-[#1A1A1A] font-bold mr-2">{s.number}.</span>
+                    <span className="text-foreground font-bold mr-2">{s.number}.</span>
                     {s.title}
                   </button>
                 );
               })}
               <button
                 onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-left text-sm rounded-md px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 mt-2"
+                className="text-left text-sm rounded-md px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 mt-2"
               >
                 FAQs
               </button>
