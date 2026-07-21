@@ -5,6 +5,7 @@ import NotificationDropdown from './NotificationDropdown';
 import { useThemeStore } from '@/stores/themeStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,76 +57,73 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         className="fixed top-0 left-0 right-0 z-[51] bg-background"
         style={{ height: 'env(safe-area-inset-top)' }}
       />
-    <header
-      className="bg-background/95 backdrop-blur-sm border-b-2 border-[#FFD700]/60 flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
-      style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
-    >
-      <div className="flex items-center">
-        <button
-          onClick={onMenuClick}
-          className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
-          aria-label="Open menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center">
-        <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}>
-          <span style={{ color: '#FFD700' }}>F</span>
-          <span style={{ color: 'currentColor' }}>iveServ</span>
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {roleStyle && (
-          <span
-            className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${roleStyle.bg} ${roleStyle.text}`}
+      <header
+        className="bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
+        style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
+      >
+        <div className="flex items-center">
+          <button
+            onClick={onMenuClick}
+            className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+            aria-label="Open menu"
           >
-            <span className="hidden sm:inline">{activeRole}</span>
-            <span className="sm:hidden">{roleStyle.abbr}</span>
-          </span>
-        )}
-        <button
-          onClick={handleThemeToggle}
-          className="p-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
-        <NotificationDropdown />
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="focus:outline-none active:scale-95 transition-transform">
-              <Avatar className="w-8 h-8 cursor-pointer border border-border hover:border-primary transition-colors">
-                {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} /> : null}
-                <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="px-3 py-2">
-              <p className="text-sm font-medium text-foreground truncate">{user?.full_name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-              <User className="w-4 h-4 mr-2" /> View Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
-              <Settings className="w-4 h-4 mr-2" /> My Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
-              <LogOut className="w-4 h-4 mr-2" /> Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </header>
+        <div className="flex-1 flex items-center justify-center">
+          <FiveServLogo variant="light" size="sm" showTagline={false} />
+        </div>
+
+        <div className="flex items-center gap-3">
+          {roleStyle && (
+            <span
+              className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${roleStyle.bg} ${roleStyle.text}`}
+            >
+              <span className="hidden sm:inline">{activeRole}</span>
+              <span className="sm:hidden">{roleStyle.abbr}</span>
+            </span>
+          )}
+          <button
+            onClick={handleThemeToggle}
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+          <NotificationDropdown />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="focus:outline-none active:scale-95 transition-transform">
+                <Avatar className="w-8 h-8 cursor-pointer border border-border hover:border-primary transition-colors">
+                  {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} /> : null}
+                  <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-3 py-2">
+                <p className="text-sm font-medium text-foreground truncate">{user?.full_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                <User className="w-4 h-4 mr-2" /> View Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
+                <Settings className="w-4 h-4 mr-2" /> My Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive">
+                <LogOut className="w-4 h-4 mr-2" /> Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
     </>
   );
 };
