@@ -103,36 +103,10 @@ const Login = () => {
         {/* Right: Sign-in form */}
         <div className="w-full md:w-7/12 p-8 sm:p-10 md:p-14 bg-white">
           <div className="max-w-md mx-auto">
-            {/* Mobile logo */}
-            <div className="md:hidden mb-10 text-center">
-              <div className="flex items-baseline justify-center">
-                <span
-                  className="text-[#FFD700]"
-                  style={{
-                    fontFamily: 'Georgia, serif',
-                    fontWeight: 'bold',
-                    fontSize: '2.2rem',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  F
-                </span>
-                <span
-                  className="text-[#1A1A1A]"
-                  style={{
-                    fontFamily: 'Georgia, serif',
-                    fontWeight: 'bold',
-                    fontSize: '2.2rem',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  iveServ
-                </span>
-              </div>
-              <div className="text-[#FFD700] text-[10px] font-semibold tracking-[0.2em] mt-1">
-                ONE TEAM. ONE CALL. DONE.
-              </div>
-            </div>
+          {/* Mobile logo */}
+          <div className="md:hidden mb-10">
+            <FiveServLogo variant="dark" size="md" />
+          </div>
 
             <div className="mb-10">
               <h1 className="text-[1.75rem] font-semibold text-[#1A1A1A] tracking-tight">
