@@ -9,6 +9,7 @@ import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 import { isDeviceTrusted } from '@/lib/trustedDevice';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 
 const Login = () => {
   const navigate = useNavigate();
