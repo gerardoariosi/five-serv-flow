@@ -790,9 +790,9 @@ const HelpCenter = () => {
         {/* Content */}
         <main className="min-w-0">
           {!hasResults && (
-            <Card className="bg-white border border-gray-100 p-6 text-center shadow-none">
-              <p className="text-sm text-gray-900">
-                No results for <span className="text-[#FFD700] font-semibold">"{q}"</span> — try different words or browse the sections below
+            <Card className="bg-card border border-border p-6 text-center shadow-none">
+              <p className="text-sm text-foreground">
+                No results for <span className="text-primary font-semibold">"{q}"</span> — try different words or browse the sections below
               </p>
             </Card>
           )}
@@ -806,8 +806,8 @@ const HelpCenter = () => {
               className="scroll-mt-24 mb-10"
             >
               <div className="flex items-center gap-3 mb-4">
-                <Badge className="bg-[#FFD700] text-[#1A1A1A] rounded-md font-bold hover:bg-[#FFD700]">{section.number}</Badge>
-                <h2 className="text-xl font-bold tracking-tight text-gray-900">
+                <Badge className="bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90">{section.number}</Badge>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">
                   <Highlight text={section.title} query={q} />
                 </h2>
               </div>
@@ -824,17 +824,17 @@ const HelpCenter = () => {
           {filteredFaqs.length > 0 && (
             <section id="faq" className="scroll-mt-24 mt-12">
               <div className="flex items-center gap-3 mb-4">
-                <Badge className="bg-[#FFD700] text-[#1A1A1A] rounded-md font-bold hover:bg-[#FFD700]">FAQ</Badge>
-                <h2 className="text-xl font-bold tracking-tight text-gray-900">Frequently Asked Questions</h2>
+                <Badge className="bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90">FAQ</Badge>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">Frequently Asked Questions</h2>
               </div>
-              <Card className="bg-white border border-gray-100 p-2 shadow-none">
+              <Card className="bg-card border border-border p-2 shadow-none">
                 <Accordion type="single" collapsible className="w-full">
                   {filteredFaqs.map((f, i) => (
-                    <AccordionItem key={i} value={`faq-${i}`} className="border-gray-100">
-                      <AccordionTrigger className="text-left text-sm font-medium hover:no-underline px-3 text-gray-900">
+                    <AccordionItem key={i} value={`faq-${i}`} className="border-border">
+                      <AccordionTrigger className="text-left text-sm font-medium hover:no-underline px-3 text-foreground">
                         <Highlight text={f.q} query={q} />
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-gray-600 px-3">
+                      <AccordionContent className="text-sm text-muted-foreground px-3">
                         <Highlight text={f.a} query={q} />
                       </AccordionContent>
                     </AccordionItem>
