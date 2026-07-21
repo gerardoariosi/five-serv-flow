@@ -199,7 +199,7 @@ const TicketReview = () => {
           <p className="text-sm text-muted-foreground">This will close the ticket and record your approval. This action is logged.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApprove(false)}>Cancel</Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleApprove} disabled={processing}>Approve</Button>
+            <Button className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={handleApprove} disabled={processing}>Approve</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -283,7 +283,7 @@ const TicketReview = () => {
                   <div key={photo.id} className="rounded-lg overflow-hidden border border-border relative">
                     <img src={photo.url} alt="" className="w-full h-40 object-cover" />
                     {photo.is_pending_sync && (
-                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-orange-500 text-white text-[9px] font-bold rounded">PENDING</div>
+                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[hsl(27,96%,45%)] text-white text-[9px] font-bold rounded">PENDING</div>
                     )}
                     <div className="p-2">
                       <p className="text-[10px] text-muted-foreground">
@@ -301,7 +301,7 @@ const TicketReview = () => {
       {/* Action buttons */}
       {!approved && ticket.status === 'ready_for_review' && (
         <div className="flex gap-3 pt-4">
-          <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" size="lg" onClick={() => setShowApprove(true)} disabled={processing}>
+          <Button className="flex-1 bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" size="lg" onClick={() => setShowApprove(true)} disabled={processing}>
             <Check className="w-5 h-5 mr-2" /> Approve
           </Button>
           <Button className="flex-1" variant="destructive" size="lg" onClick={() => setShowReject(true)} disabled={processing}>

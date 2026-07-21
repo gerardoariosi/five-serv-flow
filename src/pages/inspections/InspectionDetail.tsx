@@ -461,9 +461,9 @@ const InspectionDetail = () => {
                     <span className="text-sm text-foreground">{item.item_name}</span>
                     <div className="flex items-center gap-1 shrink-0">
                       {item.pm_selected && (
-                        <Badge className="text-[10px] bg-green-500/20 text-green-400">PM ✓</Badge>
+                        <Badge className="text-[10px] bg-[hsl(142,71%,40%)]/15 text-[hsl(142,71%,30%)]">PM ✓</Badge>
                       )}
-                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-orange-500 text-white'}`}>
+                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-[hsl(27,96%,45%)] text-white'}`}>
                         {item.status}
                       </Badge>
                     </div>
@@ -649,7 +649,7 @@ const InspectionDetail = () => {
           </>
         )}
         {inspection.status === 'pm_responded' && (
-          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleMarkApproved}>
+          <Button size="sm" className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={handleMarkApproved}>
             <Check className="w-4 h-4 mr-1" /> Mark Estimate Approved
           </Button>
         )}
