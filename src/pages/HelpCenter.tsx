@@ -688,23 +688,20 @@ const HelpCenter = () => {
   const activeSection = HELP_SECTIONS.find((s) => s.id === activeId) ?? HELP_SECTIONS[0];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-[#1A1A1A] border-b border-[#FFD700]/30">
+      <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login')}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{user ? 'Back to app' : 'Back to login'}</span>
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-serif text-lg leading-none">
-              <span className="text-[#FFD700] font-bold">F</span>
-              <span className="text-white font-bold">iveServ</span>
-            </span>
-            <span className="text-gray-400 text-xs hidden sm:inline">Help Center</span>
+            <FiveServLogo variant="dark" size="sm" showTagline={false} />
+            <span className="text-muted-foreground text-xs hidden sm:inline">Help Center</span>
           </div>
         </div>
       </header>
