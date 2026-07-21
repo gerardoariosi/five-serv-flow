@@ -73,7 +73,7 @@ const Login = () => {
 
           <div className="relative z-10 max-w-sm">
             {/* Exact current FiveServ logo */}
-            <FiveServLogo variant="dark" size="lg" className="mb-10" />
+            <FiveServLogo variant="light" size="lg" className="mb-10" />
 
             <h2
               className="text-3xl lg:text-5xl font-semibold text-[#1A1A1A] leading-[1.1] mb-5"
@@ -105,7 +105,7 @@ const Login = () => {
           <div className="max-w-md mx-auto">
           {/* Mobile logo */}
           <div className="md:hidden mb-10">
-            <FiveServLogo variant="dark" size="md" />
+            <FiveServLogo variant="light" size="md" />
           </div>
 
             <div className="mb-10">
