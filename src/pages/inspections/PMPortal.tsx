@@ -471,10 +471,10 @@ const PMPortal = () => {
                   return (
                     <div
                       key={item.id}
-                      className={`px-5 py-4 border-b border-gray-100 last:border-0 transition-all duration-150 ${
+                      className={`px-5 py-4 border-b border-border last:border-0 transition-all duration-150 ${
                         isSelected
-                          ? 'bg-[#FFFBEB] border-l-4 border-l-[#FFD700]'
-                          : 'bg-white border-l-4 border-l-transparent hover:bg-gray-50'
+                          ? 'bg-primary/10 border-l-4 border-l-primary'
+                          : 'bg-card border-l-4 border-l-transparent hover:bg-muted/50'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -483,11 +483,11 @@ const PMPortal = () => {
                           onClick={() => !readOnly && toggleItem(item.id)}
                           disabled={readOnly}
                           className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors mt-0.5 ${
-                            isSelected ? 'bg-[#FFD700] border-[#FFD700]' : 'border-gray-300 bg-white'
+                            isSelected ? 'bg-primary border-primary' : 'border-border bg-background'
                           } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           aria-label={isSelected ? 'Deselect item' : 'Select item'}
                         >
-                          {isSelected && <Check className="w-4 h-4 text-black" />}
+                          {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
                         </button>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
