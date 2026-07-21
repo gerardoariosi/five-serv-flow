@@ -724,7 +724,7 @@ const TicketDetail = () => {
             </div>
           )}
           <div className="flex gap-2 flex-wrap pt-2">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleApproveEvaluation} disabled={changingStatus}>
+            <Button size="sm" className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={handleApproveEvaluation} disabled={changingStatus}>
               <Check className="w-4 h-4 mr-1" /> Approve to Work
             </Button>
             <Button size="sm" variant="outline" onClick={handleEstimateRequired} disabled={changingStatus}>
@@ -915,7 +915,7 @@ const TicketDetail = () => {
         {/* Approve / Reject for ready_for_review */}
         {isAdminOrSupervisor && ticket.status === 'ready_for_review' && (
           <>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => changeStatus('closed')} disabled={changingStatus}>
+            <Button size="sm" className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={() => changeStatus('closed')} disabled={changingStatus}>
               <Check className="w-4 h-4 mr-1" /> Approve
             </Button>
             <Button size="sm" variant="destructive" onClick={() => setShowRejectModal(true)}>
