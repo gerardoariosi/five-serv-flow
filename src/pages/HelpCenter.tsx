@@ -768,18 +768,18 @@ const HelpCenter = () => {
         {/* Mobile section picker */}
         <div className="md:hidden">
           <Collapsible>
-            <CollapsibleTrigger className="w-full flex items-center justify-between bg-white border border-gray-100 rounded-md px-4 py-3 text-sm text-gray-900">
+            <CollapsibleTrigger className="w-full flex items-center justify-between bg-card border border-border rounded-md px-4 py-3 text-sm text-foreground">
               <span>Browse sections</span>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 flex flex-col gap-1 bg-white border border-gray-100 rounded-md p-2">
+            <CollapsibleContent className="mt-2 flex flex-col gap-1 bg-card border border-border rounded-md p-2">
               {HELP_SECTIONS.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => scrollToSection(s.id)}
-                  className="text-left text-sm rounded px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className="text-left text-sm rounded px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 >
-                  <span className="text-[#FFD700] font-bold mr-2">{s.number}.</span>
+                  <span className="text-primary font-bold mr-2">{s.number}.</span>
                   {s.title}
                 </button>
               ))}
