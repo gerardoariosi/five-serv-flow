@@ -288,16 +288,13 @@ const EstimatePortal = () => {
 
       {/* Header */}
       <div className="sticky top-0 z-10 shadow-sm">
-        <div className="bg-[#1A1A1A] px-4 py-4">
+        <div className="bg-card px-4 py-4 border-b border-border">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex-1" />
-            <span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.1rem' }}>
-              <span style={{ color: '#FFD700' }}>F</span>
-              <span style={{ color: '#FFFFFF' }}>iveServ</span>
-            </span>
+            <FiveServLogo variant="light" size="sm" showTagline={false} />
             <div className="flex-1 flex justify-end">
               {readOnly && (
-                <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 text-[10px] uppercase tracking-wider">Approved</Badge>
+                <Badge className="bg-[hsl(142,71%,45%)]/15 text-[hsl(142,71%,35%)] border border-[hsl(142,71%,45%)]/30 text-[10px] uppercase tracking-wider">Approved</Badge>
               )}
             </div>
           </div>
@@ -472,8 +469,7 @@ const EstimatePortal = () => {
         {/* Submit */}
         {!readOnly && (
           <Button
-            className="w-full bg-[#1A1A1A] hover:bg-black text-white font-bold border-b-2"
-            style={{ borderBottomColor: '#FFD700' }}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold border-b-2 border-primary-foreground/20"
             size="lg"
             onClick={() => setShowConfirm(true)}
             disabled={!signatureData || !selectedOptionId}
@@ -484,18 +480,18 @@ const EstimatePortal = () => {
       </div>
 
       {/* Footer */}
-      <footer className="mt-12 bg-[#1A1A1A] text-white">
+      <footer className="mt-12 bg-card text-foreground border-t border-border">
         <div style={{ height: '2px', backgroundColor: '#FFD700' }} />
         <div className="max-w-2xl mx-auto px-4 py-6 text-center space-y-2">
-          <div><span style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', letterSpacing: '-0.01em', fontSize: '1.2rem' }}><span style={{ color: '#FFD700' }}>F</span><span style={{ color: '#FFFFFF' }}>iveServ</span></span></div>
-          <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: '#FFD700' }}>One Team. One Call. Done.</p>
-          <p className="text-[11px] text-gray-300 mt-2">Licensed &amp; Insured · Central Florida</p>
-          <p className="text-[11px] text-gray-300">
-            <a href="mailto:info@fiveserv.net" className="hover:text-white">info@fiveserv.net</a>
+          <FiveServLogo variant="light" size="sm" showTagline={false} />
+          <p className="text-[10px] uppercase tracking-[0.2em] text-primary">One Team. One Call. Done.</p>
+          <p className="text-[11px] text-muted-foreground mt-2">Licensed &amp; Insured · Central Florida</p>
+          <p className="text-[11px] text-muted-foreground">
+            <a href="mailto:info@fiveserv.net" className="hover:text-foreground">info@fiveserv.net</a>
             {' · '}
-            <a href="tel:+14078814942" className="hover:text-white">(407) 881-4942</a>
+            <a href="tel:+14078814942" className="hover:text-foreground">(407) 881-4942</a>
           </p>
-          <p className="text-[10px] italic text-gray-500 pt-2">This document is confidential.</p>
+          <p className="text-[10px] italic text-muted-foreground/70 pt-2">This document is confidential.</p>
         </div>
       </footer>
 
