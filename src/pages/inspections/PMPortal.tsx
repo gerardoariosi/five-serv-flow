@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Shield, Lock, Mail, Check, AlertTriangle, Camera, Download, ZoomIn, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import FiveServLogo from '@/components/auth/FiveServLogo';
 import SignaturePad from '@/components/inspections/SignaturePad';
 import Spinner from '@/components/ui/Spinner';
 import { WHOLE_UNIT_KEY, WHOLE_UNIT_LABEL } from '@/lib/inspectionAreas';
