@@ -481,7 +481,7 @@ const InspectionDetail = () => {
           {inspection.pm_total_selected != null && inspection.pm_total_selected > 0 && (
             <div className="flex items-center justify-between pt-2 border-t border-border">
               <span className="text-xs text-muted-foreground">PM Approved Total</span>
-              <span className="text-sm font-bold text-[#22c55e]">${inspection.pm_total_selected.toFixed(2)}</span>
+              <span className="text-sm font-bold text-emerald-600">${inspection.pm_total_selected.toFixed(2)}</span>
             </div>
           )}
           <DialogFooter>
@@ -755,7 +755,7 @@ const InspectionDetail = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Pre-Approved Total</span>
-                  <p className="text-[#22c55e] font-bold">${(inspection.pm_total_selected ?? 0).toFixed(2)}</p>
+                  <p className="text-emerald-600 font-bold">${(inspection.pm_total_selected ?? 0).toFixed(2)}</p>
                 </div>
               </div>
             </div>
