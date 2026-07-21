@@ -9,7 +9,6 @@ import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 import { isDeviceTrusted } from '@/lib/trustedDevice';
-import FiveServLogo from '@/components/auth/FiveServLogo';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -61,7 +60,7 @@ const Login = () => {
     <div className="min-h-screen w-full flex items-center justify-center bg-[#FAF9F6] p-4 md:p-8 font-sans">
       <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl shadow-[#1A1A1A]/5 flex flex-col md:flex-row overflow-hidden border border-[#E5E5E1]">
         {/* Left: Branding & Trust */}
-        <div className="hidden md:flex md:w-5/12 bg-[#F3F2EE] p-8 lg:p-14 flex-col justify-center items-center text-center relative overflow-hidden">
+        <div className="hidden md:flex md:w-5/12 bg-[#F3F2EE] p-8 lg:p-14 flex-col justify-between relative overflow-hidden">
           {/* Subtle gold dot pattern */}
           <div
             className="absolute inset-0 opacity-40 pointer-events-none"
@@ -71,25 +70,73 @@ const Login = () => {
             }}
           />
 
-          <div className="relative z-10 max-w-sm">
+          <div className="relative z-10">
             {/* Exact current FiveServ logo */}
-            <FiveServLogo variant="light" size="lg" className="mb-10" />
+            <div className="mb-12">
+              <div className="flex items-baseline">
+                <span
+                  className="text-[#FFD700]"
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontWeight: 'bold',
+                    fontSize: '2.6rem',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  F
+                </span>
+                <span
+                  className="text-[#1A1A1A]"
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontWeight: 'bold',
+                    fontSize: '2.6rem',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  iveServ
+                </span>
+              </div>
+              <div className="text-[#FFD700] text-[11px] font-semibold tracking-[0.22em] mt-2">
+                ONE TEAM. ONE CALL. DONE.
+              </div>
+            </div>
 
             <h2
-              className="text-3xl lg:text-5xl font-semibold text-[#1A1A1A] leading-[1.1] mb-5"
+              className="text-2xl lg:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-4"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
             >
               Run your properties without the chaos.
             </h2>
-            <p className="text-sm lg:text-base text-[#1A1A1A]/70 leading-relaxed mb-10">
+            <p className="text-sm lg:text-base text-[#1A1A1A]/70 leading-relaxed mb-8">
               Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
             </p>
 
-            <div className="relative z-10 flex flex-wrap justify-center gap-2">
+            <div className="grid grid-cols-2 gap-3 max-w-[280px]">
+              {[
+                { label: "Work orders", span: "col-span-1" },
+                { label: "Inspections", span: "col-span-1" },
+                { label: "Communication", span: "col-span-2 flex justify-center" },
+              ].map(({ label, span }) => (
+                <div
+                  key={label}
+                  className={`${span} min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-4 border border-[#1A1A1A]/5`}
+                >
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#FFD700] mb-2.5" />
+                  <div className="text-xs lg:text-sm font-semibold text-[#1A1A1A] leading-tight">
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-12 pt-12 border-t border-[#1A1A1A]/10">
+            <div className="flex flex-wrap gap-2">
               {['Work orders', 'Inspections', 'Vendors', 'Accounting'].map((mod) => (
                 <span
                   key={mod}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide text-[#1A1A1A]/70 bg-white/60 border border-[#1A1A1A]/5"
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide text-[#1A1A1A]/70 bg-white/60 border border-[#1A1A1A]/5"
                 >
                   <span className="w-1 h-1 rounded-full bg-[#FFD700] mr-1.5" />
                   {mod}
@@ -97,16 +144,41 @@ const Login = () => {
               ))}
             </div>
           </div>
-
         </div>
 
         {/* Right: Sign-in form */}
         <div className="w-full md:w-7/12 p-8 sm:p-10 md:p-14 bg-white">
           <div className="max-w-md mx-auto">
-          {/* Mobile logo */}
-          <div className="md:hidden mb-10">
-            <FiveServLogo variant="light" size="md" />
-          </div>
+            {/* Mobile logo */}
+            <div className="md:hidden mb-10 text-center">
+              <div className="flex items-baseline justify-center">
+                <span
+                  className="text-[#FFD700]"
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontWeight: 'bold',
+                    fontSize: '2.2rem',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  F
+                </span>
+                <span
+                  className="text-[#1A1A1A]"
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontWeight: 'bold',
+                    fontSize: '2.2rem',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  iveServ
+                </span>
+              </div>
+              <div className="text-[#FFD700] text-[10px] font-semibold tracking-[0.2em] mt-1">
+                ONE TEAM. ONE CALL. DONE.
+              </div>
+            </div>
 
             <div className="mb-10">
               <h1 className="text-[1.75rem] font-semibold text-[#1A1A1A] tracking-tight">
