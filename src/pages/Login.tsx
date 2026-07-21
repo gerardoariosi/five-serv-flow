@@ -103,32 +103,14 @@ const Login = () => {
             </div>
 
             <h2
-              className="text-2xl lg:text-4xl font-semibold text-[#1A1A1A] leading-tight mb-4"
+              className="text-3xl lg:text-5xl font-semibold text-[#1A1A1A] leading-tight mb-6"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
             >
               Run your properties without the chaos.
             </h2>
-            <p className="text-sm lg:text-base text-[#1A1A1A]/70 leading-relaxed mb-8">
+            <p className="text-base lg:text-lg text-[#1A1A1A]/70 leading-relaxed max-w-sm">
               Schedule inspections, dispatch technicians, track work orders, and keep owners informed — all in one place.
             </p>
-
-            <div className="grid grid-cols-2 gap-3 max-w-[280px]">
-              {[
-                { label: "Work orders", span: "col-span-1" },
-                { label: "Inspections", span: "col-span-1" },
-                { label: "Communication", span: "col-span-2 flex justify-center" },
-              ].map(({ label, span }) => (
-                <div
-                  key={label}
-                  className={`${span} min-w-0 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-4 border border-[#1A1A1A]/5`}
-                >
-                  <div className="h-1.5 w-1.5 rounded-full bg-[#FFD700] mb-2.5" />
-                  <div className="text-xs lg:text-sm font-semibold text-[#1A1A1A] leading-tight">
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="relative z-10 mt-12 pt-12 border-t border-[#1A1A1A]/10">
