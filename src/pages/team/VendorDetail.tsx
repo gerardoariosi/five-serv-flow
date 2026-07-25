@@ -50,7 +50,7 @@ const DOC_TYPE_LABEL: Record<string, string> = {
 const VendorDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isNew = id === 'new';
+  const isNew = !id || id === 'new';
   const qc = useQueryClient();
   const { user, activeRole } = useAuthStore();
   const canManageDocs = activeRole === 'admin' || activeRole === 'supervisor';
