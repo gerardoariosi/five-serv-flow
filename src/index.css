@@ -127,11 +127,25 @@
     --gold-muted: 51 80% 40%;
     --surface: 0 0% 16%;
     --surface-hover: 0 0% 19%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 10%;
+    --info-soft: 217 60% 20%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 10%;
+    --success-soft: 142 40% 18%;
+    --warning: 33 96% 56%;
+    --warning-foreground: 0 0% 10%;
+    --warning-soft: 33 60% 20%;
     --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+    --danger-soft: 0 50% 22%;
+    --purple: 262 70% 65%;
+    --purple-soft: 262 40% 22%;
     --emergency: 0 72% 59%;
     --make-ready: 51 100% 50%;
     --repair: 217 91% 60%;
     --capex: 142 71% 45%;
+
     --nav-height: 64px;
     --sidebar-width: 280px;
     --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
