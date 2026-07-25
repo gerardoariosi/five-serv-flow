@@ -127,7 +127,7 @@ const PMPortal = () => {
     setLoading(false);
   }, [token]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (pinEntered) fetchData(); }, [fetchData, pinEntered]);
 
   // Force light mode
   useEffect(() => {
@@ -607,7 +607,7 @@ const PMPortal = () => {
         {readOnly && inspection.pm_signature_data && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: inspection.pm_signature_data }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(inspection.pm_signature_data, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
           </div>
         )}
 

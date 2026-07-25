@@ -790,7 +790,7 @@ const InspectionDetail = () => {
             {inspection.pm_signature_data && (
               <div>
                 <h4 className="text-sm font-semibold text-foreground mb-2">Signature</h4>
-                <div className="border border-border rounded-lg p-3 bg-white" dangerouslySetInnerHTML={{ __html: inspection.pm_signature_data }} />
+                <div className="border border-border rounded-lg p-3 bg-white" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(inspection.pm_signature_data, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
               </div>
             )}
           </TabsContent>
