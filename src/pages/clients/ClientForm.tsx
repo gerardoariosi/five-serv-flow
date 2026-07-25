@@ -16,7 +16,7 @@ const ClientForm = () => {
   const queryClient = useQueryClient();
   const isEdit = !!id;
 
-  const [form, setForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', type: 'pm', address: '' });
+  const [form, setForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', type: 'pm', address: '', referred_by: '', lead_source: '' });
   const [emailError, setEmailError] = useState('');
 
   const { data: existing, isLoading } = useQuery({
@@ -38,6 +38,8 @@ const ClientForm = () => {
         phone: existing.phone ?? '',
         type: existing.type ?? 'pm',
         address: (existing as any).address ?? '',
+        referred_by: (existing as any).referred_by ?? '',
+        lead_source: (existing as any).lead_source ?? '',
       });
     }
   }, [existing]);
@@ -63,7 +65,12 @@ const ClientForm = () => {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, email: form.email.toLowerCase() };
+      const payload = {
+        ...form,
+        email: form.email.toLowerCase(),
+        referred_by: form.referred_by.trim() || null,
+        lead_source: form.lead_source || null,
+      };
       if (isEdit) {
         const { error } = await supabase.from('clients').update(payload).eq('id', id!);
         if (error) throw error;
