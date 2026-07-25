@@ -290,7 +290,7 @@ const Dashboard = () => {
         <div className="flex gap-2 overflow-x-auto md:overflow-visible md:grid md:grid-cols-6 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 pb-1">
           {ticketMetrics.map((m) => (
             <div key={m.label} className={`fs-card shrink-0 min-w-[110px] md:min-w-0 py-2.5 px-3 border-l-2 ${m.border} flex flex-col`}>
-              <span className={`text-2xl font-bold leading-none ${m.color}`}>{m.value}</span>
+              <span className={`text-2xl font-bold leading-none tabular-nums ${m.color}`}>{m.value}</span>
               <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5">{m.label}</span>
             </div>
           ))}
@@ -303,7 +303,7 @@ const Dashboard = () => {
         <div className="flex gap-2 overflow-x-auto md:overflow-visible md:grid md:grid-cols-3 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 pb-1">
           {inspectionMetrics.map((m) => (
             <div key={m.label} className={`fs-card shrink-0 min-w-[110px] md:min-w-0 py-2.5 px-3 border-l-2 ${m.border} flex flex-col`}>
-              <span className={`text-2xl font-bold leading-none ${m.color}`}>{m.value}</span>
+              <span className={`text-2xl font-bold leading-none tabular-nums ${m.color}`}>{m.value}</span>
               <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mt-1.5">{m.label}</span>
             </div>
           ))}
