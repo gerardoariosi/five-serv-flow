@@ -105,10 +105,20 @@ const ClientDetail = () => {
       <div className="bg-card border border-border rounded-lg p-5 mb-6">
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Building2 className="w-5 h-5 text-primary" />
               <h1 className="text-lg font-bold text-foreground">{client.company_name}</h1>
               <Badge variant="outline">{client.type === 'pm' ? 'Property Manager' : 'Residential'}</Badge>
+              {(client as any).referred_by && (
+                <Badge variant="outline" className="border-primary/40 text-primary">
+                  Referred by: {(client as any).referred_by}
+                </Badge>
+              )}
+              {(client as any).lead_source && (
+                <Badge variant="secondary" className="capitalize text-[10px]">
+                  {(client as any).lead_source}
+                </Badge>
+              )}
             </div>
             <div className="flex flex-col gap-1 text-sm text-muted-foreground ml-7">
               {client.contact_name && <span>{client.contact_name}</span>}

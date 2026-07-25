@@ -47,6 +47,7 @@ import ReportDetail from "./pages/reports/ReportDetail";
 import ChatPage from "./pages/chat/ChatPage";
 import SettingsPage from "./pages/settings/SettingsPage";
 import UserManagement from "./pages/settings/UserManagement";
+import AuditLog from "./pages/settings/AuditLog";
 import Unsubscribe from "./pages/Unsubscribe";
 import HelpCenter from "./pages/HelpCenter";
 import NotFound from "./pages/NotFound";
@@ -115,6 +116,7 @@ const App = () => {
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/users" element={<UserManagement />} />
+            <Route path="/settings/audit-log" element={<AuditLog />} />
           </Route>
 
           {/* Public PM portal */}

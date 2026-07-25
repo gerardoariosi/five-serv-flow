@@ -16,7 +16,7 @@ const ClientForm = () => {
   const queryClient = useQueryClient();
   const isEdit = !!id;
 
-  const [form, setForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', type: 'pm', address: '' });
+  const [form, setForm] = useState({ company_name: '', contact_name: '', email: '', phone: '', type: 'pm', address: '', referred_by: '', lead_source: '' });
   const [emailError, setEmailError] = useState('');
 
   const { data: existing, isLoading } = useQuery({
@@ -38,6 +38,8 @@ const ClientForm = () => {
         phone: existing.phone ?? '',
         type: existing.type ?? 'pm',
         address: (existing as any).address ?? '',
+        referred_by: (existing as any).referred_by ?? '',
+        lead_source: (existing as any).lead_source ?? '',
       });
     }
   }, [existing]);
@@ -63,7 +65,12 @@ const ClientForm = () => {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, email: form.email.toLowerCase() };
+      const payload = {
+        ...form,
+        email: form.email.toLowerCase(),
+        referred_by: form.referred_by.trim() || null,
+        lead_source: form.lead_source || null,
+      };
       if (isEdit) {
         const { error } = await supabase.from('clients').update(payload).eq('id', id!);
         if (error) throw error;
@@ -133,6 +140,29 @@ const ClientForm = () => {
             <p className="text-xs text-muted-foreground mt-1">Home or service address for this residential client.</p>
           </div>
         )}
+
+        <div>
+          <Label>Referred by (optional)</Label>
+          <Input
+            value={form.referred_by}
+            onChange={e => setForm(f => ({ ...f, referred_by: e.target.value }))}
+            placeholder="Name of person or client who referred them"
+            className="bg-secondary border-border"
+          />
+        </div>
+        <div>
+          <Label>Lead source (optional)</Label>
+          <Select value={form.lead_source || 'none'} onValueChange={v => setForm(f => ({ ...f, lead_source: v === 'none' ? '' : v }))}>
+            <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">—</SelectItem>
+              <SelectItem value="referral">Referral</SelectItem>
+              <SelectItem value="google">Google</SelectItem>
+              <SelectItem value="social">Social</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <Button onClick={() => mutation.mutate()} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2">
           {mutation.isPending ? <Spinner size="sm" /> : isEdit ? 'Update Client' : 'Create Client'}
