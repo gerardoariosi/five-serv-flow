@@ -1533,6 +1533,7 @@ export type Database = {
           note: string | null
           paid_at: string | null
           payment_date: string
+          proof_url: string | null
           status: string
           vendor_id: string
           week_ending_date: string | null
@@ -1546,6 +1547,7 @@ export type Database = {
           note?: string | null
           paid_at?: string | null
           payment_date: string
+          proof_url?: string | null
           status?: string
           vendor_id: string
           week_ending_date?: string | null
@@ -1559,6 +1561,7 @@ export type Database = {
           note?: string | null
           paid_at?: string | null
           payment_date?: string
+          proof_url?: string | null
           status?: string
           vendor_id?: string
           week_ending_date?: string | null
