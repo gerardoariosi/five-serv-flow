@@ -212,103 +212,110 @@ const CreateInspection = () => {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl font-bold text-foreground">New Inspection</h1>
-      </div>
-
-      {/* Progress */}
-      <div className="flex items-center justify-center gap-2 flex-wrap">
-        {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
-          <div key={step} className="flex items-center gap-1">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-              i === 0 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-            }`}>
-              {i + 1}
-            </div>
-            <span className={`text-xs ${i === 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{step}</span>
-            {i < 3 && <div className="w-4 sm:w-8 h-px bg-border" />}
+    <>
+      <FormShell
+        title="New Inspection"
+        subtitle="Configure and start or schedule a property inspection."
+        maxWidth="2xl"
+        footer={
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleSubmit}
+            disabled={saving || !!propertyHasActiveInspection || (mode === 'schedule' && !scheduleDate)}
+          >
+            {saving ? <Spinner size="sm" /> : (mode === 'schedule' ? 'Schedule Inspection →' : 'Start Inspection →')}
+          </Button>
+        }
+      >
+        {/* Progress */}
+        <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] px-4 py-3">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
+              <div key={step} className="flex items-center gap-1.5">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  i === 0 ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                }`}>
+                  {i + 1}
+                </div>
+                <span className={`text-xs font-medium ${i === 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{step}</span>
+                {i < 3 && <div className="w-4 sm:w-8 h-px bg-border" />}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        {/* Client */}
-        <div>
-          <Label>Client (PM)</Label>
-          <Select value={form.client_id} onValueChange={v => {
-            setForm(p => ({ ...p, client_id: v, property_id: '' }));
-            setPropertySearch('');
-          }}>
-            <SelectTrigger><SelectValue placeholder="Select PM" /></SelectTrigger>
-            <SelectContent>
-              {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
         </div>
 
-        {/* Property — searchable dropdown */}
-        <div className="relative">
-          <Label>Property / Address</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={propertySearch}
-              onChange={e => {
-                setPropertySearch(e.target.value);
-                setShowPropertyDropdown(true);
-                setForm(p => ({ ...p, property_id: '' }));
-              }}
-              onFocus={() => setShowPropertyDropdown(true)}
-              placeholder="Search property or address..."
-              className={`pl-10 ${propertyHasActiveInspection ? 'border-destructive' : ''}`}
-            />
-          </div>
-          {showPropertyDropdown && (
-            <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
-              {filteredProperties.length > 0 ? (
-                filteredProperties.map((p: any) => {
-                  const hasActive = activeInspectionPropertyIds.includes(p.id);
-                  return (
+        <FormSection title="Property">
+          <FormField label="Client (PM)">
+            <Select value={form.client_id} onValueChange={v => {
+              setForm(p => ({ ...p, client_id: v, property_id: '' }));
+              setPropertySearch('');
+            }}>
+              <SelectTrigger><SelectValue placeholder="Select PM" /></SelectTrigger>
+              <SelectContent>
+                {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Property / address"
+            error={propertyHasActiveInspection ? 'This property already has an active inspection.' : undefined}
+          >
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={propertySearch}
+                  onChange={e => {
+                    setPropertySearch(e.target.value);
+                    setShowPropertyDropdown(true);
+                    setForm(p => ({ ...p, property_id: '' }));
+                  }}
+                  onFocus={() => setShowPropertyDropdown(true)}
+                  placeholder="Search property or address..."
+                  className={`pl-10 ${propertyHasActiveInspection ? 'border-destructive' : ''}`}
+                />
+              </div>
+              {showPropertyDropdown && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredProperties.length > 0 ? (
+                    filteredProperties.map((p: any) => {
+                      const hasActive = activeInspectionPropertyIds.includes(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => !hasActive && handleSelectProperty(p.id)}
+                          disabled={hasActive}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${hasActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <span className="font-medium text-foreground">{p.full_address || p.address || p.name}</span>
+                          {hasActive && <span className="text-destructive ml-2 text-xs">(active inspection)</span>}
+                        </button>
+                      );
+                    })
+                  ) : null}
+                  {propertySearch.trim() && (
                     <button
-                      key={p.id}
-                      onClick={() => !hasActive && handleSelectProperty(p.id)}
-                      disabled={hasActive}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors ${hasActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={handleAddNewAddress}
+                      className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors border-t border-border flex items-center gap-2"
                     >
-                      <span className="font-medium text-foreground">{p.full_address || p.address || p.name}</span>
-                      {hasActive && <span className="text-destructive ml-2 text-xs">(active inspection)</span>}
+                      <Plus className="w-4 h-4" />
+                      Add new address: "{propertySearch}"
                     </button>
-                  );
-                })
-              ) : null}
-              {propertySearch.trim() && (
-                <button
-                  onClick={handleAddNewAddress}
-                  className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors border-t border-border flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add new address: "{propertySearch}"
-                </button>
-              )}
-              {!propertySearch.trim() && filteredProperties.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  {form.client_id ? 'No properties for this PM. Type to add.' : 'Select a PM first or type to search.'}
+                  )}
+                  {!propertySearch.trim() && filteredProperties.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      {form.client_id ? 'No properties for this PM. Type to add.' : 'Select a PM first or type to search.'}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-          {propertyHasActiveInspection && (
-            <p className="text-xs text-destructive mt-1">This property already has an active inspection.</p>
-          )}
-        </div>
+          </FormField>
+        </FormSection>
 
-        {/* Start Now vs Schedule */}
-        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-          <Label>When?</Label>
+        <FormSection title="Schedule">
           <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
@@ -329,16 +336,14 @@ const CreateInspection = () => {
           </div>
 
           {mode === 'now' && (
-            <div>
-              <Label className="text-xs">Visit Date (optional)</Label>
+            <FormField label="Visit date (optional)">
               <Input type="date" value={form.visit_date} onChange={e => setForm(p => ({ ...p, visit_date: e.target.value }))} />
-            </div>
+            </FormField>
           )}
 
           {mode === 'schedule' && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Date *</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Date" required>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -360,36 +365,33 @@ const CreateInspection = () => {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-              <div>
-                <Label className="text-xs">Time</Label>
+              </FormField>
+              <FormField label="Time">
                 <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
-              </div>
+              </FormField>
               <div className="col-span-2">
-                <Label className="text-xs">Assign to (optional)</Label>
-                <Select value={assignedTo} onValueChange={setAssignedTo}>
-                  <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
-                  <SelectContent>
-                    {users.map(u => <SelectItem key={u.id} value={u.id}>{u.display_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <FormField label="Assign to (optional)">
+                  <Select value={assignedTo} onValueChange={setAssignedTo}>
+                    <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
+                    <SelectContent>
+                      {users.map(u => <SelectItem key={u.id} value={u.id}>{u.display_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </FormField>
               </div>
             </div>
           )}
-        </div>
+        </FormSection>
 
-        {/* Room counters */}
-        <div className="bg-card border border-border rounded-lg p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground">Property Configuration</h3>
-
+        <FormSection title="Property configuration" description="HVAC / A-C is always included.">
           {(['bedrooms', 'bathrooms', 'living_rooms'] as const).map(field => (
             <div key={field} className="flex items-center justify-between">
-              <Label className="capitalize">{field.replace('_', ' ')}</Label>
+              <Label className="capitalize text-sm text-foreground">{field.replace('_', ' ')}</Label>
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCounter(field, -1)} disabled={form[field] <= 0}>
                   <Minus className="w-4 h-4" />
                 </Button>
-                <span className="text-foreground font-bold w-6 text-center">{form[field]}</span>
+                <span className="text-foreground font-bold w-6 text-center tabular-nums">{form[field]}</span>
                 <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleCounter(field, 1)}>
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -397,26 +399,20 @@ const CreateInspection = () => {
             </div>
           ))}
 
-          <div className="space-y-3 pt-2 border-t border-border">
+          <div className="space-y-3 pt-3 border-t border-border">
             {([
               { key: 'has_garage', label: 'Garage' },
               { key: 'has_laundry', label: 'Laundry' },
               { key: 'has_exterior', label: 'Exterior / Patio' },
             ] as const).map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between">
-                <Label>{label}</Label>
+                <Label className="text-sm text-foreground">{label}</Label>
                 <Switch checked={form[key]} onCheckedChange={v => setForm(p => ({ ...p, [key]: v }))} />
               </div>
             ))}
           </div>
-
-          <p className="text-xs text-muted-foreground italic">HVAC / A-C is always included.</p>
-        </div>
-
-        <Button className="w-full" size="lg" onClick={handleSubmit} disabled={saving || !!propertyHasActiveInspection || (mode === 'schedule' && !scheduleDate)}>
-          {saving ? <Spinner size="sm" /> : (mode === 'schedule' ? 'Schedule Inspection →' : 'Start Inspection →')}
-        </Button>
-      </div>
+        </FormSection>
+      </FormShell>
 
       {/* Add New Property Confirmation Dialog */}
       <Dialog open={newAddressDialog.open} onOpenChange={o => setNewAddressDialog(p => ({ ...p, open: o }))}>
@@ -433,17 +429,16 @@ const CreateInspection = () => {
             value={newPropertyName}
             onChange={e => setNewPropertyName(e.target.value)}
             placeholder="Property name / address"
-            className="bg-secondary border-border"
           />
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setNewAddressDialog({ open: false, address: '', pmName: '' })}>Cancel</Button>
-            <Button onClick={handleConfirmNewProperty} disabled={!newPropertyName.trim()} className="bg-primary text-primary-foreground">
+            <Button onClick={handleConfirmNewProperty} disabled={!newPropertyName.trim()}>
               Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
