@@ -307,11 +307,30 @@ const VendorDetail = () => {
                           </span>
                           {p.status === 'paid' && p.proof_url && <ProofLink path={p.proof_url} />}
                           {p.note && <span className="flex-1 min-w-[100px] truncate text-muted-foreground">— {p.note}</span>}
-                          {p.status === 'pending' && canManagePayments && (
-                            <Button size="sm" variant="outline" className="h-6 text-[10px] ml-auto" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
-                              Mark Paid
-                            </Button>
-                          )}
+                          <div className="ml-auto flex items-center gap-1">
+                            {p.status === 'pending' && canManagePayments && (
+                              <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
+                                Mark Paid
+                              </Button>
+                            )}
+                            {canManagePayments && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Row actions">
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => setEditPayment(p)}>
+                                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeletePayment(p)}>
+                                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
