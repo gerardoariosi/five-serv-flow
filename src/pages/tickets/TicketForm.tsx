@@ -373,7 +373,7 @@ const TicketForm = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-6">
+    <>
       {/* Draft prompt */}
       <Dialog open={showDraftPrompt} onOpenChange={setShowDraftPrompt}>
         <DialogContent>
@@ -411,165 +411,153 @@ const TicketForm = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-bold text-foreground">{isEdit ? 'Edit Ticket' : 'New Ticket'}</h1>
-        </div>
-        {!isEdit && (
+      <FormShell
+        title={isEdit ? 'Edit Ticket' : 'New Ticket'}
+        subtitle={isEdit ? undefined : 'Create a work order and assign it to a technician.'}
+        maxWidth="2xl"
+        headerAction={!isEdit ? (
           <Button variant="outline" size="sm" onClick={() => setShowTemplates(true)}>
-            <FileText className="w-4 h-4 mr-1" /> Use Template
+            <FileText className="w-4 h-4 mr-1.5" /> Use Template
           </Button>
-        )}
-      </div>
+        ) : undefined}
+        footer={
+          <div className="flex gap-3 w-full">
+            {!isEdit && (
+              <Button variant="outline" className="flex-1" onClick={() => handleSubmit(true)} disabled={saving}>
+                Save as Draft
+              </Button>
+            )}
+            <Button className="flex-1" onClick={() => handleSubmit(false)} disabled={saving}>
+              {saving ? <Spinner size="sm" /> : (isEdit ? 'Update Ticket' : 'Create Ticket')}
+            </Button>
+          </div>
+        }
+      >
+        <FormSection title="Job">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Work type">
+              <Select value={form.work_type} onValueChange={v => setForm(p => ({ ...p, work_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {workTypes.map(wt => (
+                    <SelectItem key={wt.key} value={wt.key}>{wt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Priority">
+              <Select value={form.priority} onValueChange={v => setForm(p => ({ ...p, priority: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
 
-      <div className="space-y-4">
-        {/* Work Type + Priority */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label>Work Type</Label>
-            <Select value={form.work_type} onValueChange={v => setForm(p => ({ ...p, work_type: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+          {form.work_type === 'emergency' && !form.technician_id && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/30">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+              <span className="text-xs text-destructive">Emergency tickets require an assigned technician before submission.</span>
+            </div>
+          )}
+
+          {form.work_type === 'capex' && (
+            <FormField label="Quote reference #">
+              <Input value={form.quote_reference} onChange={e => setForm(p => ({ ...p, quote_reference: e.target.value }))} placeholder="Quote or PO number" />
+            </FormField>
+          )}
+        </FormSection>
+
+        <FormSection title="Location">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField label="Client / PM">
+              <Select value={form.client_id} onValueChange={v => setForm(p => ({ ...p, client_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Zone">
+              <Select value={form.zone_id} onValueChange={v => setForm(p => ({ ...p, zone_id: v, property_id: '' }))}>
+                <SelectTrigger><SelectValue placeholder="Select zone" /></SelectTrigger>
+                <SelectContent>
+                  {zones.map((z: any) => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </div>
+          <FormField label="Property">
+            <Select value={form.property_id} onValueChange={v => setForm(p => ({ ...p, property_id: v }))}>
+              <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
               <SelectContent>
-                {workTypes.map(wt => (
-                  <SelectItem key={wt.key} value={wt.key}>{wt.label}</SelectItem>
-                ))}
+                {filteredProperties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>Priority</Label>
-            <Select value={form.priority} onValueChange={v => setForm(p => ({ ...p, priority: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Client + Zone */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label>Client / PM</Label>
-            <Select value={form.client_id} onValueChange={v => setForm(p => ({ ...p, client_id: v }))}>
-              <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>
-                {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Zone</Label>
-            <Select value={form.zone_id} onValueChange={v => setForm(p => ({ ...p, zone_id: v, property_id: '' }))}>
-              <SelectTrigger><SelectValue placeholder="Select zone" /></SelectTrigger>
-              <SelectContent>
-                {zones.map((z: any) => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Property (filtered by zone) */}
-        <div>
-          <Label>Property</Label>
-          <Select value={form.property_id} onValueChange={v => setForm(p => ({ ...p, property_id: v }))}>
-            <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-            <SelectContent>
-              {filteredProperties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Unit + Technician */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <Label>Unit</Label>
+          </FormField>
+          <FormField label="Unit">
             <Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="e.g. Apt 201" />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Schedule & Assignment">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              label={<>Technician{form.work_type === 'emergency' && <span className="text-destructive ml-1">*</span>}</>}
+            >
+              <Select value={form.technician_id} onValueChange={v => setForm(p => ({ ...p, technician_id: v }))}>
+                <SelectTrigger className={form.work_type === 'emergency' && !form.technician_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Assign technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.display_name ?? t.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Appointment time">
+              <Input type="datetime-local" value={form.appointment_time} onChange={e => setForm(p => ({ ...p, appointment_time: e.target.value }))} />
+            </FormField>
           </div>
-          <div>
-            <Label className="flex items-center gap-1">
-              Technician
-              {form.work_type === 'emergency' && <span className="text-destructive text-xs">*required</span>}
-            </Label>
-            <Select value={form.technician_id} onValueChange={v => setForm(p => ({ ...p, technician_id: v }))}>
-              <SelectTrigger className={form.work_type === 'emergency' && !form.technician_id ? 'border-destructive' : ''}>
-                <SelectValue placeholder="Assign technician" />
-              </SelectTrigger>
+          <FormField label="Related inspection">
+            <Select value={form.related_inspection_id || 'none'} onValueChange={v => setForm(p => ({ ...p, related_inspection_id: v === 'none' ? '' : v }))}>
+              <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
               <SelectContent>
-                {technicians.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.display_name ?? t.full_name}</SelectItem>)}
+                <SelectItem value="none">None</SelectItem>
+                {inspections.map((ins: any) => <SelectItem key={ins.id} value={ins.id}>{ins.ins_number ?? ins.id.slice(0, 8)}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-        </div>
+          </FormField>
+        </FormSection>
 
-        {/* Emergency alert */}
-        {form.work_type === 'emergency' && !form.technician_id && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/30">
-            <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
-            <span className="text-xs text-destructive">Emergency tickets require an assigned technician before submission.</span>
-          </div>
-        )}
+        <FormSection title="Details">
+          <FormField label={<>Description <span className="normal-case tracking-normal text-muted-foreground/70 font-normal">({form.description.length}/5000)</span></>}>
+            <Textarea
+              value={form.description}
+              onChange={e => { if (e.target.value.length <= 5000) setForm(p => ({ ...p, description: e.target.value })); }}
+              rows={4}
+              placeholder="Describe the work needed..."
+            />
+          </FormField>
+          <FormField
+            label="Internal note"
+            hint="Not visible to PM or technician."
+          >
+            <Textarea value={form.internal_note} onChange={e => setForm(p => ({ ...p, internal_note: e.target.value }))} rows={2} placeholder="Internal notes..." />
+          </FormField>
+        </FormSection>
 
-        {/* Appointment Time */}
-        <div>
-          <Label>Appointment Time</Label>
-          <Input type="datetime-local" value={form.appointment_time} onChange={e => setForm(p => ({ ...p, appointment_time: e.target.value }))} />
-        </div>
-
-        {/* Description */}
-        <div>
-          <Label>Description <span className="text-muted-foreground text-xs">({form.description.length}/5000)</span></Label>
-          <Textarea
-            value={form.description}
-            onChange={e => { if (e.target.value.length <= 5000) setForm(p => ({ ...p, description: e.target.value })); }}
-            rows={4}
-            placeholder="Describe the work needed..."
-          />
-        </div>
-
-        {/* Internal Note */}
-        <div>
-          <Label className="text-muted-foreground">Internal Note <span className="text-xs">(not visible to PM or technician)</span></Label>
-          <Textarea value={form.internal_note} onChange={e => setForm(p => ({ ...p, internal_note: e.target.value }))} rows={2} placeholder="Internal notes..." />
-        </div>
-
-        {/* Quote Reference — CapEx only */}
-        {form.work_type === 'capex' && (
-          <div>
-            <Label>Quote Reference #</Label>
-            <Input value={form.quote_reference} onChange={e => setForm(p => ({ ...p, quote_reference: e.target.value }))} placeholder="Quote or PO number" />
-          </div>
-        )}
-
-        {/* Related Inspection */}
-        <div>
-          <Label>Related Inspection</Label>
-          <Select value={form.related_inspection_id || 'none'} onValueChange={v => setForm(p => ({ ...p, related_inspection_id: v === 'none' ? '' : v }))}>
-            <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {inspections.map((ins: any) => <SelectItem key={ins.id} value={ins.id}>{ins.ins_number ?? ins.id.slice(0, 8)}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Initial Photos */}
-        <div>
-          <Label>Initial Photos (optional)</Label>
-          <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors mt-1">
+        <FormSection title="Initial photos" description="Optional — attach reference photos before work begins.">
+          <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors">
             <Camera className="w-5 h-5 text-primary" />
             <span className="text-sm text-muted-foreground">Add Photos</span>
             <input type="file" accept="image/*" multiple className="hidden" onChange={addPhoto} />
           </label>
           {initialPhotos.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-2">
               {initialPhotos.map((f, i) => (
                 <div key={i} className="relative rounded-lg overflow-hidden border border-border">
                   <img src={URL.createObjectURL(f)} alt="" className="w-full h-20 object-cover" />
@@ -583,21 +571,9 @@ const TicketForm = () => {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Submit */}
-        <div className="flex gap-3 pt-4">
-          {!isEdit && (
-            <Button variant="outline" className="flex-1" onClick={() => handleSubmit(true)} disabled={saving}>
-              Save as Draft
-            </Button>
-          )}
-          <Button className="flex-1" onClick={() => handleSubmit(false)} disabled={saving}>
-            {saving ? <Spinner size="sm" /> : (isEdit ? 'Update Ticket' : 'Create Ticket')}
-          </Button>
-        </div>
-      </div>
-    </div>
+        </FormSection>
+      </FormShell>
+    </>
   );
 };
 
