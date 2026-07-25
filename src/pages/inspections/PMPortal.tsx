@@ -226,6 +226,7 @@ const PMPortal = () => {
             templateName: 'pm-response-received',
             recipientEmail: adminEmail,
             idempotencyKey: `pm-response-${inspection.id}`,
+            portalToken: token,
             templateData: {
               ins_number: inspection.ins_number ?? '',
               property_name: prop?.name ?? 'N/A',
