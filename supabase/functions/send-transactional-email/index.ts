@@ -54,6 +54,44 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Authorization: require a real signed-in user JWT (not just the anon key).
+  // Templates triggered from public portals (pm-response-received, etc.) are
+  // called server-to-server from other edge functions using SERVICE_ROLE_KEY,
+  // which is also accepted here.
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+  const isServiceRole = token === supabaseServiceKey
+  if (!isServiceRole) {
+    const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') || '', {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    })
+    const { data: userData, error: userErr } = await authClient.auth.getUser()
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    // Require the caller to have at least one staff role
+    const { data: roles } = await authClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userData.user.id)
+      .limit(1)
+    if (!roles || roles.length === 0) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
   // Parse request body
   let templateName: string
   let recipientEmail: string
