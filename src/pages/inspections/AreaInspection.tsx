@@ -248,6 +248,9 @@ const AreaInspection = () => {
     setSaving(false);
   }, [id, currentArea, items, notes]);
 
+  const autoSaveRef = useRef(autoSave);
+  useEffect(() => { autoSaveRef.current = autoSave; }, [autoSave]);
+
   const handleAreaPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !currentArea || !id) return;
     if (!user?.id) { toast.error('Not authenticated'); return; }
