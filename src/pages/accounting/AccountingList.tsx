@@ -13,8 +13,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import VendorPayablesTab from './VendorPayablesTab';
 import { toast } from 'sonner';
 import { getTicketColor } from '@/lib/ticketColors';
+
 
 const BILLING_STATUSES = ['all', 'pending', 'invoiced', 'paid'];
 
@@ -133,12 +136,23 @@ const AccountingList = () => {
     <div className="p-4 max-w-3xl mx-auto space-y-4 pb-28">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Accounting</h1>
-        {canSelect && (
-          <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
-            {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
-          </Button>
-        )}
       </div>
+
+      <Tabs defaultValue="client-billing">
+        <TabsList className="bg-secondary">
+          <TabsTrigger value="client-billing">Client Billing</TabsTrigger>
+          <TabsTrigger value="vendor-payables">Vendor Payables</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="client-billing" className="mt-4 space-y-4">
+          <div className="flex items-center justify-end">
+            {canSelect && (
+              <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+                {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
+              </Button>
+            )}
+          </div>
+
 
       {/* Search */}
       <div className="relative">
@@ -263,6 +277,14 @@ const AccountingList = () => {
           </Button>
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="vendor-payables" className="mt-4">
+          <VendorPayablesTab />
+        </TabsContent>
+      </Tabs>
+
+
 
       <BulkDeleteDialog
         open={!!singleDelete}

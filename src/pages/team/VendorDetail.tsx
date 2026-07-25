@@ -23,13 +23,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Save, Upload, Download, Trash2, Plus, FileText, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Download, Trash2, Plus, FileText, DollarSign, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getExpirationStatus,
   expirationBadgeClass,
   expirationLabel,
 } from '@/lib/vendorAlerts';
+import AddVendorPaymentDialog from '@/components/vendors/AddVendorPaymentDialog';
+import MarkPaidDialog from '@/components/vendors/MarkPaidDialog';
+
 
 const SPECIALTIES_CATALOG = [
   'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Carpentry',
@@ -73,8 +76,8 @@ const VendorDetail = () => {
   const [uploading, setUploading] = useState(false);
 
   const [payDialog, setPayDialog] = useState(false);
-  const [newPay, setNewPay] = useState({ amount: '', payment_date: new Date().toISOString().slice(0, 10), note: '' });
-  const [savingPay, setSavingPay] = useState(false);
+  const [markPaid, setMarkPaid] = useState<{ id: string; amount: number } | null>(null);
+
 
   const { data: vendor } = useQuery({
     queryKey: ['vendor', id],
@@ -128,12 +131,13 @@ const VendorDetail = () => {
         .from('vendor_payments')
         .select('*')
         .eq('vendor_id', id!)
-        .order('payment_date', { ascending: false });
+        .order('due_date', { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data ?? [];
     },
     enabled: !isNew && (canManageDocs || canManagePayments),
   });
+
 
   const toggleSpecialty = (s: string) => {
     setForm(prev => ({
@@ -224,29 +228,20 @@ const VendorDetail = () => {
     refetchDocs();
   };
 
-  const handleAddPayment = async () => {
-    const amt = parseFloat(newPay.amount);
-    if (isNaN(amt) || amt < 0) { toast.error('Enter a valid amount'); return; }
-    if (!user?.id || !id) return;
-    setSavingPay(true);
-    const { error } = await supabase.from('vendor_payments').insert({
-      vendor_id: id,
-      amount: amt,
-      payment_date: newPay.payment_date,
-      note: newPay.note || null,
-      created_by: user.id,
-    });
-    setSavingPay(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success('Payment logged');
-    setPayDialog(false);
-    setNewPay({ amount: '', payment_date: new Date().toISOString().slice(0, 10), note: '' });
-    refetchPay();
-  };
 
-  const totalPaid = payments.reduce((sum, p: any) => sum + Number(p.amount ?? 0), 0);
+
+
+  const pendingPayments = (payments as any[]).filter(p => p.status === 'pending');
+  const paidPayments = (payments as any[]).filter(p => p.status === 'paid');
+  const balance = pendingPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const totalPaid = paidPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const oldestDue = pendingPayments
+    .map(p => p.due_date)
+    .filter(Boolean)
+    .sort()[0] as string | undefined;
   const licStatus = getExpirationStatus(form.license_expiration_date);
   const insStatus = getExpirationStatus(form.insurance_expiration_date);
+
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-6 pb-16">
@@ -381,28 +376,54 @@ const VendorDetail = () => {
         <section className="border border-border rounded-lg bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
+
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" /> Payments
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Total paid: <span className="text-foreground font-semibold">${totalPaid.toFixed(2)}</span>
-              </p>
             </div>
             {canManagePayments && (
               <Button size="sm" variant="outline" onClick={() => setPayDialog(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Log
+                <Plus className="w-4 h-4 mr-1" /> Add Payment
               </Button>
             )}
           </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Balance
+              </p>
+              <p className="text-lg font-bold text-foreground tabular-nums">${balance.toFixed(2)}</p>
+              {oldestDue && <p className="text-[10px] text-muted-foreground mt-0.5">Oldest due: {oldestDue}</p>}
+            </div>
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Total Paid
+              </p>
+              <p className="text-lg font-bold text-foreground tabular-nums">${totalPaid.toFixed(2)}</p>
+            </div>
+          </div>
+
           {payments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No payments logged.</p>
+            <p className="text-xs text-muted-foreground">No payments yet.</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {payments.map((p: any) => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded border border-border text-xs">
-                  <span className="font-semibold text-foreground">${Number(p.amount).toFixed(2)}</span>
-                  <span className="text-muted-foreground">{p.payment_date}</span>
-                  {p.note && <span className="flex-1 truncate text-muted-foreground">— {p.note}</span>}
+              {(payments as any[]).map((p) => (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded border border-border text-xs flex-wrap">
+                  <Badge variant={p.status === 'paid' ? 'default' : 'outline'} className="text-[10px]">
+                    {p.status === 'paid' ? 'Paid' : 'Pending'}
+                  </Badge>
+                  <span className="font-semibold text-foreground tabular-nums">${Number(p.amount).toFixed(2)}</span>
+                  <span className="text-muted-foreground">
+                    Wk {p.week_ending_date ?? p.payment_date} · Due {p.due_date ?? '—'}
+                    {p.status === 'paid' && p.paid_at && ` · Paid ${p.paid_at}`}
+                  </span>
+                  {p.note && <span className="flex-1 min-w-[100px] truncate text-muted-foreground">— {p.note}</span>}
+                  {p.status === 'pending' && canManagePayments && (
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] ml-auto" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
+                      Mark Paid
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -440,31 +461,22 @@ const VendorDetail = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Payment dialog */}
-      <Dialog open={payDialog} onOpenChange={setPayDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Log Payment</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Amount ($)</Label>
-              <Input type="number" step="0.01" min="0" value={newPay.amount} onChange={e => setNewPay(p => ({ ...p, amount: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={newPay.payment_date} onChange={e => setNewPay(p => ({ ...p, payment_date: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Note (optional)</Label>
-              <Input value={newPay.note} onChange={e => setNewPay(p => ({ ...p, note: e.target.value }))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleAddPayment} disabled={savingPay}>
-              {savingPay ? 'Saving…' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddVendorPaymentDialog
+        open={payDialog}
+        onOpenChange={setPayDialog}
+        vendorId={id}
+        vendorName={vendor?.company_name}
+        onSaved={() => refetchPay()}
+      />
+
+      <MarkPaidDialog
+        open={!!markPaid}
+        onOpenChange={(o) => !o && setMarkPaid(null)}
+        paymentId={markPaid?.id ?? null}
+        amount={markPaid?.amount}
+        onSaved={() => { refetchPay(); setMarkPaid(null); }}
+      />
+
     </div>
   );
 };
