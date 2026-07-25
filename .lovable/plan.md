@@ -1,115 +1,65 @@
+# Vendor Payments — Edit & Delete per row
 
-# Shared Detail-Page Redesign — Client, Property, Vendor
+Add row-level Edit and Delete actions to every entry in the vendor payments list, without touching the existing Add Payment, Mark Paid, or balance-calculation flows.
 
-## Research summary (applied)
+## 1. Role gating (same as today)
 
-From Linear, Attio, Stripe, HubSpot, Notion, and Height, the strongest common threads for record/detail pages are:
+Reuse the existing `canManagePayments` check in `VendorDetail.tsx` (`activeRole === 'admin' || activeRole === 'accounting'`). Edit and Delete controls only render when this is true. Technicians and supervisors see the list read-only, exactly as today.
 
-- **Compact identity header** — 36px logo/initials + name + one muted subline + inline status pill; no hero.
-- **Metadata as label/value rows**, not stat cards. Groups separated by a hairline + small section label — this is the single biggest fix for the "wall of identical white cards" feeling.
-- **Off-white app bg + pure-white surfaces + 1px low-opacity borders + no shadows on static panels.** This is what reads as "premium" vs. "generic admin."
-- **Empty state = dashed-border block** (~120px), tiny icon, one CTA, kept the same height whether populated or not, so pages don't jump.
-- **Sub-sections behind tabs** when they're large repeating datasets (Documents, Payments, Related records); metadata itself stays flowing.
-- **One accent color** (FiveServ gold) reserved for primary buttons, active tab indicator, and links only. Status uses muted pastel pills.
-- **Empty editable field** → dashed-underline "Add …" ghost link (turns gaps into affordances). Read-only empty → `—`.
+RLS on `vendor_payments` already restricts UPDATE/DELETE to admin/accounting, so no policy changes are needed.
 
-## Design direction for FiveServ
+## 2. New component — `EditVendorPaymentDialog.tsx`
 
-Mobile-first single column across all three detail pages, always in this exact vertical order:
+A single dialog handling both pending and paid entries:
 
-```text
-┌────────────────────────────────────────────┐
-│ ← chevron                                  │  top bar (unchanged)
-├────────────────────────────────────────────┤
-│ [avatar] Name              [status pill]   │  identity block
-│         one muted subline                  │
-├────────────────────────────────────────────┤
-│ [Primary CTA] [icon] [icon]        [⋯]     │  actions row
-├────────────────────────────────────────────┤
-│ SECTION LABEL                              │
-│ label            value                     │  metadata group 1
-│ label            value                     │
-│ ──────────────  hairline  ──────────────   │
-│ SECTION LABEL                              │
-│ label            value                     │  metadata group 2
-│                                            │
-├────────────────────────────────────────────┤
-│ [Tab] [Tab] [Tab] [Tab]                    │  sub-sections
-│                                            │
-│  ...content or dashed empty block...       │
-└────────────────────────────────────────────┘
-```
+- **Always editable**: `week_ending_date`, `due_date` (with the same lock/unlock behavior as Add), `amount`, `note`.
+- **Only when `status === 'paid'`**: also show `paid_at` date and a proof-of-payment file input.
+  - If a `proof_url` already exists, show a "View current proof" link + a "Replace" affordance.
+  - If none exists, show "Attach proof of payment — optional" (same copy as MarkPaidDialog).
+- **Status is never mutated** by this dialog — it's not a field. Pending stays pending, paid stays paid.
+- Upload path for proof reuses the exact convention already in place: `vendor-documents/{vendorId}/proofs/{paymentId}-{ts}.{ext}` in the private `vendor-documents` bucket.
+- On save: `UPDATE vendor_payments SET ... WHERE id = :paymentId`, then invalidate the `vendor_payments` query so Balance / Total Paid recompute from the fresh rows.
 
-## Shared building blocks (new components)
+To avoid duplication, the shared form fields (week/due/amount/note with lock toggle) will be extracted from `AddVendorPaymentDialog` into a small `VendorPaymentFormFields` component consumed by both Add and Edit dialogs. No behavior change to Add.
 
-Create in `src/components/detail/` so all three pages compose the same primitives:
+## 3. Delete flow
 
-1. **`DetailHeader`** — avatar/icon slot, name, subline, status pill slot, actions slot. Handles back chevron. ~64px tall on mobile.
-2. **`DetailActions`** — 1 primary button + up to 3 icon-ghost buttons + optional overflow `DropdownMenu`. Role-gated buttons simply aren't passed in.
-3. **`FieldGroup`** — takes a group label + children (rows). Renders label (`text-xs font-semibold text-muted-foreground mb-2`) and a top hairline (`border-t border-border/60`) except for the first group in the page.
-4. **`FieldRow`** — `grid grid-cols-[110px_1fr] gap-3 py-1.5`, label left (`text-xs text-muted-foreground`), value right (`text-sm text-foreground`). Empty read-only → `—`. Empty editable (`editHref` prop) → dashed-underline ghost link.
-5. **`SectionTabs`** — thin underline tabs, horizontally scrollable on overflow, 44px tap targets. Reuses shadcn Tabs internally.
-6. **`EmptyBlock`** — dashed-border container, icon, primary line, muted subline, optional small outline CTA. ~120–140px min-height so populated/empty don't jump.
-7. **`StatusPill`** — one component, variants: `success` (green pastel), `neutral` (gray), `warning` (amber), `danger` (red). All muted, never saturated.
+- On click, show a confirmation (reuse `AlertDialog` from shadcn already used elsewhere in the app): "Delete this payment entry? This cannot be undone."
+- On confirm: if the row has a `proof_url`, remove that object from the `vendor-documents` bucket first (best-effort, don't block on failure), then `DELETE FROM vendor_payments WHERE id = :paymentId`.
+- Invalidate the `vendor_payments` query — Balance and Total Paid recompute automatically since they're derived from the row list.
+- Toast on success/failure.
 
-No new color tokens required — the existing off-white `--background`, pure-white `--card`, warm gray `--border`, and gold `--primary` already match the direction. The redesign will remove ad-hoc `bg-card border border-border rounded-lg` wrappers wherever a `FieldGroup` replaces them.
+## 4. Row UI
 
-## Per-page application
+Follow the app's existing row-actions convention (⋮ dropdown menu, same pattern as TicketList/ClientList):
 
-### ClientDetail.tsx
+- Replace the current inline "Mark Paid" button with a compact action cluster on the right side of each row:
+  - Pending row (admin/accounting): `Mark Paid` button + `⋮` menu with **Edit**, **Delete**.
+  - Paid row (admin/accounting): `⋮` menu with **Edit** (which is where proof can now be added after the fact), **Delete**.
+  - Non-privileged roles: no menu, no buttons (unchanged from today).
+- Icons: `Pencil` for Edit, `Trash2` for Delete (destructive styling on the menu item).
 
-- Header: `Building2` icon in a tinted-gold square (36px) · `company_name` · subline = `contact_name` + property count + "Client since {year}". Status pill: `type` (Property Manager / Residential). Referred-by and lead-source move out of the header into a **"Source"** field group.
-- Actions: primary = "Add Property" (admin/supervisor); ghost = Email, Call (only when contact info exists); overflow = "Import Properties (CSV)", Edit, Deactivate.
-- Field groups (replace the current single big header card):
-  - **Contact** — Contact name, Email, Phone
-  - **Source** — Type, Referred by, Lead source
-- Sub-sections (keep the current 3–4 tabs, restyled): Properties · Tickets · Inspections · Internal Notes (role-gated).
-- Empty states inside each tab replaced with `EmptyBlock` (icon + "No properties yet" + role-gated "Add Property" outline button).
+Layout stays on a single row on desktop and wraps as it does today on mobile — no structural change to the list.
 
-### PropertyDetail.tsx
+## 5. Vendor Payables (Accounting tab)
 
-- Header: `MapPin` in tinted square · `formatAddress(property)` as the name (fallback to `name`) · subline = zone + PM name. Status pill: none by default; if `pm_changed_at` recent → amber "PM changed" pill.
-- Actions: primary = "New Ticket"; ghost = "New Inspection", "Directions" (opens maps link that's currently inline in the header). Overflow = Edit, and Admin-only Delete.
-- Field groups:
-  - **Location** — Street, City/State/Zip, Zone, Directions link
-  - **Property Management** — Current PM, Previous PM + change date (when present)
-  - **Tenant** (admin/supervisor only, replaces the current collapsible "Property Notes" panel) — Tenant name, Tenant phone, General notes (inline-editable via existing upsert; keeps existing "Last updated" caption). This is a `FieldGroup` with inline `Input`/`Textarea` values instead of the current separate accordion card.
-- Sub-sections (tabs unchanged): Active Tickets · History · Inspections. Empty states replaced with `EmptyBlock`.
-- `PropertyDocumentsSections` (Gallery / Estimates & Invoices) stays as-is below the tabs but wrapped in `FieldGroup` styling for visual consistency (label + hairline, no extra card).
+The Vendor Payables tab currently lists **vendors with pending balances**, not individual payment rows, so there is nothing per-row to edit or delete there. No change. Edit/Delete are reached by clicking through to the vendor and using the payments list on `VendorDetail`.
 
-### VendorDetail.tsx
+## 6. Files touched
 
-- Header: company logo slot (fallback: initials tinted-gold square) · `company_name` · subline = `contact_name` + specialties count. Status pill: Active/Archived, plus license/insurance expiring/expired pills relocated inline into the status area.
-- Actions: primary = admin-only "Add Payment" when Payments tab is active, otherwise "Upload Document"; ghost = Email, Call; overflow = Edit, Archive.
-- Field groups (replace the current 2-col grid card):
-  - **Contact** — Phone, Email
-  - **Compliance** — License #, License expiration, Insurance info, Insurance expiration
-  - **Specialties** — chips (kept as-is inside the group)
-  - **Notes** — plain text block
-- Sub-sections become tabs: **Documents · Payments**. This replaces the current two stacked sections. Payments tab keeps the existing Balance / Total Paid summary strip *inside* the tab (two `FieldRow`-style tiles, no border) and the payments list, `AddVendorPaymentDialog`, and `MarkPaidDialog` wiring is untouched. `ProofLink` behavior unchanged.
+- **New**: `src/components/vendors/EditVendorPaymentDialog.tsx`
+- **New (refactor extract)**: `src/components/vendors/VendorPaymentFormFields.tsx`
+- **Edited**: `src/components/vendors/AddVendorPaymentDialog.tsx` — consume the extracted fields, no behavior change.
+- **Edited**: `src/pages/team/VendorDetail.tsx` — add the ⋮ menu per row, wire Edit dialog + Delete confirm, invalidate queries.
 
-## What stays the same (non-goals)
+No DB migration. No RLS change. No change to `MarkPaidDialog`, Add flow, balance math, or the Payables tab.
 
-- All queries, mutations, RLS, role gating logic, and the underlying data model.
-- All dialogs (`ImportPropertiesDialog`, `AddVendorPaymentDialog`, `MarkPaidDialog`, upload dialog).
-- `PropertyDocumentsSections` internal behavior.
-- Routing (`/edit` still opens the form pages).
-- No color-token changes to `index.css`; palette already fits.
+## Risks / flags
 
-## Technical notes
+1. **Editing a paid entry's amount changes Total Paid retroactively.** Intended per the request, but there is no audit trail on `vendor_payments` beyond the existing global `audit_log` trigger (if attached). Worth confirming you're OK with silent retroactive edits — otherwise we'd add a "reason" field or an edit log, which is out of scope here.
+2. **Deleting a paid entry with a proof file**: storage removal is best-effort. If the bucket delete fails (e.g. transient), the DB row still gets deleted and the file becomes orphaned. Acceptable tradeoff for simplicity; alternative is a two-phase delete that blocks on storage.
+3. **Replacing a proof file**: the old file will be left in storage (new one uploaded to a new timestamped path). Same orphan tradeoff. Can add cleanup if you want it strict.
+4. **Concurrent edits**: no optimistic locking. Last write wins. Same as everywhere else in the app today.
+5. **Refactor of Add dialog**: extracting shared fields is low-risk but does touch the working Add flow. Will keep the extraction mechanical (props-in, values-out) so Add behavior is byte-identical.
 
-- New primitives are dumb presentational components — no data-fetching, no store access — so the three page files stay thin.
-- Detail pages will import from `@/components/detail/*` and drop most of their hand-rolled card markup. The three files should shrink to ~150–200 lines each.
-- Tabs used only when there are ≥2 sub-datasets; single-dataset pages (unlikely here) would render inline.
-- Mobile-first: no two-column layout is added. Desktop will simply center the content column at `max-w-3xl mx-auto`.
-- Accessibility: `FieldRow` uses `<dl>/<dt>/<dd>` semantics; `EmptyBlock` uses `role="status"`; tabs come from shadcn Tabs so keyboard nav is preserved.
-
-## Implementation order (when approved)
-
-1. Create the 7 shared primitives in `src/components/detail/` with Storybook-free but exportable API.
-2. Refactor `VendorDetail.tsx` first (biggest file, exercises every primitive including tabs + dashed empty + status pills).
-3. Refactor `PropertyDetail.tsx` (adds the inline-editable Tenant group pattern).
-4. Refactor `ClientDetail.tsx` (simplest, mostly tabs + one contact group).
-5. Manual pass: verify role-gating removes actions cleanly, and that mobile viewports at 375px still fit without horizontal scroll.
-
-No database migration, no route change, no store change.
+Confirm and I'll implement.
