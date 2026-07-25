@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
 import { US_STATES, formatAddress } from '@/lib/propertyAddress';
+import FormShell from '@/components/form/FormShell';
+import FormSection from '@/components/form/FormSection';
+import FormField from '@/components/form/FormField';
 
 const PropertyForm = () => {
   const navigate = useNavigate();
@@ -75,7 +77,6 @@ const PropertyForm = () => {
     }
   }, [existing, searchParams]);
 
-  // Uniqueness check on street_address + zip_code
   useEffect(() => {
     if (!form.street_address) { setAddressError(''); return; }
     const t = setTimeout(async () => {
@@ -95,7 +96,6 @@ const PropertyForm = () => {
   const mutation = useMutation({
     mutationFn: async () => {
       const fullAddress = formatAddress(form as any);
-      // Mirror to `name` and `address` for backward compatibility (trigger also syncs `address`)
       const payload: any = {
         street_address: form.street_address,
         city: form.city || null,
@@ -157,7 +157,6 @@ const PropertyForm = () => {
       const lines = text.split('\n').filter(l => l.trim());
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
-      // Support both legacy single 'address' and split columns
       const streetIdx = headers.indexOf('street_address') >= 0 ? headers.indexOf('street_address') : headers.indexOf('address');
       const cityIdx = headers.indexOf('city');
       const stateIdx = headers.indexOf('state');
@@ -227,104 +226,96 @@ const PropertyForm = () => {
   if (isEdit && isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
 
   return (
-    <div className="p-4 max-w-lg mx-auto">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back
-      </button>
-
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-foreground">{isEdit ? 'Edit Property' : 'New Property'}</h1>
-        {!isEdit && (
-          <>
-            <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
-              <Upload className="w-4 h-4 mr-1" /> {importing ? 'Importing...' : 'CSV Import'}
-            </Button>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
-          </>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <div>
-          <Label>Street Address *</Label>
+    <FormShell
+      title={isEdit ? 'Edit Property' : 'New Property'}
+      subtitle={isEdit ? undefined : 'Register a service address and assign a property manager.'}
+      headerAction={!isEdit ? (
+        <>
+          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
+            <Upload className="w-4 h-4 mr-1.5" /> {importing ? 'Importing…' : 'CSV Import'}
+          </Button>
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
+        </>
+      ) : undefined}
+      footer={
+        <Button
+          onClick={() => mutation.mutate()}
+          disabled={!canSubmit}
+          className="w-full sm:ml-auto sm:w-auto sm:min-w-[180px]"
+        >
+          {mutation.isPending ? <Spinner size="sm" /> : isEdit ? 'Update Property' : 'Create Property'}
+        </Button>
+      }
+    >
+      <FormSection title="Address">
+        <FormField label="Street address" required error={addressError || undefined}>
           <Input
             value={form.street_address}
             onChange={e => setForm(f => ({ ...f, street_address: e.target.value }))}
             placeholder="e.g. 123 Main St"
-            className="bg-secondary border-border"
           />
-          {addressError && <p className="text-xs text-destructive mt-1">{addressError}</p>}
-        </div>
-        <div>
-          <Label>City *</Label>
+        </FormField>
+        <FormField label="City" required>
           <Input
             value={form.city}
             onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
             placeholder="e.g. Springfield"
-            className="bg-secondary border-border"
           />
-        </div>
+        </FormField>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>State *</Label>
+          <FormField label="State" required>
             <Select value={form.state} onValueChange={v => setForm(f => ({ ...f, state: v }))}>
-              <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent className="max-h-64">
                 {US_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} — {s.name}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>Zip Code *</Label>
+          </FormField>
+          <FormField label="Zip code" required>
             <Input
               value={form.zip_code}
               onChange={e => setForm(f => ({ ...f, zip_code: e.target.value.replace(/[^0-9-]/g, '').slice(0, 10) }))}
               placeholder="e.g. 12345"
               inputMode="numeric"
-              className="bg-secondary border-border"
             />
-          </div>
+          </FormField>
         </div>
-        <div>
-          <Label>Zone</Label>
+      </FormSection>
+
+      <FormSection title="Assignment">
+        <FormField label="Zone">
           <div className="flex gap-2">
             <Select value={form.zone_id} onValueChange={v => setForm(f => ({ ...f, zone_id: v }))}>
-              <SelectTrigger className="bg-secondary border-border flex-1"><SelectValue placeholder="Select zone" /></SelectTrigger>
+              <SelectTrigger className="flex-1"><SelectValue placeholder="Select zone" /></SelectTrigger>
               <SelectContent>
                 {zones?.map(z => <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button variant="outline" size="icon" onClick={() => setNewZoneDialog(true)} title="Create new zone">+</Button>
           </div>
-        </div>
-        <div>
-          <Label>Property Manager</Label>
+        </FormField>
+        <FormField label="Property manager">
           <Select value={form.current_pm_id} onValueChange={v => setForm(f => ({ ...f, current_pm_id: v }))}>
-            <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select PM" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select PM" /></SelectTrigger>
             <SelectContent>
               {clients?.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
+      </FormSection>
 
-        <Button onClick={() => mutation.mutate()} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2">
-          {mutation.isPending ? <Spinner size="sm" /> : isEdit ? 'Update Property' : 'Create Property'}
-        </Button>
-      </div>
-
-      {/* New Zone Dialog */}
       <Dialog open={newZoneDialog} onOpenChange={setNewZoneDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Create Zone</DialogTitle></DialogHeader>
-          <Input value={newZoneName} onChange={e => setNewZoneName(e.target.value)} placeholder="Zone name" className="bg-secondary border-border" />
+          <Input value={newZoneName} onChange={e => setNewZoneName(e.target.value)} placeholder="Zone name" />
           <DialogFooter>
-            <Button onClick={() => createZoneMutation.mutate()} disabled={!newZoneName || createZoneMutation.isPending} className="bg-primary text-primary-foreground">
+            <Button onClick={() => createZoneMutation.mutate()} disabled={!newZoneName || createZoneMutation.isPending}>
               {createZoneMutation.isPending ? <Spinner size="sm" /> : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </FormShell>
   );
 };
 

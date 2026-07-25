@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
+import FormShell from '@/components/form/FormShell';
+import FormSection from '@/components/form/FormSection';
+import FormField from '@/components/form/FormField';
 
 const ClientForm = () => {
   const navigate = useNavigate();
@@ -44,7 +45,6 @@ const ClientForm = () => {
     }
   }, [existing]);
 
-  // Real-time duplicate email check
   useEffect(() => {
     if (!form.email) { setEmailError(''); return; }
     const t = setTimeout(async () => {
@@ -92,68 +92,69 @@ const ClientForm = () => {
   if (isEdit && isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
 
   return (
-    <div className="p-4 max-w-lg mx-auto">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back
-      </button>
+    <FormShell
+      title={isEdit ? 'Edit Client' : 'New Client'}
+      subtitle={isEdit ? undefined : 'Add a property manager or residential owner.'}
+      footer={
+        <Button
+          onClick={() => mutation.mutate()}
+          disabled={!canSubmit}
+          className="w-full sm:ml-auto sm:w-auto sm:min-w-[180px]"
+        >
+          {mutation.isPending ? <Spinner size="sm" /> : isEdit ? 'Update Client' : 'Create Client'}
+        </Button>
+      }
+    >
+      <FormSection title="Contact">
+        <FormField label="Company name" required>
+          <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Acme Property Group" />
+        </FormField>
+        <FormField label="Contact name">
+          <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="Primary contact" />
+        </FormField>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Email" required error={emailError || undefined}>
+            <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="name@company.com" />
+          </FormField>
+          <FormField label="Phone">
+            <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(555) 123-4567" />
+          </FormField>
+        </div>
+      </FormSection>
 
-      <h1 className="text-xl font-bold text-foreground mb-6">{isEdit ? 'Edit Client' : 'New Client'}</h1>
-
-      <div className="flex flex-col gap-4">
-        <div>
-          <Label>Company Name *</Label>
-          <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} className="bg-secondary border-border" />
-        </div>
-        <div>
-          <Label>Contact Name</Label>
-          <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} className="bg-secondary border-border" />
-        </div>
-        <div>
-          <Label>Email *</Label>
-          <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="bg-secondary border-border" />
-          {emailError && <p className="text-xs text-destructive mt-1">{emailError}</p>}
-        </div>
-        <div>
-          <Label>Phone</Label>
-          <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(555) 123-4567" className="bg-secondary border-border" />
-        </div>
-        <div>
-          <Label>Type *</Label>
+      <FormSection title="Classification">
+        <FormField label="Type" required>
           <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-            <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="pm">Property Manager</SelectItem>
               <SelectItem value="residential">Residential Owner</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
 
         {form.type === 'residential' && (
-          <div>
-            <Label>Service Address</Label>
+          <FormField label="Service address" hint="Home or service address for this residential client.">
             <Input
               value={form.address}
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
               placeholder="e.g. 123 Main St, Springfield"
-              className="bg-secondary border-border"
             />
-            <p className="text-xs text-muted-foreground mt-1">Home or service address for this residential client.</p>
-          </div>
+          </FormField>
         )}
+      </FormSection>
 
-        <div>
-          <Label>Referred by (optional)</Label>
+      <FormSection title="Attribution" description="Optional — helps track where new business comes from.">
+        <FormField label="Referred by">
           <Input
             value={form.referred_by}
             onChange={e => setForm(f => ({ ...f, referred_by: e.target.value }))}
             placeholder="Name of person or client who referred them"
-            className="bg-secondary border-border"
           />
-        </div>
-        <div>
-          <Label>Lead source (optional)</Label>
+        </FormField>
+        <FormField label="Lead source">
           <Select value={form.lead_source || 'none'} onValueChange={v => setForm(f => ({ ...f, lead_source: v === 'none' ? '' : v }))}>
-            <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">—</SelectItem>
               <SelectItem value="referral">Referral</SelectItem>
@@ -162,13 +163,9 @@ const ClientForm = () => {
               <SelectItem value="other">Other</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        <Button onClick={() => mutation.mutate()} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2">
-          {mutation.isPending ? <Spinner size="sm" /> : isEdit ? 'Update Client' : 'Create Client'}
-        </Button>
-      </div>
-    </div>
+        </FormField>
+      </FormSection>
+    </FormShell>
   );
 };
 
