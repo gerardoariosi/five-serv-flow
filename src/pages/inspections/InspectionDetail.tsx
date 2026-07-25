@@ -537,19 +537,14 @@ const InspectionDetail = () => {
       </Dialog>
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-lg font-bold text-foreground">{inspection.ins_number ?? 'No INS#'}</span>
-            <Badge className={`text-xs ${inspectionStatusColors[inspection.status ?? 'draft']}`}>
-              {inspectionStatusLabels[inspection.status ?? 'draft']}
-            </Badge>
-          </div>
-        </div>
-      </div>
+      <DetailHeader
+        name={inspection.ins_number ?? 'No INS#'}
+        status={
+          <StatusPill className={inspectionStatusColors[inspection.status ?? 'draft']}>
+            {inspectionStatusLabels[inspection.status ?? 'draft']}
+          </StatusPill>
+        }
+      />
 
       {/* PM not responding alert */}
       {inspection.status === 'sent' && !inspection.pm_submitted_at && daysSinceSent >= 2 && (
@@ -560,34 +555,34 @@ const InspectionDetail = () => {
       )}
 
       {/* Info */}
-      <div className="bg-card border border-border rounded-lg p-4">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-muted-foreground">Property</span>
-            <p className="text-foreground font-medium">{propertyLabel(inspection.property_id) || '—'}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Client / PM</span>
-            <p className="text-foreground font-medium">{inspection.client_id ? clients[inspection.client_id] : '—'}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Visit Date</span>
-            <p className="text-foreground font-medium">{inspection.visit_date ?? '—'}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Config</span>
-            <p className="text-foreground font-medium text-xs">
+      <FieldGroup label="Details" first>
+        {inspection.property_id && propertyLabel(inspection.property_id) && (
+          <FieldRow label="Property" value={propertyLabel(inspection.property_id)} />
+        )}
+        {inspection.client_id && clients[inspection.client_id] && (
+          <FieldRow label="Client / PM" value={clients[inspection.client_id]} />
+        )}
+        {inspection.visit_date && <FieldRow label="Visit Date" value={inspection.visit_date} />}
+        <FieldRow
+          label="Config"
+          value={
+            <span className="text-xs">
               {inspection.bedrooms}BR · {inspection.bathrooms}BA · {inspection.living_rooms}LR
               {inspection.has_garage ? ' · Garage' : ''}
               {inspection.has_laundry ? ' · Laundry' : ''}
               {inspection.has_exterior ? ' · Exterior' : ''}
-            </p>
-          </div>
-          <div className="col-span-2">
-            <span className="text-muted-foreground">Assigned to</span>
-            {(activeRole === 'admin' || activeRole === 'supervisor') ? (
+            </span>
+          }
+        />
+      </FieldGroup>
+
+      <FieldGroup label="Assignment">
+        <FieldRow
+          label="Assigned to"
+          value={
+            (activeRole === 'admin' || activeRole === 'supervisor') ? (
               <Select value={inspection.assigned_to ?? ''} onValueChange={handleReassign}>
-                <SelectTrigger className="mt-1 h-9">
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Unassigned" />
                 </SelectTrigger>
                 <SelectContent>
@@ -597,11 +592,12 @@ const InspectionDetail = () => {
                 </SelectContent>
               </Select>
             ) : (
-              <p className="text-foreground font-medium">{inspection.assigned_to ? (users[inspection.assigned_to] || '—') : '—'}</p>
-            )}
-          </div>
-        </div>
-      </div>
+              inspection.assigned_to ? (users[inspection.assigned_to] || null) : <span className="text-muted-foreground">Unassigned</span>
+            )
+          }
+        />
+      </FieldGroup>
+
 
       {/* Export & Email buttons */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-3">
