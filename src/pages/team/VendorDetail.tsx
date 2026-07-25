@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -23,7 +21,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Save, Upload, Download, Trash2, Plus, FileText, DollarSign, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Edit, Upload, Download, Trash2, Plus, FileText, DollarSign, CheckCircle2, Clock, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getExpirationStatus,
@@ -32,13 +30,6 @@ import {
 } from '@/lib/vendorAlerts';
 import AddVendorPaymentDialog from '@/components/vendors/AddVendorPaymentDialog';
 import MarkPaidDialog from '@/components/vendors/MarkPaidDialog';
-
-
-const SPECIALTIES_CATALOG = [
-  'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Carpentry',
-  'Flooring', 'Appliance Repair', 'Landscaping', 'General Maintenance',
-  'Drywall', 'Roofing', 'Locksmith', 'Cleaning', 'Pest Control',
-];
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   w9: 'W-9',
@@ -50,26 +41,10 @@ const DOC_TYPE_LABEL: Record<string, string> = {
 const VendorDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isNew = !id || id === 'new';
-  const qc = useQueryClient();
   const { user, activeRole } = useAuthStore();
+  const canEdit = activeRole === 'admin' || activeRole === 'supervisor';
   const canManageDocs = activeRole === 'admin' || activeRole === 'supervisor';
   const canManagePayments = activeRole === 'admin' || activeRole === 'accounting';
-
-  const [form, setForm] = useState({
-    company_name: '',
-    contact_name: '',
-    phone: '',
-    email: '',
-    specialties: [] as string[],
-    license_number: '',
-    insurance_info: '',
-    notes: '',
-    status: 'active',
-    license_expiration_date: '',
-    insurance_expiration_date: '',
-  });
-  const [saving, setSaving] = useState(false);
 
   const [docDialog, setDocDialog] = useState(false);
   const [newDoc, setNewDoc] = useState<{ doc_type: string; file: File | null }>({ doc_type: 'w9', file: null });
@@ -78,40 +53,19 @@ const VendorDetail = () => {
   const [payDialog, setPayDialog] = useState(false);
   const [markPaid, setMarkPaid] = useState<{ id: string; amount: number } | null>(null);
 
-
-  const { data: vendor } = useQuery({
+  const { data: vendor, isLoading } = useQuery({
     queryKey: ['vendor', id],
     queryFn: async () => {
-      if (isNew) return null;
       const { data, error } = await supabase.from('technicians_vendors').select('*').eq('id', id!).single();
       if (error) throw error;
       return data;
     },
-    enabled: !isNew,
+    enabled: !!id,
   });
-
-  useEffect(() => {
-    if (vendor) {
-      setForm({
-        company_name: vendor.company_name || '',
-        contact_name: vendor.contact_name || '',
-        phone: vendor.phone || '',
-        email: vendor.email || '',
-        specialties: vendor.specialties || [],
-        license_number: vendor.license_number || '',
-        insurance_info: vendor.insurance_info || '',
-        notes: vendor.notes || '',
-        status: vendor.status || 'active',
-        license_expiration_date: (vendor as any).license_expiration_date || '',
-        insurance_expiration_date: (vendor as any).insurance_expiration_date || '',
-      });
-    }
-  }, [vendor]);
 
   const { data: documents = [], refetch: refetchDocs } = useQuery({
     queryKey: ['vendor_documents', id],
     queryFn: async () => {
-      if (isNew) return [];
       const { data, error } = await supabase
         .from('vendor_documents')
         .select('*')
@@ -120,13 +74,12 @@ const VendorDetail = () => {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !isNew && canManageDocs,
+    enabled: !!id && canManageDocs,
   });
 
   const { data: payments = [], refetch: refetchPay } = useQuery({
     queryKey: ['vendor_payments', id],
     queryFn: async () => {
-      if (isNew) return [];
       const { data, error } = await supabase
         .from('vendor_payments')
         .select('*')
@@ -135,52 +88,8 @@ const VendorDetail = () => {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !isNew && (canManageDocs || canManagePayments),
+    enabled: !!id && (canManageDocs || canManagePayments),
   });
-
-
-  const toggleSpecialty = (s: string) => {
-    setForm(prev => ({
-      ...prev,
-      specialties: prev.specialties.includes(s) ? prev.specialties.filter(x => x !== s) : [...prev.specialties, s],
-    }));
-  };
-
-  const handleSave = async () => {
-    if (!form.company_name.trim()) { toast.error('Company name is required'); return; }
-    setSaving(true);
-    try {
-      const payload: any = {
-        company_name: form.company_name,
-        contact_name: form.contact_name,
-        phone: form.phone,
-        email: form.email || null,
-        specialties: form.specialties,
-        license_number: form.license_number || null,
-        insurance_info: form.insurance_info || null,
-        notes: form.notes || null,
-        status: form.status,
-        type: 'vendor',
-        license_expiration_date: form.license_expiration_date || null,
-        insurance_expiration_date: form.insurance_expiration_date || null,
-      };
-      if (isNew) {
-        const { error } = await supabase.from('technicians_vendors').insert(payload);
-        if (error) throw error;
-        toast.success('Vendor created');
-      } else {
-        const { error } = await supabase.from('technicians_vendors').update(payload).eq('id', id!);
-        if (error) throw error;
-        toast.success('Vendor updated');
-        qc.invalidateQueries({ queryKey: ['vendor', id] });
-      }
-      navigate('/team/technicians');
-    } catch (e: any) {
-      toast.error(e?.message || 'Save failed');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleUpload = async () => {
     if (!newDoc.file || !user?.id || !id) return;
@@ -228,9 +137,6 @@ const VendorDetail = () => {
     refetchDocs();
   };
 
-
-
-
   const pendingPayments = (payments as any[]).filter(p => p.status === 'pending');
   const paidPayments = (payments as any[]).filter(p => p.status === 'paid');
   const balance = pendingPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
@@ -239,20 +145,35 @@ const VendorDetail = () => {
     .map(p => p.due_date)
     .filter(Boolean)
     .sort()[0] as string | undefined;
-  const licStatus = getExpirationStatus(form.license_expiration_date);
-  const insStatus = getExpirationStatus(form.insurance_expiration_date);
 
+  const licStatus = getExpirationStatus((vendor as any)?.license_expiration_date);
+  const insStatus = getExpirationStatus((vendor as any)?.insurance_expiration_date);
+
+  if (isLoading || !vendor) {
+    return (
+      <div className="p-4 max-w-2xl mx-auto">
+        <p className="text-sm text-muted-foreground">Loading vendor…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-6 pb-16">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/team/technicians')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="text-xl font-bold text-foreground">{isNew ? 'New Vendor' : 'Vendor Details'}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/team/technicians')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-xl font-bold text-foreground truncate">Vendor Details</h1>
+        </div>
+        {canEdit && (
+          <Button variant="outline" size="sm" onClick={() => navigate(`/team/vendors/${id}/edit`)}>
+            <Edit className="w-4 h-4 mr-1" /> Edit
+          </Button>
+        )}
       </div>
 
-      {!isNew && (licStatus === 'expired' || licStatus === 'expiring' || insStatus === 'expired' || insStatus === 'expiring') && (
+      {(licStatus === 'expired' || licStatus === 'expiring' || insStatus === 'expired' || insStatus === 'expiring') && (
         <div className="flex flex-wrap gap-2">
           {(licStatus === 'expired' || licStatus === 'expiring') && (
             <Badge variant="outline" className={expirationBadgeClass(licStatus)}>
@@ -267,78 +188,71 @@ const VendorDetail = () => {
         </div>
       )}
 
-      <div className="space-y-4">
-        <div>
-          <Label>Company Name *</Label>
-          <Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} />
-        </div>
-        <div>
-          <Label>Contact Name</Label>
-          <Input value={form.contact_name} onChange={e => setForm({ ...form, contact_name: e.target.value })} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label>Phone</Label>
-            <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+      {/* Info card */}
+      <section className="border border-border rounded-lg bg-card p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-foreground truncate">{vendor.company_name}</h2>
+            {vendor.contact_name && (
+              <p className="text-sm text-muted-foreground truncate">{vendor.contact_name}</p>
+            )}
           </div>
-          <div>
-            <Label>Email (optional)</Label>
-            <Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-          </div>
+          <Badge variant={vendor.status === 'active' ? 'default' : 'outline'} className="text-[10px]">
+            {vendor.status === 'active' ? 'Active' : 'Archived'}
+          </Badge>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label>License #</Label>
-            <Input value={form.license_number} onChange={e => setForm({ ...form, license_number: e.target.value })} />
-          </div>
-          <div>
-            <Label>License expiration</Label>
-            <Input type="date" value={form.license_expiration_date} onChange={e => setForm({ ...form, license_expiration_date: e.target.value })} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label>Insurance Info</Label>
-            <Input value={form.insurance_info} onChange={e => setForm({ ...form, insurance_info: e.target.value })} />
-          </div>
-          <div>
-            <Label>Insurance expiration</Label>
-            <Input type="date" value={form.insurance_expiration_date} onChange={e => setForm({ ...form, insurance_expiration_date: e.target.value })} />
-          </div>
-        </div>
-        <div>
-          <Label>Notes</Label>
-          <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} />
-        </div>
-        <div>
-          <Label>Status</Label>
-          <div className="flex items-center gap-2 mt-1">
-            <Switch checked={form.status === 'active'} onCheckedChange={v => setForm({ ...form, status: v ? 'active' : 'archived' })} />
-            <span className="text-sm text-muted-foreground">{form.status === 'active' ? 'Active' : 'Archived'}</span>
-          </div>
-        </div>
-        <div>
-          <Label>Specialties</Label>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {SPECIALTIES_CATALOG.map(s => (
-              <Badge
-                key={s}
-                variant={form.specialties.includes(s) ? 'default' : 'outline'}
-                className="cursor-pointer text-xs"
-                onClick={() => toggleSpecialty(s)}
-              >
-                {s}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      <Button onClick={handleSave} disabled={saving} className="w-full">
-        <Save className="w-4 h-4 mr-2" /> {saving ? 'Saving...' : 'Save Vendor'}
-      </Button>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm pt-1">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Phone</p>
+            {vendor.phone
+              ? <a href={`tel:${vendor.phone}`} className="text-foreground flex items-center gap-1"><Phone className="w-3 h-3" /> {vendor.phone}</a>
+              : <p className="text-muted-foreground">—</p>}
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Email</p>
+            {vendor.email
+              ? <a href={`mailto:${vendor.email}`} className="text-foreground flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" /> <span className="truncate">{vendor.email}</span></a>
+              : <p className="text-muted-foreground">—</p>}
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">License #</p>
+            <p className="text-foreground">{vendor.license_number || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">License Expiration</p>
+            <p className="text-foreground">{(vendor as any).license_expiration_date || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Insurance Info</p>
+            <p className="text-foreground">{vendor.insurance_info || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Insurance Expiration</p>
+            <p className="text-foreground">{(vendor as any).insurance_expiration_date || '—'}</p>
+          </div>
+        </div>
 
-      {!isNew && canManageDocs && (
+        {vendor.specialties && vendor.specialties.length > 0 && (
+          <div className="pt-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Specialties</p>
+            <div className="flex flex-wrap gap-1">
+              {vendor.specialties.map((s: string) => (
+                <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {vendor.notes && (
+          <div className="pt-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{vendor.notes}</p>
+          </div>
+        )}
+      </section>
+
+      {canManageDocs && (
         <section className="border border-border rounded-lg bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -372,15 +286,12 @@ const VendorDetail = () => {
         </section>
       )}
 
-      {!isNew && (canManageDocs || canManagePayments) && (
+      {(canManageDocs || canManagePayments) && (
         <section className="border border-border rounded-lg bg-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <div>
-
-              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-primary" /> Payments
-              </h2>
-            </div>
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-primary" /> Payments
+            </h2>
             {canManagePayments && (
               <Button size="sm" variant="outline" onClick={() => setPayDialog(true)}>
                 <Plus className="w-4 h-4 mr-1" /> Add Payment
@@ -476,7 +387,6 @@ const VendorDetail = () => {
         amount={markPaid?.amount}
         onSaved={() => { refetchPay(); setMarkPaid(null); }}
       />
-
     </div>
   );
 };
