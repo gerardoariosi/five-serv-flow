@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -182,11 +182,11 @@ const AreaInspection = () => {
   const hasRepairOrUrgent = currentItems.some(i => i.status === 'needs_repair' || i.status === 'urgent');
   const minPhotos = hasRepairOrUrgent ? 3 : 1;
   const photosEnough = currentPhotos.length >= minPhotos;
-  const itemPhotoReq = currentItems.every(i =>
-    i.status === 'good' || i.status === 'na' || !i.dbId
-      ? (i.status === 'good' || i.status === 'na')
-      : (itemPhotos[i.dbId!]?.length ?? 0) >= 1
-  );
+  const itemPhotoReq = currentItems.every(i => {
+    if (i.status === 'good' || i.status === 'na') return true;
+    if (!i.dbId) return false;
+    return (itemPhotos[i.dbId]?.length ?? 0) >= 1;
+  });
   // For items without dbId yet but Repair/Urgent, block Next until saved so they can add a photo.
   const unsavedRepair = currentItems.some(i => (i.status === 'needs_repair' || i.status === 'urgent') && !i.dbId);
 
@@ -201,6 +201,11 @@ const AreaInspection = () => {
       updated[index] = { ...curr, status, priority: curr.priority ?? 'medium' };
     }
     setItems(prev => ({ ...prev, [currentArea.key]: updated }));
+    // Auto-save immediately when flipping to repair/urgent so the item gets a dbId
+    // and the user can upload the required per-item photo without being blocked.
+    if (status === 'needs_repair' || status === 'urgent') {
+      setTimeout(() => { autoSaveRef.current?.(); }, 0);
+    }
   };
 
   const setItemNote = (index: number, note: string) => {
@@ -242,6 +247,9 @@ const AreaInspection = () => {
     await supabase.from('inspections').update({ status: 'in_progress' }).eq('id', id);
     setSaving(false);
   }, [id, currentArea, items, notes]);
+
+  const autoSaveRef = useRef(autoSave);
+  useEffect(() => { autoSaveRef.current = autoSave; }, [autoSave]);
 
   const handleAreaPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !currentArea || !id) return;
