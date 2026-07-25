@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ScrollText } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -807,6 +810,7 @@ const settingsSections = [
 
 const SettingsPage = () => {
   const [activeSection, setActiveSection] = useState('specialties');
+  const { activeRole } = useAuthStore();
 
   const renderSection = () => {
     switch (activeSection) {
@@ -829,6 +833,22 @@ const SettingsPage = () => {
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <h1 className="text-xl font-bold text-foreground mb-6">Settings</h1>
+
+      {activeRole === 'admin' && (
+        <Link
+          to="/settings/audit-log"
+          className="mb-6 flex items-center gap-3 p-3 rounded-lg bg-card border border-border hover:border-primary/40 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center">
+            <ScrollText className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">Audit Log</p>
+            <p className="text-xs text-muted-foreground">Who changed what and when across clients, properties, tickets & vendors.</p>
+          </div>
+        </Link>
+      )}
+
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar */}
         <div className="hidden md:block w-56 flex-shrink-0">

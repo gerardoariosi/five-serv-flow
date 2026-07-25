@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
+import { getWorstStatus, expirationBadgeClass, expirationLabel } from '@/lib/vendorAlerts';
 
 const TechnicianList = () => {
   const navigate = useNavigate();
