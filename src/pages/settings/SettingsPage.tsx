@@ -15,7 +15,6 @@ import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Power, Download, Upload, Key, Globe, FileText, Tag, Wrench, ClipboardList, MapPin, Calendar, Building2, Bell } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { useAuthStore } from '@/stores/authStore';
 import { isPushSupported, requestAndSubscribe, unsubscribeFromPush } from '@/lib/pushNotifications';
 import { useEffect } from 'react';
 
