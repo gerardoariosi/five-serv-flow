@@ -239,14 +239,15 @@ const PropertyDetail = () => {
               ) : (
                 <div className="flex flex-col">
                   {closedTickets.map(t => (
-                    <div key={t.id} className="py-3 px-1 border-b border-border/50 last:border-0">
+                    <button key={t.id} onClick={() => navigate(`/tickets/${t.id}`)} className="w-full text-left py-3 px-1 border-b border-border/50 last:border-0 hover:bg-muted/30">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-sm text-foreground truncate">{t.fs_number}</span>
                         <Badge variant="outline" className="text-[10px] font-normal">{t.status}</Badge>
                       </div>
                       {t.closed_at && <p className="text-[11px] text-muted-foreground">Closed: {new Date(t.closed_at).toLocaleDateString()}</p>}
-                    </div>
+                    </button>
                   ))}
+
                 </div>
               ),
             },
