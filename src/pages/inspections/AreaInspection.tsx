@@ -450,10 +450,7 @@ const AreaInspection = () => {
                   {/* Item photos */}
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Item Photos ({imgs.length})</span>
-                      {imgs.length === 0 && item.dbId && (
-                        <span className="text-[11px] text-destructive">Photo required</span>
-                      )}
+                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Item Photos ({imgs.length}) — optional</span>
                     </div>
                     {!item.dbId ? (
                       <p className="text-[11px] text-muted-foreground">Photo upload available after saving (tap Next/Back once).</p>
