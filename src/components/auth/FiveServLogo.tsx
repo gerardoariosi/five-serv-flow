@@ -21,18 +21,19 @@ const FiveServLogo = ({
   const s = sizeMap[size];
 
   return (
-    <div className={className}>
-      <span
+    <div className={className} style={{ textAlign: 'center' }}>
+      <div
         style={{
           fontFamily: 'Georgia, serif',
           fontWeight: 'bold',
           letterSpacing: '-0.01em',
           fontSize: s.wordmark,
+          lineHeight: 1,
         }}
       >
         <span style={{ color: '#FFD700' }}>F</span>
         <span style={{ color: wordmarkColor }}>iveServ</span>
-      </span>
+      </div>
       {showTagline && (
         <div
           style={{
@@ -48,6 +49,7 @@ const FiveServLogo = ({
         </div>
       )}
     </div>
+
   );
 };
 

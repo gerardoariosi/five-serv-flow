@@ -75,7 +75,7 @@ const Splash = () => {
   }, [navigate, setUser, setLoading]);
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6">
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-6" style={{ backgroundColor: '#FAF9F6' }}>
       <div
         className={`transition-opacity duration-300 ${
           visible ? 'opacity-100' : 'opacity-0'
