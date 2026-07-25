@@ -228,25 +228,8 @@ const VendorDetail = () => {
     refetchDocs();
   };
 
-  const handleAddPayment = async () => {
-    const amt = parseFloat(newPay.amount);
-    if (isNaN(amt) || amt < 0) { toast.error('Enter a valid amount'); return; }
-    if (!user?.id || !id) return;
-    setSavingPay(true);
-    const { error } = await supabase.from('vendor_payments').insert({
-      vendor_id: id,
-      amount: amt,
-      payment_date: newPay.payment_date,
-      note: newPay.note || null,
-      created_by: user.id,
-    });
-    setSavingPay(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success('Payment logged');
-    setPayDialog(false);
-    setNewPay({ amount: '', payment_date: new Date().toISOString().slice(0, 10), note: '' });
-    refetchPay();
-  };
+
+
 
   const totalPaid = payments.reduce((sum, p: any) => sum + Number(p.amount ?? 0), 0);
   const licStatus = getExpirationStatus(form.license_expiration_date);
