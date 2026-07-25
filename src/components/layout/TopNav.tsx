@@ -58,7 +58,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         style={{ height: 'env(safe-area-inset-top)' }}
       />
       <header
-        className="bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
+        className="relative bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
         style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
       >
         <div className="flex items-center">
@@ -71,7 +71,10 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           </button>
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
+        <div
+          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
+          style={{ top: 'calc(env(safe-area-inset-top) + 0.5rem)', bottom: '0.5rem' }}
+        >
           <FiveServLogo variant="light" size="sm" showTagline={false} />
         </div>
 
