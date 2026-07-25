@@ -1445,6 +1445,7 @@ export type Database = {
           id: string
         }[]
       }
+      has_any_staff_role: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1468,6 +1469,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      user_in_group_role_access: {
+        Args: { _role_access: string[]; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
