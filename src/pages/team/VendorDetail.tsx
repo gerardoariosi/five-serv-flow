@@ -13,9 +13,15 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import {
-  Edit, Upload, Download, Trash2, Plus, FileText, DollarSign, Clock, Mail, Phone, Wrench,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Edit, Upload, Download, Trash2, Plus, FileText, DollarSign, Clock, Mail, Phone, Wrench, MoreVertical, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
