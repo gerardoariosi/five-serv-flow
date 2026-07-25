@@ -77,6 +77,19 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Only admins and supervisors may send business emails to arbitrary recipients.
+  const { data: roleRows } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+  const roles = (roleRows ?? []).map((r: { role: string }) => r.role)
+  if (!roles.includes('admin') && !roles.includes('supervisor')) {
+    return new Response(JSON.stringify({ error: 'Forbidden: admin or supervisor role required' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   let body: { template_name: string; to_email: string; variables: Record<string, string> }
   try {
     body = await req.json()
