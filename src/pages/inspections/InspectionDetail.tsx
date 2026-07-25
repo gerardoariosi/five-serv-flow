@@ -14,13 +14,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send, Play, Plus, Minus, UserCheck } from 'lucide-react';
+import { Edit, Trash2, Eye, ExternalLink, Clock, Check, FileText, AlertTriangle, Link2, ArrowRight, Download, Mail, Send, Play, Plus, Minus, UserCheck } from 'lucide-react';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
 import Spinner from '@/components/ui/Spinner';
 import { generateFiveServPdf, generatePmVersionPdf, downloadPdf } from '@/lib/inspectionPdf';
 import { sendInspectionAssignedEmail } from '@/lib/inspectionAssignmentEmail';
 import { pushToUsers } from '@/lib/pushNotifications';
 import { formatAddress } from '@/lib/propertyAddress';
+import DetailHeader from '@/components/detail/DetailHeader';
+import FieldGroup from '@/components/detail/FieldGroup';
+import FieldRow from '@/components/detail/FieldRow';
+import StatusPill from '@/components/detail/StatusPill';
+
 
 
 const InspectionDetail = () => {
