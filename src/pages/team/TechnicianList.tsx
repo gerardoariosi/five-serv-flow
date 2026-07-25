@@ -243,6 +243,17 @@ const TechnicianList = () => {
                   {vendor.specialties?.slice(0, 3).map((s) => (
                     <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
                   ))}
+                  {(() => {
+                    const status = getWorstStatus((vendor as any).license_expiration_date, (vendor as any).insurance_expiration_date);
+                    if (status === 'expired' || status === 'expiring') {
+                      return (
+                        <Badge variant="outline" className={`text-[10px] ${expirationBadgeClass(status)}`}>
+                          {expirationLabel(status, 'Docs')}
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
