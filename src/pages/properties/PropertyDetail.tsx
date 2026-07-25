@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
+import PropertyDocumentsSections from '@/components/properties/PropertyDocumentsSections';
+
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -238,8 +240,15 @@ const PropertyDetail = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {id && (
+        <div className="mt-6">
+          <PropertyDocumentsSections propertyId={id} />
+        </div>
+      )}
     </div>
   );
 };
+
 
 export default PropertyDetail;
