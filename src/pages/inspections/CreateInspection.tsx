@@ -11,12 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { ArrowLeft, Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react';
+import { Plus, Minus, Search, Play, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/Spinner';
 import { pushToUsers } from '@/lib/pushNotifications';
 import { sendInspectionAssignedEmail } from '@/lib/inspectionAssignmentEmail';
 import { formatAddress } from '@/lib/propertyAddress';
+import FormShell from '@/components/form/FormShell';
+import FormSection from '@/components/form/FormSection';
+import FormField from '@/components/form/FormField';
 
 const CreateInspection = () => {
   const navigate = useNavigate();
