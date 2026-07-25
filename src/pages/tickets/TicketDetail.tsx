@@ -560,28 +560,29 @@ const TicketDetail = () => {
       </Dialog>
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-lg font-bold text-foreground">{ticket.fs_number ?? 'No FS#'}</span>
-            <Badge className={`text-xs ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-            <Badge className={`text-xs ${statusColors[ticket.status ?? 'draft']}`}>{statusLabels[ticket.status ?? 'draft']}</Badge>
+      <DetailHeader
+        name={ticket.fs_number ?? 'No FS#'}
+        status={
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <StatusPill className={colors.badge}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</StatusPill>
+            <StatusPill className={statusColors[ticket.status ?? 'draft']}>{statusLabels[ticket.status ?? 'draft']}</StatusPill>
             {(ticket.rejection_count ?? 0) > 0 && (
-              <Badge variant="outline" className="text-xs text-destructive border-destructive">
-                {ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}
-              </Badge>
+              <StatusPill variant="danger">{ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}</StatusPill>
             )}
           </div>
-        </div>
-        {isAdminOrSupervisor && (
-          <Button variant="outline" size="sm" onClick={() => navigate(`/tickets/${id}/edit`)}>
-            <Edit className="w-4 h-4 mr-1" /> Edit
-          </Button>
-        )}
-      </div>
+        }
+        actions={
+          isAdminOrSupervisor ? (
+            <DetailActions
+              primary={
+                <Button variant="outline" size="sm" onClick={() => navigate(`/tickets/${id}/edit`)}>
+                  <Edit className="w-4 h-4 mr-1" /> Edit
+                </Button>
+              }
+            />
+          ) : undefined
+        }
+      />
 
       {/* Pending sync warning */}
       {hasPendingSync && (
@@ -601,84 +602,73 @@ const TicketDetail = () => {
         </div>
       )}
 
-      {/* Info Card */}
-      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
-          {isAdminOrSupervisor && (
-            <div className="flex flex-col">
-              <span className="text-muted-foreground">Client / PM</span>
-              <p className="text-foreground font-medium">{ticket.client_id ? clients[ticket.client_id]?.name : '—'}</p>
-            </div>
-          )}
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">Property</span>
-            <p className="text-foreground font-medium">{ticket.property_id ? properties[ticket.property_id]?.name : '—'}</p>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">Unit</span>
-            <p className="text-foreground font-medium">{ticket.unit || '—'}</p>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">Zone</span>
-            <p className="text-foreground font-medium">{ticket.zone_id ? zones[ticket.zone_id] : '—'}</p>
-          </div>
-          {propertyAddress && (
-            <div className="col-span-2 flex flex-col">
-              <span className="text-muted-foreground">Address</span>
+      {/* Info */}
+      <FieldGroup label="Details" first>
+        {isAdminOrSupervisor && ticket.client_id && clients[ticket.client_id]?.name && (
+          <FieldRow label="Client / PM" value={clients[ticket.client_id].name} />
+        )}
+        {ticket.property_id && properties[ticket.property_id]?.name && (
+          <FieldRow label="Property" value={properties[ticket.property_id].name} />
+        )}
+        {ticket.unit && <FieldRow label="Unit" value={ticket.unit} />}
+        {ticket.zone_id && zones[ticket.zone_id] && (
+          <FieldRow label="Zone" value={zones[ticket.zone_id]} />
+        )}
+        {propertyAddress && (
+          <FieldRow
+            label="Address"
+            value={
               <a
                 href={`https://maps.google.com/?q=${encodeURIComponent(propertyAddress)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary hover:underline font-medium"
+                className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
               >
                 <MapPin className="w-3 h-3" /> {propertyAddress}
               </a>
-            </div>
-          )}
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">Technician</span>
-            <p className="text-foreground font-medium">
-              {ticket.technician_id ? users[ticket.technician_id]?.name : <span className="text-destructive">Unassigned</span>}
-            </p>
+            }
+          />
+        )}
+        <FieldRow
+          label="Technician"
+          value={
+            ticket.technician_id
+              ? users[ticket.technician_id]?.name
+              : <span className="text-destructive font-medium">Unassigned</span>
+          }
+        />
+        {ticket.appointment_time && (
+          <FieldRow
+            label="Appointment"
+            value={new Date(ticket.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' })}
+          />
+        )}
+        <FieldRow label="Priority" value={<span className="capitalize">{ticket.priority ?? 'Normal'}</span>} />
+        {ticket.work_started_at && (
+          <FieldRow
+            label="Work Started"
+            value={new Date(ticket.work_started_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
+          />
+        )}
+      </FieldGroup>
+
+      {ticket.description && (
+        <FieldGroup label="Description">
+          <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.description}</p>
+        </FieldGroup>
+      )}
+
+      {/* Internal Note — different bg, admin/supervisor only */}
+      {isAdminOrSupervisor && ticket.internal_note && (
+        <div className="bg-secondary/50 border border-border rounded-md p-3 mt-4">
+          <div className="flex items-center gap-1 mb-1">
+            <StickyNote className="w-3 h-3 text-primary" />
+            <span className="text-xs font-semibold text-primary">Internal Note</span>
           </div>
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">Appointment</span>
-            <p className="text-foreground font-medium">
-              {ticket.appointment_time ? new Date(ticket.appointment_time).toLocaleString('en-US', { timeZone: 'America/New_York' }) : '—'}
-            </p>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-muted-foreground">Priority</span>
-            <p className="text-foreground font-medium capitalize">{ticket.priority ?? 'Normal'}</p>
-          </div>
-          {ticket.work_started_at && (
-            <div className="flex flex-col">
-              <span className="text-muted-foreground">Work Started</span>
-              <p className="text-foreground font-medium">
-                {new Date(ticket.work_started_at).toLocaleString('en-US', { timeZone: 'America/New_York' })}
-              </p>
-            </div>
-          )}
+          <p className="text-foreground text-sm italic">{ticket.internal_note}</p>
         </div>
+      )}
 
-        {ticket.description && (
-          <div>
-            <span className="text-muted-foreground text-sm">Description</span>
-            <p className="text-foreground text-sm mt-1">{ticket.description}</p>
-          </div>
-        )}
-
-        {/* Internal Note — different bg, admin/supervisor only */}
-        {isAdminOrSupervisor && ticket.internal_note && (
-          <div className="bg-secondary/50 border border-border rounded-md p-3">
-            <div className="flex items-center gap-1 mb-1">
-              <StickyNote className="w-3 h-3 text-primary" />
-              <span className="text-xs font-semibold text-primary">Internal Note</span>
-            </div>
-            <p className="text-foreground text-sm italic">{ticket.internal_note}</p>
-          </div>
-        )}
-      </div>
 
       {/* Accounting Section — Admin/Accounting only */}
       {isAdminOrAccounting && (
