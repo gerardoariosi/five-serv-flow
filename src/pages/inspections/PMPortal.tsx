@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { signatureToDataUri } from '@/lib/svgSignature';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,59 +44,32 @@ const PMPortal = () => {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    const { data: ins } = await supabase.from('inspections').select('*').eq('pm_link_token', token).single();
+  // Consumes the payload returned by verify-portal-pin (the server-side PIN gate).
+  // The portal never queries inspection/property/items directly — the server only
+  // returns them AFTER the PIN is validated, so link possession alone reveals
+  // nothing.
+  const applyServerPayload = useCallback(async (payload: {
+    inspection: any;
+    property: { name: string | null; address: string | null } | null;
+    items: any[];
+  }) => {
+    const ins = payload.inspection;
     if (!ins) { setLoading(false); return; }
-
-    // Track link open
-    await supabase.from('inspections').update({
-      link_opened_count: (ins.link_opened_count ?? 0) + 1,
-    }).eq('id', ins.id);
-
-    // Check expiry
-    if (ins.link_expires_at && new Date(ins.link_expires_at) < new Date()) {
-      setExpired(true);
-      setLoading(false);
-      return;
-    }
-
-    // Check if already submitted
-    if (ins.pm_submitted_at) {
-      setSubmitted(true);
-      setReadOnly(true);
-    }
-
+    if (ins.pm_submitted_at) { setSubmitted(true); setReadOnly(true); }
     setInspection(ins);
+    setProperty(payload.property);
 
-    // Fetch property info for hero card
-    if (ins.property_id) {
-      const { data: prop } = await supabase
-        .from('properties')
-        .select('name, address')
-        .eq('id', ins.property_id)
-        .single();
-      setProperty(prop ?? null);
-    }
+    const itemsData = payload.items ?? [];
+    setItems(itemsData);
 
-    // Fetch items needing repair
-    const { data: itemsData } = await supabase.from('inspection_items')
-      .select('*')
-      .eq('inspection_id', ins.id)
-      .in('status', ['needs_repair', 'urgent'])
-      .order('status', { ascending: true });
-    setItems(itemsData ?? []);
-
-    // Extract technician notes per area (from the `note` column)
     const notesMap: Record<string, string> = {};
-    (itemsData ?? []).forEach((item: any) => {
-      if (item.note && !notesMap[item.area]) {
-        notesMap[item.area] = item.note;
-      }
+    itemsData.forEach((item: any) => {
+      if (item.note && !notesMap[item.area]) notesMap[item.area] = item.note;
     });
     setTechNotes(notesMap);
 
-    // Fetch inspection photos via signed-URL edge function (anon can't sign private bucket)
+    // Photos are already fetched via a separate server-side signer that also
+    // validates the token; safe to keep as-is.
     try {
       const { data: signed } = await supabase.functions.invoke('sign-inspection-photos', {
         body: { token },
@@ -113,11 +86,10 @@ const PMPortal = () => {
       setPhotos({});
     }
 
-    // Pre-select items that PM had selected (read-only mode)
     if (ins.pm_submitted_at) {
       const selected = new Set<string>();
       const notes: Record<string, string> = {};
-      (itemsData ?? []).forEach((item: any) => {
+      itemsData.forEach((item: any) => {
         if (item.pm_selected) selected.add(item.id);
         if (item.pm_note) notes[item.id] = item.pm_note;
       });
@@ -127,8 +99,6 @@ const PMPortal = () => {
 
     setLoading(false);
   }, [token]);
-
-  useEffect(() => { if (pinEntered) fetchData(); }, [fetchData, pinEntered]);
 
   // Force light mode
   useEffect(() => {
@@ -150,6 +120,16 @@ const PMPortal = () => {
       if (error) throw error;
       if (data?.valid) {
         setPinEntered(true);
+        if (data.reason === 'expired') { setExpired(true); setLoading(false); return; }
+        await applyServerPayload({
+          inspection: data.inspection,
+          property: data.property,
+          items: data.items ?? [],
+        });
+      } else if (data?.reason === 'expired') {
+        setExpired(true);
+      } else if (data?.reason === 'invalid_token') {
+        setPinError('This link is no longer valid.');
       } else {
         setPinError('Incorrect PIN. Please contact FiveServ.');
       }
@@ -607,10 +587,12 @@ const PMPortal = () => {
         )}
 
         {/* Read-only signature display */}
-        {readOnly && inspection.pm_signature_data && (
+        {readOnly && inspection.pm_signature_data && signatureToDataUri(inspection.pm_signature_data) && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(inspection.pm_signature_data, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+              <img src={signatureToDataUri(inspection.pm_signature_data)!} alt="Signature" className="max-w-full h-auto" />
+            </div>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { signatureToDataUri } from '@/lib/svgSignature';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,59 +40,30 @@ const EstimatePortal = () => {
   const [submitting, setSubmitting] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    const { data: t } = await supabase.from('tickets').select('*').eq('estimate_link_token', token).maybeSingle();
+  // Consumes verify-portal-pin's payload. The portal no longer queries the
+  // ticket/property/options/photos directly — a valid PIN is required server-side
+  // before any data is disclosed.
+  const applyServerPayload = useCallback((payload: {
+    ticket: any;
+    property: { name: string | null; address: string | null } | null;
+    options: any[];
+    photos: any[];
+  }) => {
+    const t = payload.ticket;
     if (!t) { setLoading(false); return; }
-
-    // Track open
-    await supabase.from('tickets').update({
-      estimate_link_opened_count: (t.estimate_link_opened_count ?? 0) + 1,
-    }).eq('id', t.id);
-
-    if (t.estimate_expires_at && new Date(t.estimate_expires_at) < new Date()) {
-      setExpired(true); setLoading(false); return;
-    }
-
     if (t.estimate_submitted_at) {
-      setSubmitted(true);
-      setReadOnly(true);
-      setSelectedOptionId(''); // we'll match below
-      setPmNote(t.estimate_pm_note ?? '');
+      setSubmitted(true); setReadOnly(true); setPmNote(t.estimate_pm_note ?? '');
     }
-
     setTicket(t);
-
-    if (t.property_id) {
-      const { data: prop } = await supabase.from('properties').select('name, address').eq('id', t.property_id).maybeSingle();
-      setProperty(prop ?? null);
-    }
-
-    const { data: optData } = await supabase
-      .from('ticket_estimate_options')
-      .select('*')
-      .eq('ticket_id', t.id)
-      .order('sort_order', { ascending: true });
-    setOptions(optData ?? []);
-
+    setProperty(payload.property);
+    setOptions(payload.options ?? []);
     if (t.estimate_submitted_at && t.estimate_selected_option) {
-      const matched = (optData ?? []).find((o: any) => o.option_name === t.estimate_selected_option);
+      const matched = (payload.options ?? []).find((o: any) => o.option_name === t.estimate_selected_option);
       if (matched) setSelectedOptionId(matched.id);
     }
-
-    // Evaluation photos (stage = 'evaluation')
-    const { data: phData } = await supabase
-      .from('ticket_photos')
-      .select('*')
-      .eq('ticket_id', t.id)
-      .eq('stage', 'evaluation')
-      .order('uploaded_at', { ascending: true });
-    setPhotos(phData ?? []);
-
+    setPhotos(payload.photos ?? []);
     setLoading(false);
-  }, [token]);
-
-  useEffect(() => { if (pinEntered) fetchData(); }, [fetchData, pinEntered]);
+  }, []);
 
   // Force light mode
   useEffect(() => {
@@ -110,8 +81,21 @@ const EstimatePortal = () => {
         body: { token, pin: pinInput, portal_type: 'estimate' },
       });
       if (error) throw error;
-      if (data?.valid) setPinEntered(true);
-      else setPinError('Incorrect PIN. Please contact FiveServ.');
+      if (data?.valid) {
+        setPinEntered(true);
+        applyServerPayload({
+          ticket: data.ticket,
+          property: data.property,
+          options: data.options ?? [],
+          photos: data.photos ?? [],
+        });
+      } else if (data?.reason === 'expired') {
+        setExpired(true);
+      } else if (data?.reason === 'invalid_token') {
+        setPinError('This link is no longer valid.');
+      } else {
+        setPinError('Incorrect PIN. Please contact FiveServ.');
+      }
     } catch {
       setPinError('Unable to verify PIN. Please try again.');
     }
@@ -461,10 +445,12 @@ const EstimatePortal = () => {
           </div>
         )}
 
-        {readOnly && ticket.estimate_pm_signature && (
+        {readOnly && ticket.estimate_pm_signature && signatureToDataUri(ticket.estimate_pm_signature) && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.estimate_pm_signature, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+              <img src={signatureToDataUri(ticket.estimate_pm_signature)!} alt="Signature" className="max-w-full h-auto" />
+            </div>
           </div>
         )}
 

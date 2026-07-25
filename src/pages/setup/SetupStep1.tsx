@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,30 @@ import SetupProgress from '@/components/setup/SetupProgress';
 import FiveServLogo from '@/components/auth/FiveServLogo';
 import PasswordStrength, { passwordIsValid } from '@/components/auth/PasswordStrength';
 import { useSetupStore } from '@/stores/setupStore';
+import { supabase } from '@/integrations/supabase/client';
 
 const SetupStep1 = () => {
   const navigate = useNavigate();
   const { data, updateData } = useSetupStore();
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Setup wizard is one-shot. Once a company profile exists, redirect anyone
+  // who lands here back to login so they can't create a second admin account.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: profile } = await supabase
+        .from('company_profile')
+        .select('setup_completed')
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && profile?.setup_completed) {
+        navigate('/login', { replace: true });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [navigate]);
 
   const validate = () => {
     const errs: Record<string, string> = {};

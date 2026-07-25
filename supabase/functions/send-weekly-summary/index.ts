@@ -5,9 +5,19 @@ const SITE_NAME = 'FiveServ Operations Hub'
 const SENDER_DOMAIN = 'notify.fiveserv.net'
 const FROM_DOMAIN = 'notify.fiveserv.net'
 
-function substituteVariables(template: string, variables: Record<string, string>): string {
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function substituteVariables(template: string, variables: Record<string, string>, escape = true): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return variables[key] !== undefined ? variables[key] : match
+    if (variables[key] === undefined) return match
+    return escape ? escapeHtml(variables[key]) : String(variables[key])
   })
 }
 
@@ -187,8 +197,8 @@ Deno.serve(async (req) => {
       dashboard_url: 'https://fiveserv.net/dashboard',
     }
 
-    const subject = substituteVariables(template.subject || '', vars)
-    const html = substituteVariables(template.body || '', vars)
+    const subject = substituteVariables(template.subject || '', vars, false)
+    const html = substituteVariables(template.body || '', vars, true)
     const messageId = crypto.randomUUID()
 
     // Get or create unsubscribe token for recipient
