@@ -387,6 +387,48 @@ const VendorDetail = () => {
         amount={markPaid?.amount}
         onSaved={() => { refetchPay(); setMarkPaid(null); }}
       />
+
+      <EditVendorPaymentDialog
+        open={!!editPayment}
+        onOpenChange={(o) => !o && setEditPayment(null)}
+        payment={editPayment}
+        onSaved={() => { refetchPay(); setEditPayment(null); }}
+      />
+
+      <AlertDialog open={!!deletePayment} onOpenChange={(o) => !o && !deleting && setDeletePayment(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this payment entry?</AlertDialogTitle>
+            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!deletePayment) return;
+                setDeleting(true);
+                try {
+                  if (deletePayment.proof_url) {
+                    await supabase.storage.from('vendor-documents').remove([deletePayment.proof_url]).catch(() => {});
+                  }
+                  const { error } = await supabase.from('vendor_payments').delete().eq('id', deletePayment.id);
+                  if (error) { toast.error(error.message); return; }
+                  toast.success('Payment deleted');
+                  setDeletePayment(null);
+                  refetchPay();
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
