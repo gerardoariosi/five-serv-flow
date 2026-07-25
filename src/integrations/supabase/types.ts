@@ -434,6 +434,7 @@ export type Database = {
           note: string | null
           pm_note: string | null
           pm_selected: boolean | null
+          priority: string | null
           quantity: number | null
           status: string | null
           subtotal: number | null
@@ -448,6 +449,7 @@ export type Database = {
           note?: string | null
           pm_note?: string | null
           pm_selected?: boolean | null
+          priority?: string | null
           quantity?: number | null
           status?: string | null
           subtotal?: number | null
@@ -462,6 +464,7 @@ export type Database = {
           note?: string | null
           pm_note?: string | null
           pm_selected?: boolean | null
+          priority?: string | null
           quantity?: number | null
           status?: string | null
           subtotal?: number | null
@@ -482,6 +485,10 @@ export type Database = {
           area: string
           id: string
           inspection_id: string
+          item_id: string | null
+          marker_note: string | null
+          marker_x: number | null
+          marker_y: number | null
           uploaded_at: string
           uploaded_by: string
           url: string
@@ -490,6 +497,10 @@ export type Database = {
           area: string
           id?: string
           inspection_id: string
+          item_id?: string | null
+          marker_note?: string | null
+          marker_x?: number | null
+          marker_y?: number | null
           uploaded_at?: string
           uploaded_by: string
           url: string
@@ -498,11 +509,23 @@ export type Database = {
           area?: string
           id?: string
           inspection_id?: string
+          item_id?: string | null
+          marker_note?: string | null
+          marker_x?: number | null
+          marker_y?: number | null
           uploaded_at?: string
           uploaded_by?: string
           url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inspection_photos_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inspection_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inspection_tickets: {
         Row: {
