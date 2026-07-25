@@ -58,10 +58,10 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         style={{ height: 'env(safe-area-inset-top)' }}
       />
       <header
-        className="relative bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
+        className="relative bg-background/95 backdrop-blur-sm border-b border-border grid grid-cols-[1fr_auto_1fr] items-center px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
         style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
       >
-        <div className="flex items-center">
+        <div className="flex items-center justify-start">
           <button
             onClick={onMenuClick}
             className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors active:scale-95"
@@ -71,17 +71,14 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           </button>
         </div>
 
-        <div
-          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
-          style={{ top: 'calc(env(safe-area-inset-top) + 0.5rem)', bottom: '0.5rem' }}
-        >
+        <div className="flex items-center justify-center px-2">
           <FiveServLogo variant="light" size="sm" showTagline={false} />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-end gap-2 sm:gap-3 min-w-0">
           {roleStyle && (
             <span
-              className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${roleStyle.bg} ${roleStyle.text}`}
+              className={`hidden sm:inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full ${roleStyle.bg} ${roleStyle.text}`}
             >
               <span className="hidden sm:inline">{activeRole}</span>
               <span className="sm:hidden">{roleStyle.abbr}</span>
@@ -111,6 +108,11 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
               <div className="px-3 py-2">
                 <p className="text-sm font-medium text-foreground truncate">{user?.full_name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                {roleStyle && (
+                  <span className={`sm:hidden mt-2 inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${roleStyle.bg} ${roleStyle.text}`}>
+                    {activeRole}
+                  </span>
+                )}
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
@@ -127,6 +129,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           </DropdownMenu>
         </div>
       </header>
+
     </>
   );
 };
