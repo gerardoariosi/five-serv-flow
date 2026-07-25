@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { signatureToDataUri } from '@/lib/svgSignature';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -607,10 +607,12 @@ const PMPortal = () => {
         )}
 
         {/* Read-only signature display */}
-        {readOnly && inspection.pm_signature_data && (
+        {readOnly && inspection.pm_signature_data && signatureToDataUri(inspection.pm_signature_data) && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(inspection.pm_signature_data, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+              <img src={signatureToDataUri(inspection.pm_signature_data)!} alt="Signature" className="max-w-full h-auto" />
+            </div>
           </div>
         )}
 

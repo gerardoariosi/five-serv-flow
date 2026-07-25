@@ -792,10 +792,12 @@ const InspectionDetail = () => {
             )}
 
             {/* Signature */}
-            {inspection.pm_signature_data && (
+            {inspection.pm_signature_data && signatureToDataUri(inspection.pm_signature_data) && (
               <div>
                 <h4 className="text-sm font-semibold text-foreground mb-2">Signature</h4>
-                <div className="border border-border rounded-lg p-3 bg-white" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(inspection.pm_signature_data, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
+                <div className="border border-border rounded-lg p-3 bg-white">
+                  <img src={signatureToDataUri(inspection.pm_signature_data)!} alt="Signature" className="max-w-full h-auto" />
+                </div>
               </div>
             )}
           </TabsContent>

@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { signatureToDataUri } from '@/lib/svgSignature';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -461,10 +461,12 @@ const EstimatePortal = () => {
           </div>
         )}
 
-        {readOnly && ticket.estimate_pm_signature && (
+        {readOnly && ticket.estimate_pm_signature && signatureToDataUri(ticket.estimate_pm_signature) && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.estimate_pm_signature, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+              <img src={signatureToDataUri(ticket.estimate_pm_signature)!} alt="Signature" className="max-w-full h-auto" />
+            </div>
           </div>
         )}
 
