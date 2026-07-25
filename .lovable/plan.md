@@ -1,58 +1,115 @@
-# Split Vendor page into View + Edit (Clients/Properties pattern)
 
-## Goal
-Mirror the existing Clients/Properties pattern:
-- `VendorDetail.tsx` = read-only view + Documents + Payments.
-- `VendorForm.tsx` = editable fields only, at `/team/vendors/:id/edit` and `/team/vendors/new`.
+# Shared Detail-Page Redesign — Client, Property, Vendor
 
-## Current state (verified)
-- `App.tsx` routes: `/team/vendors/new` and `/team/vendors/:id` both point to `VendorDetail`. No `/edit` route yet.
-- Links to the vendor page currently exist in:
-  - `TechnicianList.tsx` (card body click + "View / Edit" menu item).
-  - `accounting/VendorPayablesTab.tsx` (row click).
-- Clients pattern is: `/clients/new` → `ClientForm`, `/clients/:id` → `ClientDetail`, `/clients/:id/edit` → `ClientForm`.
+## Research summary (applied)
 
-## Steps
+From Linear, Attio, Stripe, HubSpot, Notion, and Height, the strongest common threads for record/detail pages are:
 
-### 1. Create `src/pages/team/VendorForm.tsx` (edit-only page)
-- Route params: `id` (undefined = new).
-- Fields (identical to today): company name (required), contact name, phone, email, license #, license expiration, insurance info, insurance expiration, notes, status, specialties multi-select.
-- Same validation as today (company name required).
-- Loads existing vendor when `id` present; empty state when creating.
-- Save:
-  - New → insert, then `navigate(/team/vendors/{newId})`.
-  - Edit → update, then `navigate(/team/vendors/{id})`.
-- Cancel returns to `/team/vendors/{id}` when editing, `/team/vendors` (list) when new.
-- No Documents, no Payments, no expiration alert badges.
+- **Compact identity header** — 36px logo/initials + name + one muted subline + inline status pill; no hero.
+- **Metadata as label/value rows**, not stat cards. Groups separated by a hairline + small section label — this is the single biggest fix for the "wall of identical white cards" feeling.
+- **Off-white app bg + pure-white surfaces + 1px low-opacity borders + no shadows on static panels.** This is what reads as "premium" vs. "generic admin."
+- **Empty state = dashed-border block** (~120px), tiny icon, one CTA, kept the same height whether populated or not, so pages don't jump.
+- **Sub-sections behind tabs** when they're large repeating datasets (Documents, Payments, Related records); metadata itself stays flowing.
+- **One accent color** (FiveServ gold) reserved for primary buttons, active tab indicator, and links only. Status uses muted pastel pills.
+- **Empty editable field** → dashed-underline "Add …" ghost link (turns gaps into affordances). Read-only empty → `—`.
 
-### 2. Rewrite `src/pages/team/VendorDetail.tsx` (read-only view)
-- Remove all form `<Input>`/`<Select>` fields for the vendor info block.
-- Render info as plain text/badges: company name, contact, phone (tel: link), email (mailto:), license #, license expiration, insurance info, insurance expiration, status badge, specialties as badges, notes.
-- Keep the license/insurance expiration alert banner at the top exactly as-is.
-- Keep Documents section unchanged (upload/download/delete W-9, insurance, contract, other).
-- Keep Payments section unchanged (Balance / Total Paid, list, Add Payment, Mark Paid).
-- Add "Edit" button in the header (icon + label), same placement/style as `ClientDetail.tsx` — navigates to `/team/vendors/{id}/edit`. Gate to admin only, same rule used today for editing vendors.
-- Remove the always-visible Save button and any dirty-state tracking — no longer applies.
+## Design direction for FiveServ
 
-### 3. Update `src/App.tsx`
-- Change `/team/vendors/new` → `VendorForm` (instead of `VendorDetail`).
-- Keep `/team/vendors/:id` → `VendorDetail`.
-- Add `/team/vendors/:id/edit` → `VendorForm`.
+Mobile-first single column across all three detail pages, always in this exact vertical order:
 
-### 4. Update call sites
-- `TechnicianList.tsx`: both existing links already point to `/team/vendors/{id}` (view page) — no change needed; "View / Edit" menu item label can stay since Edit is one click away from the view.
-- `accounting/VendorPayablesTab.tsx`: already navigates to the view page — no change.
-- "New Vendor" button in `TechnicianList.tsx` still points to `/team/vendors/new`, which now correctly opens the form.
+```text
+┌────────────────────────────────────────────┐
+│ ← chevron                                  │  top bar (unchanged)
+├────────────────────────────────────────────┤
+│ [avatar] Name              [status pill]   │  identity block
+│         one muted subline                  │
+├────────────────────────────────────────────┤
+│ [Primary CTA] [icon] [icon]        [⋯]     │  actions row
+├────────────────────────────────────────────┤
+│ SECTION LABEL                              │
+│ label            value                     │  metadata group 1
+│ label            value                     │
+│ ──────────────  hairline  ──────────────   │
+│ SECTION LABEL                              │
+│ label            value                     │  metadata group 2
+│                                            │
+├────────────────────────────────────────────┤
+│ [Tab] [Tab] [Tab] [Tab]                    │  sub-sections
+│                                            │
+│  ...content or dashed empty block...       │
+└────────────────────────────────────────────┘
+```
 
-## Risks / flags
-- **Route conflict**: `/team/vendors/new` must be declared before `/team/vendors/:id` so `:id` doesn't swallow `new`. Both already exist in App.tsx in that order — preserve it.
-- **Redirect after create**: today, creating a new vendor stays on the page. New behavior redirects to the view. Confirm this is desired (plan assumes yes — matches Clients/Properties).
-- **Admin-only Edit gate**: today anyone with `canEdit` in `VendorDetail` can save. Confirm the Edit button should follow the same role rule (admin) — plan reuses whatever role check `VendorDetail` currently applies for edits so behavior does not tighten or loosen accidentally.
-- **Documents / Payments untouched**: they move file location (into the new view) but their queries, mutations, dialogs, and role gates stay byte-identical. No functional changes.
-- **No effect on Clients, Properties, or other pages** — scope strictly limited to Vendor.
+## Shared building blocks (new components)
 
-## Deliverables
-- New file: `src/pages/team/VendorForm.tsx`.
-- Rewritten: `src/pages/team/VendorDetail.tsx` (view-only + Docs + Payments).
-- Updated: `src/App.tsx` (3 route lines).
-- No DB migration, no changes to `TechnicianList.tsx` or `VendorPayablesTab.tsx`.
+Create in `src/components/detail/` so all three pages compose the same primitives:
+
+1. **`DetailHeader`** — avatar/icon slot, name, subline, status pill slot, actions slot. Handles back chevron. ~64px tall on mobile.
+2. **`DetailActions`** — 1 primary button + up to 3 icon-ghost buttons + optional overflow `DropdownMenu`. Role-gated buttons simply aren't passed in.
+3. **`FieldGroup`** — takes a group label + children (rows). Renders label (`text-xs font-semibold text-muted-foreground mb-2`) and a top hairline (`border-t border-border/60`) except for the first group in the page.
+4. **`FieldRow`** — `grid grid-cols-[110px_1fr] gap-3 py-1.5`, label left (`text-xs text-muted-foreground`), value right (`text-sm text-foreground`). Empty read-only → `—`. Empty editable (`editHref` prop) → dashed-underline ghost link.
+5. **`SectionTabs`** — thin underline tabs, horizontally scrollable on overflow, 44px tap targets. Reuses shadcn Tabs internally.
+6. **`EmptyBlock`** — dashed-border container, icon, primary line, muted subline, optional small outline CTA. ~120–140px min-height so populated/empty don't jump.
+7. **`StatusPill`** — one component, variants: `success` (green pastel), `neutral` (gray), `warning` (amber), `danger` (red). All muted, never saturated.
+
+No new color tokens required — the existing off-white `--background`, pure-white `--card`, warm gray `--border`, and gold `--primary` already match the direction. The redesign will remove ad-hoc `bg-card border border-border rounded-lg` wrappers wherever a `FieldGroup` replaces them.
+
+## Per-page application
+
+### ClientDetail.tsx
+
+- Header: `Building2` icon in a tinted-gold square (36px) · `company_name` · subline = `contact_name` + property count + "Client since {year}". Status pill: `type` (Property Manager / Residential). Referred-by and lead-source move out of the header into a **"Source"** field group.
+- Actions: primary = "Add Property" (admin/supervisor); ghost = Email, Call (only when contact info exists); overflow = "Import Properties (CSV)", Edit, Deactivate.
+- Field groups (replace the current single big header card):
+  - **Contact** — Contact name, Email, Phone
+  - **Source** — Type, Referred by, Lead source
+- Sub-sections (keep the current 3–4 tabs, restyled): Properties · Tickets · Inspections · Internal Notes (role-gated).
+- Empty states inside each tab replaced with `EmptyBlock` (icon + "No properties yet" + role-gated "Add Property" outline button).
+
+### PropertyDetail.tsx
+
+- Header: `MapPin` in tinted square · `formatAddress(property)` as the name (fallback to `name`) · subline = zone + PM name. Status pill: none by default; if `pm_changed_at` recent → amber "PM changed" pill.
+- Actions: primary = "New Ticket"; ghost = "New Inspection", "Directions" (opens maps link that's currently inline in the header). Overflow = Edit, and Admin-only Delete.
+- Field groups:
+  - **Location** — Street, City/State/Zip, Zone, Directions link
+  - **Property Management** — Current PM, Previous PM + change date (when present)
+  - **Tenant** (admin/supervisor only, replaces the current collapsible "Property Notes" panel) — Tenant name, Tenant phone, General notes (inline-editable via existing upsert; keeps existing "Last updated" caption). This is a `FieldGroup` with inline `Input`/`Textarea` values instead of the current separate accordion card.
+- Sub-sections (tabs unchanged): Active Tickets · History · Inspections. Empty states replaced with `EmptyBlock`.
+- `PropertyDocumentsSections` (Gallery / Estimates & Invoices) stays as-is below the tabs but wrapped in `FieldGroup` styling for visual consistency (label + hairline, no extra card).
+
+### VendorDetail.tsx
+
+- Header: company logo slot (fallback: initials tinted-gold square) · `company_name` · subline = `contact_name` + specialties count. Status pill: Active/Archived, plus license/insurance expiring/expired pills relocated inline into the status area.
+- Actions: primary = admin-only "Add Payment" when Payments tab is active, otherwise "Upload Document"; ghost = Email, Call; overflow = Edit, Archive.
+- Field groups (replace the current 2-col grid card):
+  - **Contact** — Phone, Email
+  - **Compliance** — License #, License expiration, Insurance info, Insurance expiration
+  - **Specialties** — chips (kept as-is inside the group)
+  - **Notes** — plain text block
+- Sub-sections become tabs: **Documents · Payments**. This replaces the current two stacked sections. Payments tab keeps the existing Balance / Total Paid summary strip *inside* the tab (two `FieldRow`-style tiles, no border) and the payments list, `AddVendorPaymentDialog`, and `MarkPaidDialog` wiring is untouched. `ProofLink` behavior unchanged.
+
+## What stays the same (non-goals)
+
+- All queries, mutations, RLS, role gating logic, and the underlying data model.
+- All dialogs (`ImportPropertiesDialog`, `AddVendorPaymentDialog`, `MarkPaidDialog`, upload dialog).
+- `PropertyDocumentsSections` internal behavior.
+- Routing (`/edit` still opens the form pages).
+- No color-token changes to `index.css`; palette already fits.
+
+## Technical notes
+
+- New primitives are dumb presentational components — no data-fetching, no store access — so the three page files stay thin.
+- Detail pages will import from `@/components/detail/*` and drop most of their hand-rolled card markup. The three files should shrink to ~150–200 lines each.
+- Tabs used only when there are ≥2 sub-datasets; single-dataset pages (unlikely here) would render inline.
+- Mobile-first: no two-column layout is added. Desktop will simply center the content column at `max-w-3xl mx-auto`.
+- Accessibility: `FieldRow` uses `<dl>/<dt>/<dd>` semantics; `EmptyBlock` uses `role="status"`; tabs come from shadcn Tabs so keyboard nav is preserved.
+
+## Implementation order (when approved)
+
+1. Create the 7 shared primitives in `src/components/detail/` with Storybook-free but exportable API.
+2. Refactor `VendorDetail.tsx` first (biggest file, exercises every primitive including tabs + dashed empty + status pills).
+3. Refactor `PropertyDetail.tsx` (adds the inline-editable Tenant group pattern).
+4. Refactor `ClientDetail.tsx` (simplest, mostly tabs + one contact group).
+5. Manual pass: verify role-gating removes actions cleanly, and that mobile viewports at 375px still fit without horizontal scroll.
+
+No database migration, no route change, no store change.
