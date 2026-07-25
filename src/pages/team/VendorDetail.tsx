@@ -29,6 +29,7 @@ import {
 } from '@/lib/vendorAlerts';
 import AddVendorPaymentDialog from '@/components/vendors/AddVendorPaymentDialog';
 import MarkPaidDialog from '@/components/vendors/MarkPaidDialog';
+import EditVendorPaymentDialog from '@/components/vendors/EditVendorPaymentDialog';
 import ProofLink from '@/components/vendors/ProofLink';
 import DetailHeader from '@/components/detail/DetailHeader';
 import DetailActions from '@/components/detail/DetailActions';
