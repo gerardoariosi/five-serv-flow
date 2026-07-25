@@ -1,14 +1,16 @@
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
-export type StatusPillVariant = 'success' | 'neutral' | 'warning' | 'danger' | 'info';
+export type StatusPillVariant = 'success' | 'neutral' | 'warning' | 'danger' | 'info' | 'purple' | 'gold';
 
 const variantClasses: Record<StatusPillVariant, string> = {
-  success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  success: 'bg-success-soft text-success border-success/25',
   neutral: 'bg-muted text-muted-foreground border-border',
-  warning: 'bg-amber-50 text-amber-700 border-amber-200',
-  danger: 'bg-rose-50 text-rose-700 border-rose-200',
-  info: 'bg-sky-50 text-sky-700 border-sky-200',
+  warning: 'bg-warning-soft text-warning border-warning/25',
+  danger:  'bg-danger-soft text-danger border-danger/25',
+  info:    'bg-info-soft text-info border-info/25',
+  purple:  'bg-purple-soft text-purple border-purple/25',
+  gold:    'bg-primary/10 text-[hsl(45,100%,32%)] border-primary/30',
 };
 
 interface Props {

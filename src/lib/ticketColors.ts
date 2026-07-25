@@ -8,29 +8,29 @@ export const workTypeColors: Record<string, { bg: string; border: string; badge:
   'make-ready': makeReadyColors,
   'make_ready': makeReadyColors,
   emergency: {
-    bg: 'bg-destructive/10',
-    border: 'border-destructive/40',
-    badge: 'bg-destructive text-destructive-foreground',
+    bg: 'bg-danger-soft',
+    border: 'border-danger/40',
+    badge: 'bg-danger text-danger-foreground',
   },
   repair: {
-    bg: 'bg-[hsl(217,91%,55%)]/10',
-    border: 'border-[hsl(217,91%,55%)]/40',
-    badge: 'bg-[hsl(217,91%,45%)] text-white',
+    bg: 'bg-info-soft',
+    border: 'border-info/40',
+    badge: 'bg-info text-info-foreground',
   },
   capex: {
-    bg: 'bg-[hsl(142,71%,40%)]/10',
-    border: 'border-[hsl(142,71%,40%)]/40',
-    badge: 'bg-[hsl(142,71%,35%)] text-white',
+    bg: 'bg-success-soft',
+    border: 'border-success/40',
+    badge: 'bg-success text-success-foreground',
   },
 };
 
 export const getTicketColor = (workType: string | null): string => {
   switch (workType) {
-    case 'make_ready': case 'make-ready': return 'hsl(45, 100%, 51%)';
-    case 'emergency': return 'hsl(0, 72%, 59%)';
-    case 'repair': return 'hsl(217, 91%, 55%)';
-    case 'capex': return 'hsl(142, 71%, 40%)';
-    default: return 'hsl(0, 0%, 40%)';
+    case 'make_ready': case 'make-ready': return 'hsl(var(--make-ready))';
+    case 'emergency': return 'hsl(var(--emergency))';
+    case 'repair': return 'hsl(var(--repair))';
+    case 'capex': return 'hsl(var(--capex))';
+    default: return 'hsl(var(--muted-foreground))';
   }
 };
 
@@ -51,15 +51,15 @@ export const statusLabels: Record<string, string> = {
 
 export const statusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
-  open: 'bg-primary/20 text-primary',
-  in_progress: 'bg-[hsl(217,91%,55%)]/15 text-[hsl(217,91%,45%)]',
-  paused: 'bg-[hsl(27,96%,50%)]/15 text-[hsl(27,96%,40%)]',
-  pending_evaluation: 'bg-[hsl(45,100%,50%)]/15 text-[hsl(45,100%,35%)]',
-  pending_estimate: 'bg-[hsl(38,92%,50%)]/15 text-[hsl(38,92%,35%)]',
-  estimate_sent: 'bg-[hsl(239,84%,67%)]/15 text-[hsl(239,84%,55%)]',
-  estimate_approved: 'bg-[hsl(160,84%,39%)]/15 text-[hsl(160,84%,30%)]',
-  ready_for_review: 'bg-[hsl(270,60%,55%)]/15 text-[hsl(270,60%,45%)]',
-  closed: 'bg-[hsl(142,71%,40%)]/15 text-[hsl(142,71%,30%)]',
-  rejected: 'bg-destructive/15 text-destructive',
+  open: 'bg-primary/15 text-[hsl(45,100%,32%)]',
+  in_progress: 'bg-info-soft text-info',
+  paused: 'bg-warning-soft text-warning',
+  pending_evaluation: 'bg-primary/15 text-[hsl(45,100%,32%)]',
+  pending_estimate: 'bg-warning-soft text-warning',
+  estimate_sent: 'bg-purple-soft text-purple',
+  estimate_approved: 'bg-success-soft text-success',
+  ready_for_review: 'bg-purple-soft text-purple',
+  closed: 'bg-success-soft text-success',
+  rejected: 'bg-danger-soft text-danger',
   cancelled: 'bg-muted text-muted-foreground',
 };
