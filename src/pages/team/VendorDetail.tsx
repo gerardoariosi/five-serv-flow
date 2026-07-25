@@ -56,6 +56,9 @@ const VendorDetail = () => {
   const [uploading, setUploading] = useState(false);
   const [payDialog, setPayDialog] = useState(false);
   const [markPaid, setMarkPaid] = useState<{ id: string; amount: number } | null>(null);
+  const [editPayment, setEditPayment] = useState<any | null>(null);
+  const [deletePayment, setDeletePayment] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [tab, setTab] = useState<'documents' | 'payments'>('documents');
 
   const { data: vendor, isLoading } = useQuery({
