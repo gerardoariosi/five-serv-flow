@@ -376,7 +376,7 @@ const VendorDetail = () => {
         <section className="border border-border rounded-lg bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-            <div>
+
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" /> Payments
               </h2>
