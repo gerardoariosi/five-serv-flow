@@ -8,36 +8,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Edit, Upload, Download, Trash2, Plus, FileText, DollarSign, CheckCircle2, Clock, Mail, Phone } from 'lucide-react';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import {
+  Edit, Upload, Download, Trash2, Plus, FileText, DollarSign, Clock, Mail, Phone, Wrench,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  getExpirationStatus,
-  expirationBadgeClass,
-  expirationLabel,
+  getExpirationStatus, expirationLabel,
 } from '@/lib/vendorAlerts';
 import AddVendorPaymentDialog from '@/components/vendors/AddVendorPaymentDialog';
 import MarkPaidDialog from '@/components/vendors/MarkPaidDialog';
 import ProofLink from '@/components/vendors/ProofLink';
-
+import DetailHeader from '@/components/detail/DetailHeader';
+import DetailActions from '@/components/detail/DetailActions';
+import FieldGroup from '@/components/detail/FieldGroup';
+import FieldRow from '@/components/detail/FieldRow';
+import SectionTabs from '@/components/detail/SectionTabs';
+import EmptyBlock from '@/components/detail/EmptyBlock';
+import StatusPill from '@/components/detail/StatusPill';
 
 const DOC_TYPE_LABEL: Record<string, string> = {
-  w9: 'W-9',
-  insurance: 'Insurance',
-  contract: 'Contract',
-  other: 'Other',
+  w9: 'W-9', insurance: 'Insurance', contract: 'Contract', other: 'Other',
 };
 
 const VendorDetail = () => {
@@ -45,15 +41,15 @@ const VendorDetail = () => {
   const navigate = useNavigate();
   const { user, activeRole } = useAuthStore();
   const canEdit = activeRole === 'admin' || activeRole === 'supervisor';
-  const canManageDocs = activeRole === 'admin' || activeRole === 'supervisor';
+  const canManageDocs = canEdit;
   const canManagePayments = activeRole === 'admin' || activeRole === 'accounting';
 
   const [docDialog, setDocDialog] = useState(false);
   const [newDoc, setNewDoc] = useState<{ doc_type: string; file: File | null }>({ doc_type: 'w9', file: null });
   const [uploading, setUploading] = useState(false);
-
   const [payDialog, setPayDialog] = useState(false);
   const [markPaid, setMarkPaid] = useState<{ id: string; amount: number } | null>(null);
+  const [tab, setTab] = useState<'documents' | 'payments'>('documents');
 
   const { data: vendor, isLoading } = useQuery({
     queryKey: ['vendor', id],
@@ -68,11 +64,7 @@ const VendorDetail = () => {
   const { data: documents = [], refetch: refetchDocs } = useQuery({
     queryKey: ['vendor_documents', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendor_documents')
-        .select('*')
-        .eq('vendor_id', id!)
-        .order('uploaded_at', { ascending: false });
+      const { data, error } = await supabase.from('vendor_documents').select('*').eq('vendor_id', id!).order('uploaded_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -82,11 +74,7 @@ const VendorDetail = () => {
   const { data: payments = [], refetch: refetchPay } = useQuery({
     queryKey: ['vendor_payments', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendor_payments')
-        .select('*')
-        .eq('vendor_id', id!)
-        .order('due_date', { ascending: false, nullsFirst: false });
+      const { data, error } = await supabase.from('vendor_payments').select('*').eq('vendor_id', id!).order('due_date', { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -99,33 +87,22 @@ const VendorDetail = () => {
     try {
       const ext = newDoc.file.name.split('.').pop();
       const path = `${id}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('vendor-documents').upload(path, newDoc.file, {
-        contentType: newDoc.file.type,
-      });
+      const { error: upErr } = await supabase.storage.from('vendor-documents').upload(path, newDoc.file, { contentType: newDoc.file.type });
       if (upErr) throw upErr;
       const { error: dbErr } = await supabase.from('vendor_documents').insert({
-        vendor_id: id,
-        doc_type: newDoc.doc_type,
-        file_path: path,
-        file_name: newDoc.file.name,
-        uploaded_by: user.id,
+        vendor_id: id, doc_type: newDoc.doc_type, file_path: path, file_name: newDoc.file.name, uploaded_by: user.id,
       });
       if (dbErr) throw dbErr;
       toast.success('Document uploaded');
       setDocDialog(false);
       setNewDoc({ doc_type: 'w9', file: null });
       refetchDocs();
-    } catch (e: any) {
-      toast.error(e?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
+    } catch (e: any) { toast.error(e?.message || 'Upload failed'); }
+    finally { setUploading(false); }
   };
 
   const handleDownload = async (doc: any) => {
-    const { data, error } = await supabase.storage
-      .from('vendor-documents')
-      .createSignedUrl(doc.file_path, 60);
+    const { data, error } = await supabase.storage.from('vendor-documents').createSignedUrl(doc.file_path, 60);
     if (error || !data?.signedUrl) { toast.error('Could not generate download link'); return; }
     window.open(data.signedUrl, '_blank');
   };
@@ -139,214 +116,203 @@ const VendorDetail = () => {
     refetchDocs();
   };
 
+  if (isLoading || !vendor) {
+    return <div className="p-4 max-w-3xl mx-auto"><p className="text-sm text-muted-foreground">Loading vendor…</p></div>;
+  }
+
   const pendingPayments = (payments as any[]).filter(p => p.status === 'pending');
   const paidPayments = (payments as any[]).filter(p => p.status === 'paid');
   const balance = pendingPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   const totalPaid = paidPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const oldestDue = pendingPayments
-    .map(p => p.due_date)
-    .filter(Boolean)
-    .sort()[0] as string | undefined;
+  const oldestDue = pendingPayments.map(p => p.due_date).filter(Boolean).sort()[0] as string | undefined;
 
-  const licStatus = getExpirationStatus((vendor as any)?.license_expiration_date);
-  const insStatus = getExpirationStatus((vendor as any)?.insurance_expiration_date);
+  const licStatus = getExpirationStatus((vendor as any).license_expiration_date);
+  const insStatus = getExpirationStatus((vendor as any).insurance_expiration_date);
 
-  if (isLoading || !vendor) {
-    return (
-      <div className="p-4 max-w-2xl mx-auto">
-        <p className="text-sm text-muted-foreground">Loading vendor…</p>
-      </div>
-    );
-  }
+  const statusPills = (
+    <>
+      <StatusPill variant={vendor.status === 'active' ? 'success' : 'neutral'}>
+        {vendor.status === 'active' ? 'Active' : 'Archived'}
+      </StatusPill>
+      {(licStatus === 'expired' || licStatus === 'expiring') && (
+        <StatusPill variant={licStatus === 'expired' ? 'danger' : 'warning'}>
+          {expirationLabel(licStatus, 'License')}
+        </StatusPill>
+      )}
+      {(insStatus === 'expired' || insStatus === 'expiring') && (
+        <StatusPill variant={insStatus === 'expired' ? 'danger' : 'warning'}>
+          {expirationLabel(insStatus, 'Insurance')}
+        </StatusPill>
+      )}
+    </>
+  );
+
+  const subline = [
+    vendor.contact_name,
+    vendor.specialties && vendor.specialties.length > 0 && `${vendor.specialties.length} ${vendor.specialties.length === 1 ? 'specialty' : 'specialties'}`,
+  ].filter(Boolean).join(' · ');
+
+  const primaryAction = tab === 'payments' && canManagePayments
+    ? <Button size="sm" onClick={() => setPayDialog(true)}><Plus className="w-4 h-4 mr-1" /> Add Payment</Button>
+    : canManageDocs
+      ? <Button size="sm" onClick={() => setDocDialog(true)}><Upload className="w-4 h-4 mr-1" /> Upload Document</Button>
+      : null;
+
+  const ghostActions = (
+    <>
+      {vendor.email && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+          <a href={`mailto:${vendor.email}`} aria-label="Email"><Mail className="w-4 h-4" /></a>
+        </Button>
+      )}
+      {vendor.phone && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+          <a href={`tel:${vendor.phone}`} aria-label="Call"><Phone className="w-4 h-4" /></a>
+        </Button>
+      )}
+    </>
+  );
+
+  const overflow = canEdit ? (
+    <DropdownMenuItem onClick={() => navigate(`/team/vendors/${id}/edit`)}>
+      <Edit className="w-4 h-4 mr-2" /> Edit
+    </DropdownMenuItem>
+  ) : null;
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-6 pb-16">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/team/technicians')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl font-bold text-foreground truncate">Vendor Details</h1>
-        </div>
-        {canEdit && (
-          <Button variant="outline" size="sm" onClick={() => navigate(`/team/vendors/${id}/edit`)}>
-            <Edit className="w-4 h-4 mr-1" /> Edit
-          </Button>
-        )}
-      </div>
+    <div className="p-4 max-w-3xl mx-auto pb-16">
+      <DetailHeader
+        backTo="/team/technicians"
+        icon={<Wrench className="w-4 h-4" />}
+        name={vendor.company_name}
+        subline={subline || undefined}
+        status={statusPills}
+        actions={<DetailActions primary={primaryAction} ghost={ghostActions} overflow={overflow} />}
+      />
 
-      {(licStatus === 'expired' || licStatus === 'expiring' || insStatus === 'expired' || insStatus === 'expiring') && (
-        <div className="flex flex-wrap gap-2">
-          {(licStatus === 'expired' || licStatus === 'expiring') && (
-            <Badge variant="outline" className={expirationBadgeClass(licStatus)}>
-              {expirationLabel(licStatus, 'License')}
-            </Badge>
-          )}
-          {(insStatus === 'expired' || insStatus === 'expiring') && (
-            <Badge variant="outline" className={expirationBadgeClass(insStatus)}>
-              {expirationLabel(insStatus, 'Insurance')}
-            </Badge>
-          )}
-        </div>
+      <FieldGroup label="Contact" first>
+        <FieldRow label="Phone" value={vendor.phone ? <a href={`tel:${vendor.phone}`} className="hover:text-primary">{vendor.phone}</a> : null} />
+        <FieldRow label="Email" value={vendor.email ? <a href={`mailto:${vendor.email}`} className="hover:text-primary break-all">{vendor.email}</a> : null} />
+      </FieldGroup>
+
+      <FieldGroup label="Compliance">
+        <FieldRow label="License #" value={vendor.license_number} />
+        <FieldRow label="License exp." value={(vendor as any).license_expiration_date} />
+        <FieldRow label="Insurance" value={vendor.insurance_info} />
+        <FieldRow label="Insurance exp." value={(vendor as any).insurance_expiration_date} />
+      </FieldGroup>
+
+      {vendor.specialties && vendor.specialties.length > 0 && (
+        <FieldGroup label="Specialties">
+          <div className="flex flex-wrap gap-1 py-1.5">
+            {vendor.specialties.map((s: string) => (
+              <Badge key={s} variant="secondary" className="text-[11px] font-normal">{s}</Badge>
+            ))}
+          </div>
+        </FieldGroup>
       )}
 
-      {/* Info card */}
-      <section className="border border-border rounded-lg bg-card p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-foreground truncate">{vendor.company_name}</h2>
-            {vendor.contact_name && (
-              <p className="text-sm text-muted-foreground truncate">{vendor.contact_name}</p>
-            )}
-          </div>
-          <Badge variant={vendor.status === 'active' ? 'default' : 'outline'} className="text-[10px]">
-            {vendor.status === 'active' ? 'Active' : 'Archived'}
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm pt-1">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Phone</p>
-            {vendor.phone
-              ? <a href={`tel:${vendor.phone}`} className="text-foreground flex items-center gap-1"><Phone className="w-3 h-3" /> {vendor.phone}</a>
-              : <p className="text-muted-foreground">—</p>}
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Email</p>
-            {vendor.email
-              ? <a href={`mailto:${vendor.email}`} className="text-foreground flex items-center gap-1 truncate"><Mail className="w-3 h-3 shrink-0" /> <span className="truncate">{vendor.email}</span></a>
-              : <p className="text-muted-foreground">—</p>}
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">License #</p>
-            <p className="text-foreground">{vendor.license_number || '—'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">License Expiration</p>
-            <p className="text-foreground">{(vendor as any).license_expiration_date || '—'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Insurance Info</p>
-            <p className="text-foreground">{vendor.insurance_info || '—'}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Insurance Expiration</p>
-            <p className="text-foreground">{(vendor as any).insurance_expiration_date || '—'}</p>
-          </div>
-        </div>
-
-        {vendor.specialties && vendor.specialties.length > 0 && (
-          <div className="pt-1">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Specialties</p>
-            <div className="flex flex-wrap gap-1">
-              {vendor.specialties.map((s: string) => (
-                <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {vendor.notes && (
-          <div className="pt-1">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Notes</p>
-            <p className="text-sm text-foreground whitespace-pre-wrap">{vendor.notes}</p>
-          </div>
-        )}
-      </section>
-
-      {canManageDocs && (
-        <section className="border border-border rounded-lg bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" /> Documents
-            </h2>
-            <Button size="sm" variant="outline" onClick={() => setDocDialog(true)}>
-              <Upload className="w-4 h-4 mr-1" /> Upload
-            </Button>
-          </div>
-          {documents.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No documents uploaded.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {documents.map((doc: any) => (
-                <div key={doc.id} className="flex items-center gap-2 p-2 rounded border border-border">
-                  <Badge variant="secondary" className="text-[10px]">{DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type}</Badge>
-                  <span className="flex-1 text-xs text-foreground truncate">{doc.file_name || doc.file_path.split('/').pop()}</span>
-                  <span className="text-[10px] text-muted-foreground">{new Date(doc.uploaded_at).toLocaleDateString()}</span>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDownload(doc)}>
-                    <Download className="w-3.5 h-3.5" />
-                  </Button>
-                  {activeRole === 'admin' && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteDoc(doc)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+      {vendor.notes && (
+        <FieldGroup label="Notes">
+          <p className="text-sm text-foreground whitespace-pre-wrap py-1.5">{vendor.notes}</p>
+        </FieldGroup>
       )}
 
       {(canManageDocs || canManagePayments) && (
-        <section className="border border-border rounded-lg bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-primary" /> Payments
-            </h2>
-            {canManagePayments && (
-              <Button size="sm" variant="outline" onClick={() => setPayDialog(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Add Payment
-              </Button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className="rounded-lg border border-border p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Balance
-              </p>
-              <p className="text-lg font-bold text-foreground tabular-nums">${balance.toFixed(2)}</p>
-              {oldestDue && <p className="text-[10px] text-muted-foreground mt-0.5">Oldest due: {oldestDue}</p>}
-            </div>
-            <div className="rounded-lg border border-border p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Total Paid
-              </p>
-              <p className="text-lg font-bold text-foreground tabular-nums">${totalPaid.toFixed(2)}</p>
-            </div>
-          </div>
-
-          {payments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No payments yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {(payments as any[]).map((p) => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded border border-border text-xs flex-wrap">
-                  <Badge variant={p.status === 'paid' ? 'default' : 'outline'} className="text-[10px]">
-                    {p.status === 'paid' ? 'Paid' : 'Pending'}
-                  </Badge>
-                  <span className="font-semibold text-foreground tabular-nums">${Number(p.amount).toFixed(2)}</span>
-                  <span className="text-muted-foreground">
-                    Wk {p.week_ending_date ?? p.payment_date} · Due {p.due_date ?? '—'}
-                    {p.status === 'paid' && p.paid_at && ` · Paid ${p.paid_at}`}
-                  </span>
-                  {p.status === 'paid' && p.proof_url && <ProofLink path={p.proof_url} />}
-                  {p.note && <span className="flex-1 min-w-[100px] truncate text-muted-foreground">— {p.note}</span>}
-                  {p.status === 'pending' && canManagePayments && (
-                    <Button size="sm" variant="outline" className="h-6 text-[10px] ml-auto" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
-                      Mark Paid
-                    </Button>
-                  )}
-
+        <SectionTabs
+          value={tab}
+          onValueChange={(v) => setTab(v as any)}
+          tabs={[
+            {
+              value: 'documents',
+              label: 'Documents',
+              count: documents.length,
+              content: documents.length === 0 ? (
+                <EmptyBlock
+                  icon={FileText}
+                  title="No documents yet"
+                  description="Upload W-9s, insurance certificates, or contracts."
+                  action={canManageDocs ? <Button size="sm" variant="outline" onClick={() => setDocDialog(true)}><Upload className="w-4 h-4 mr-1" /> Upload</Button> : undefined}
+                />
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {documents.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center gap-2 py-2 px-1 border-b border-border/50 last:border-0">
+                      <Badge variant="secondary" className="text-[10px] font-normal">{DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type}</Badge>
+                      <span className="flex-1 text-xs text-foreground truncate">{doc.file_name || doc.file_path.split('/').pop()}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDownload(doc)}>
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                      {activeRole === 'admin' && (
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleDeleteDoc(doc)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              ),
+            },
+            {
+              value: 'payments',
+              label: 'Payments',
+              count: payments.length,
+              content: (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Balance
+                      </p>
+                      <p className="text-lg font-semibold text-foreground tabular-nums mt-0.5">${balance.toFixed(2)}</p>
+                      {oldestDue && <p className="text-[11px] text-muted-foreground">Oldest due: {oldestDue}</p>}
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" /> Total paid
+                      </p>
+                      <p className="text-lg font-semibold text-foreground tabular-nums mt-0.5">${totalPaid.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  {payments.length === 0 ? (
+                    <EmptyBlock
+                      icon={DollarSign}
+                      title="No payments yet"
+                      description="Track weekly vendor payables here."
+                      action={canManagePayments ? <Button size="sm" variant="outline" onClick={() => setPayDialog(true)}><Plus className="w-4 h-4 mr-1" /> Add payment</Button> : undefined}
+                    />
+                  ) : (
+                    <div className="flex flex-col">
+                      {(payments as any[]).map((p) => (
+                        <div key={p.id} className="flex items-center gap-2 py-2 border-b border-border/50 last:border-0 text-xs flex-wrap">
+                          <StatusPill variant={p.status === 'paid' ? 'success' : 'warning'}>
+                            {p.status === 'paid' ? 'Paid' : 'Pending'}
+                          </StatusPill>
+                          <span className="font-semibold text-foreground tabular-nums">${Number(p.amount).toFixed(2)}</span>
+                          <span className="text-muted-foreground">
+                            Wk {p.week_ending_date ?? p.payment_date} · Due {p.due_date ?? '—'}
+                            {p.status === 'paid' && p.paid_at && ` · Paid ${p.paid_at}`}
+                          </span>
+                          {p.status === 'paid' && p.proof_url && <ProofLink path={p.proof_url} />}
+                          {p.note && <span className="flex-1 min-w-[100px] truncate text-muted-foreground">— {p.note}</span>}
+                          {p.status === 'pending' && canManagePayments && (
+                            <Button size="sm" variant="outline" className="h-6 text-[10px] ml-auto" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
+                              Mark Paid
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
 
-      {/* Upload doc dialog */}
       <Dialog open={docDialog} onOpenChange={setDocDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
@@ -392,7 +358,6 @@ const VendorDetail = () => {
         amount={markPaid?.amount}
         onSaved={() => { refetchPay(); setMarkPaid(null); }}
       />
-
     </div>
   );
 };
