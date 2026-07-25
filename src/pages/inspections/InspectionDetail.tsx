@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import { signatureToDataUri } from '@/lib/svgSignature';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
