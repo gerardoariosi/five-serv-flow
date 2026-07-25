@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ImportPropertiesDialog from '@/components/properties/ImportPropertiesDialog';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Building2, Mail, Phone, Edit } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('properties');
+  const [importOpen, setImportOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
   const queryClient = useQueryClient();
   const { user, activeRole } = useAuthStore();
@@ -142,9 +144,15 @@ const ClientDetail = () => {
         </TabsList>
 
         <TabsContent value="properties" className="mt-4">
-          <Button size="sm" className="mb-4 bg-primary text-primary-foreground" onClick={() => navigate(`/properties/new?client_id=${id}`)}>
-            Add Property
-          </Button>
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => navigate(`/properties/new?client_id=${id}`)}>
+              Add Property
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+              Import Properties (CSV)
+            </Button>
+          </div>
+          {id && <ImportPropertiesDialog open={importOpen} onOpenChange={setImportOpen} clientId={id} />}
           {properties?.length === 0 ? <p className="text-muted-foreground text-sm">No properties.</p> : (
             <div className="flex flex-col gap-2">
               {properties?.map(p => (
