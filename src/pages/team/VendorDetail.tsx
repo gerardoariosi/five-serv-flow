@@ -23,13 +23,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Save, Upload, Download, Trash2, Plus, FileText, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Download, Trash2, Plus, FileText, DollarSign, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getExpirationStatus,
   expirationBadgeClass,
   expirationLabel,
 } from '@/lib/vendorAlerts';
+import AddVendorPaymentDialog from '@/components/vendors/AddVendorPaymentDialog';
+import MarkPaidDialog from '@/components/vendors/MarkPaidDialog';
+
 
 const SPECIALTIES_CATALOG = [
   'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Carpentry',
@@ -73,8 +76,8 @@ const VendorDetail = () => {
   const [uploading, setUploading] = useState(false);
 
   const [payDialog, setPayDialog] = useState(false);
-  const [newPay, setNewPay] = useState({ amount: '', payment_date: new Date().toISOString().slice(0, 10), note: '' });
-  const [savingPay, setSavingPay] = useState(false);
+  const [markPaid, setMarkPaid] = useState<{ id: string; amount: number } | null>(null);
+
 
   const { data: vendor } = useQuery({
     queryKey: ['vendor', id],
@@ -128,12 +131,13 @@ const VendorDetail = () => {
         .from('vendor_payments')
         .select('*')
         .eq('vendor_id', id!)
-        .order('payment_date', { ascending: false });
+        .order('due_date', { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data ?? [];
     },
     enabled: !isNew && (canManageDocs || canManagePayments),
   });
+
 
   const toggleSpecialty = (s: string) => {
     setForm(prev => ({

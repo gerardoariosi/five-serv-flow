@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -185,14 +185,13 @@ const GalleryTile = ({ doc, onOpen, onDelete }: { doc: any; onOpen: () => void; 
   const isImage = (doc.mime_type ?? '').startsWith('image/');
   const [thumb, setThumb] = useState<string | null>(null);
 
-  useState(() => {
-    if (isImage) {
-      supabase.storage.from(BUCKET).createSignedUrl(doc.file_path, 3600).then(({ data }) => {
-        if (data?.signedUrl) setThumb(data.signedUrl);
-      });
-    }
-    return undefined;
-  });
+  useEffect(() => {
+    if (!isImage) return;
+    supabase.storage.from(BUCKET).createSignedUrl(doc.file_path, 3600).then(({ data }) => {
+      if (data?.signedUrl) setThumb(data.signedUrl);
+    });
+  }, [doc.file_path, isImage]);
+
 
   return (
     <div className="relative group aspect-square rounded-md overflow-hidden border border-border bg-muted">
