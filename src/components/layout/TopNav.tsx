@@ -99,8 +99,8 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="focus:outline-none active:scale-95 transition-transform">
-                <Avatar className="w-8 h-8 cursor-pointer border border-border hover:border-primary transition-colors">
-                  {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} /> : null}
+                <Avatar className="w-9 h-9 cursor-pointer ring-1 ring-border hover:ring-primary transition-all">
+                  {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} className="object-cover" /> : null}
                   <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                     {initials}
                   </AvatarFallback>
