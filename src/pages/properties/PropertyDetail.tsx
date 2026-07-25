@@ -1,29 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Edit, Plus, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { MapPin, Edit, Plus, Save, Ticket, History, ClipboardCheck, Navigation } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatAddress } from '@/lib/propertyAddress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 import PropertyDocumentsSections from '@/components/properties/PropertyDocumentsSections';
-
+import DetailHeader from '@/components/detail/DetailHeader';
+import DetailActions from '@/components/detail/DetailActions';
+import FieldGroup from '@/components/detail/FieldGroup';
+import FieldRow from '@/components/detail/FieldRow';
+import SectionTabs from '@/components/detail/SectionTabs';
+import EmptyBlock from '@/components/detail/EmptyBlock';
+import StatusPill from '@/components/detail/StatusPill';
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { activeRole, user } = useAuthStore();
-  const canSeeNotes = activeRole === 'admin' || activeRole === 'supervisor';
+  const canManage = activeRole === 'admin' || activeRole === 'supervisor';
+  const canSeeNotes = canManage;
   const [activeTab, setActiveTab] = useState('active');
-  const [notesOpen, setNotesOpen] = useState(false);
   const [tenantName, setTenantName] = useState('');
   const [tenantPhone, setTenantPhone] = useState('');
   const [generalNotes, setGeneralNotes] = useState('');
@@ -41,31 +46,31 @@ const PropertyDetail = () => {
     enabled: !!id,
   });
 
-  const { data: activeTickets } = useQuery({
+  const { data: activeTickets = [] } = useQuery({
     queryKey: ['property-active-tickets', id],
     queryFn: async () => {
       const { data } = await supabase.from('tickets').select('*').eq('property_id', id!).not('status', 'in', '("closed","cancelled")').order('created_at', { ascending: false });
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'active',
+    enabled: !!id,
   });
 
-  const { data: closedTickets } = useQuery({
+  const { data: closedTickets = [] } = useQuery({
     queryKey: ['property-history', id],
     queryFn: async () => {
       const { data } = await supabase.from('tickets').select('*').eq('property_id', id!).in('status', ['closed', 'cancelled']).order('closed_at', { ascending: false });
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'history',
+    enabled: !!id,
   });
 
-  const { data: inspections } = useQuery({
+  const { data: inspections = [] } = useQuery({
     queryKey: ['property-inspections', id],
     queryFn: async () => {
       const { data } = await supabase.from('inspections').select('*').eq('property_id', id!).order('created_at', { ascending: false });
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'inspections',
+    enabled: !!id,
   });
 
   const { data: propertyNote } = useQuery({
@@ -108,147 +113,174 @@ const PropertyDetail = () => {
 
   const pm = property.clients as any;
   const prevPm = property.prev_pm as any;
+  const address = formatAddress(property as any);
+  const displayName = address || property.name || 'Unnamed property';
+  const zoneName = (property.zones as any)?.name;
+
+  const pmChangedRecent = property.pm_changed_at && (Date.now() - new Date(property.pm_changed_at).getTime()) < 60 * 24 * 60 * 60 * 1000;
+  const status = pmChangedRecent ? <StatusPill variant="warning">PM changed</StatusPill> : null;
+
+  const subline = [
+    zoneName ? `Zone: ${zoneName}` : null,
+    pm?.company_name ? `PM: ${pm.company_name}` : null,
+  ].filter(Boolean).join(' · ');
+
+  const primary = (
+    <Button size="sm" onClick={() => navigate(`/tickets/new?property_id=${id}`)}>
+      <Plus className="w-4 h-4 mr-1" /> New Ticket
+    </Button>
+  );
+
+  const ghost = (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => navigate(`/inspections/new?property_id=${id}`)}>
+        <Plus className="w-3.5 h-3.5 mr-1" /> Inspection
+      </Button>
+      {address && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+          <a href={`https://maps.google.com/?q=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer" aria-label="Directions">
+            <Navigation className="w-4 h-4" />
+          </a>
+        </Button>
+      )}
+    </>
+  );
+
+  const overflow = canManage ? (
+    <DropdownMenuItem onClick={() => navigate(`/properties/${id}/edit`)}>
+      <Edit className="w-4 h-4 mr-2" /> Edit
+    </DropdownMenuItem>
+  ) : null;
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <button onClick={() => navigate('/properties')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Properties
-      </button>
+    <div className="p-4 max-w-3xl mx-auto pb-16">
+      <DetailHeader
+        backTo="/properties"
+        icon={<MapPin className="w-4 h-4" />}
+        name={displayName}
+        subline={subline || undefined}
+        status={status}
+        actions={<DetailActions primary={primary} ghost={ghost} overflow={overflow} />}
+      />
 
-      <div className="bg-card border border-border rounded-lg p-5 mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-foreground mb-2">{formatAddress(property as any) || property.name || 'Unnamed'}</h1>
-            <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-              <span>Zone: {(property.zones as any)?.name ?? 'None'}</span>
-              <span>PM: {pm?.company_name ?? 'None'}</span>
-              {prevPm?.company_name && property.pm_changed_at && (
-                <span className="text-primary">Previous PM: {prevPm.company_name} until {new Date(property.pm_changed_at).toLocaleDateString()}</span>
-              )}
-              {formatAddress(property as any) && (
-                <a href={`https://maps.google.com/?q=${encodeURIComponent(formatAddress(property as any))}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-primary">
-                  <MapPin className="w-3 h-3" />{formatAddress(property as any)}
-                </a>
-              )}
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/properties/${id}/edit`)}>
-            <Edit className="w-4 h-4 mr-1" /> Edit
-          </Button>
-        </div>
-      </div>
+      <FieldGroup label="Location" first>
+        <FieldRow label="Address" value={address} />
+        <FieldRow label="Zone" value={zoneName} />
+      </FieldGroup>
 
-      {/* Action buttons */}
-      <div className="flex gap-2 mb-4">
-        <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => navigate(`/tickets/new?property_id=${id}`)}>
-          <Plus className="w-4 h-4 mr-1" /> New Ticket
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => navigate(`/inspections/new?property_id=${id}`)}>
-          <Plus className="w-4 h-4 mr-1" /> New Inspection
-        </Button>
-      </div>
+      <FieldGroup label="Property Management">
+        <FieldRow label="Current PM" value={pm?.company_name} />
+        {prevPm?.company_name && (
+          <FieldRow
+            label="Previous PM"
+            value={<span>{prevPm.company_name}{property.pm_changed_at ? ` (until ${new Date(property.pm_changed_at).toLocaleDateString()})` : ''}</span>}
+          />
+        )}
+      </FieldGroup>
 
-      {/* Notes (admin/supervisor only) */}
       {canSeeNotes && (
-        <div className="bg-card border border-border rounded-lg mb-4 overflow-hidden">
-          <button
-            onClick={() => setNotesOpen((o) => !o)}
-            className="w-full flex items-center justify-between p-4 text-sm font-medium text-foreground hover:bg-secondary transition-colors"
-          >
-            <span>Property Notes (internal)</span>
-            {notesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-          </button>
-          {notesOpen && (
-            <div className="p-4 pt-0 space-y-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">Tenant Name</Label>
-                <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} className="bg-secondary border-border" />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Tenant Phone</Label>
-                <Input value={tenantPhone} onChange={(e) => setTenantPhone(e.target.value)} placeholder="(555) 123-4567" className="bg-secondary border-border" />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">General Notes</Label>
-                <Textarea value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} rows={4} className="bg-secondary border-border" />
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {propertyNote?.updated_at ? `Last updated: ${new Date(propertyNote.updated_at).toLocaleString()}` : 'Not yet saved'}
-                </p>
-                <Button size="sm" onClick={saveNotes} disabled={savingNotes} className="bg-primary text-primary-foreground">
-                  {savingNotes ? <Spinner size="sm" /> : (<><Save className="w-3 h-3 mr-1" /> Save</>)}
-                </Button>
-              </div>
-            </div>
+        <FieldGroup
+          label="Tenant & Internal Notes"
+          action={
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={saveNotes} disabled={savingNotes}>
+              {savingNotes ? <Spinner size="sm" /> : (<><Save className="w-3 h-3 mr-1" /> Save</>)}
+            </Button>
+          }
+        >
+          <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-center">
+            <label className="text-xs text-muted-foreground">Tenant name</label>
+            <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} className="h-8 text-sm" />
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-center">
+            <label className="text-xs text-muted-foreground">Tenant phone</label>
+            <Input value={tenantPhone} onChange={(e) => setTenantPhone(e.target.value)} placeholder="(555) 123-4567" className="h-8 text-sm" />
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-start">
+            <label className="text-xs text-muted-foreground pt-1">Notes</label>
+            <Textarea value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} rows={3} className="text-sm" />
+          </div>
+          {propertyNote?.updated_at && (
+            <p className="text-[11px] text-muted-foreground mt-1">Last updated: {new Date(propertyNote.updated_at).toLocaleString()}</p>
           )}
-        </div>
+        </FieldGroup>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-secondary w-full justify-start">
-          <TabsTrigger value="active">Active Tickets</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="inspections">Inspections</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="active" className="mt-4">
-          {activeTickets?.length === 0 ? <p className="text-muted-foreground text-sm">No active tickets.</p> : (
-            <div className="flex flex-col gap-2">
-              {activeTickets?.map(t => (
-                <div key={t.id} onClick={() => navigate(`/tickets/${t.id}`)} className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/30">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{t.fs_number || 'Draft'}</span>
-                    <Badge variant="outline" className="text-xs">{t.status}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{t.work_type} · {t.priority}</p>
+      <div className="mt-6">
+        <SectionTabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          tabs={[
+            {
+              value: 'active',
+              label: 'Active',
+              count: activeTickets.length,
+              content: activeTickets.length === 0 ? (
+                <EmptyBlock icon={Ticket} title="No active tickets" description="Open work orders will appear here." />
+              ) : (
+                <div className="flex flex-col">
+                  {activeTickets.map(t => (
+                    <button key={t.id} onClick={() => navigate(`/tickets/${t.id}`)} className="w-full text-left py-3 px-1 border-b border-border/50 last:border-0 hover:bg-muted/30">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm text-foreground truncate">{t.fs_number || 'Draft'}</span>
+                        <Badge variant="outline" className="text-[10px] font-normal">{t.status}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{t.work_type} · {t.priority}</p>
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-4">
-          {closedTickets?.length === 0 ? <p className="text-muted-foreground text-sm">No history.</p> : (
-            <div className="flex flex-col gap-2">
-              {closedTickets?.map(t => (
-                <div key={t.id} className="bg-card border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{t.fs_number}</span>
-                    <Badge variant="outline" className="text-xs">{t.status}</Badge>
-                  </div>
-                  {t.closed_at && <p className="text-xs text-muted-foreground">Closed: {new Date(t.closed_at).toLocaleDateString()}</p>}
+              ),
+            },
+            {
+              value: 'history',
+              label: 'History',
+              count: closedTickets.length,
+              content: closedTickets.length === 0 ? (
+                <EmptyBlock icon={History} title="No history" />
+              ) : (
+                <div className="flex flex-col">
+                  {closedTickets.map(t => (
+                    <div key={t.id} className="py-3 px-1 border-b border-border/50 last:border-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm text-foreground truncate">{t.fs_number}</span>
+                        <Badge variant="outline" className="text-[10px] font-normal">{t.status}</Badge>
+                      </div>
+                      {t.closed_at && <p className="text-[11px] text-muted-foreground">Closed: {new Date(t.closed_at).toLocaleDateString()}</p>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="inspections" className="mt-4">
-          {inspections?.length === 0 ? <p className="text-muted-foreground text-sm">No inspections.</p> : (
-            <div className="flex flex-col gap-2">
-              {inspections?.map(ins => (
-                <div key={ins.id} className="bg-card border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{ins.ins_number || 'Draft'}</span>
-                    <Badge variant="outline" className="text-xs">{ins.status}</Badge>
-                  </div>
-                  {ins.visit_date && <p className="text-xs text-muted-foreground">Visit: {ins.visit_date}</p>}
+              ),
+            },
+            {
+              value: 'inspections',
+              label: 'Inspections',
+              count: inspections.length,
+              content: inspections.length === 0 ? (
+                <EmptyBlock icon={ClipboardCheck} title="No inspections" />
+              ) : (
+                <div className="flex flex-col">
+                  {inspections.map(ins => (
+                    <div key={ins.id} className="py-3 px-1 border-b border-border/50 last:border-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm text-foreground truncate">{ins.ins_number || 'Draft'}</span>
+                        <Badge variant="outline" className="text-[10px] font-normal">{ins.status}</Badge>
+                      </div>
+                      {ins.visit_date && <p className="text-[11px] text-muted-foreground">Visit: {ins.visit_date}</p>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+              ),
+            },
+          ]}
+        />
+      </div>
 
       {id && (
-        <div className="mt-6">
+        <div className="mt-8">
           <PropertyDocumentsSections propertyId={id} />
         </div>
       )}
     </div>
   );
 };
-
 
 export default PropertyDetail;

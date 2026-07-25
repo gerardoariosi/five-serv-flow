@@ -1,16 +1,23 @@
 import { useState } from 'react';
-import ImportPropertiesDialog from '@/components/properties/ImportPropertiesDialog';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, Mail, Phone, Edit } from 'lucide-react';
+import { Building2, Mail, Phone, Edit, Upload, Plus, FolderOpen, Ticket, ClipboardCheck, StickyNote } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import Spinner from '@/components/ui/Spinner';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import ImportPropertiesDialog from '@/components/properties/ImportPropertiesDialog';
+import DetailHeader from '@/components/detail/DetailHeader';
+import DetailActions from '@/components/detail/DetailActions';
+import FieldGroup from '@/components/detail/FieldGroup';
+import FieldRow from '@/components/detail/FieldRow';
+import SectionTabs from '@/components/detail/SectionTabs';
+import EmptyBlock from '@/components/detail/EmptyBlock';
+import StatusPill from '@/components/detail/StatusPill';
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +27,8 @@ const ClientDetail = () => {
   const [noteText, setNoteText] = useState('');
   const queryClient = useQueryClient();
   const { user, activeRole } = useAuthStore();
-  const canSeeNotes = activeRole === 'admin' || activeRole === 'supervisor';
+  const canManage = activeRole === 'admin' || activeRole === 'supervisor';
+  const canSeeNotes = canManage;
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['client', id],
@@ -32,57 +40,53 @@ const ClientDetail = () => {
     enabled: !!id,
   });
 
-  const { data: properties } = useQuery({
+  const { data: properties = [] } = useQuery({
     queryKey: ['client-properties', id],
     queryFn: async () => {
       const { data, error } = await supabase.from('properties').select('*').eq('current_pm_id', id!);
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'properties',
+    enabled: !!id,
   });
 
-  const { data: tickets } = useQuery({
+  const { data: tickets = [] } = useQuery({
     queryKey: ['client-tickets', id],
     queryFn: async () => {
       const { data, error } = await supabase.from('tickets').select('*, properties(name)').eq('client_id', id!).order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'tickets',
+    enabled: !!id,
   });
 
-  const { data: inspections } = useQuery({
+  const { data: inspections = [] } = useQuery({
     queryKey: ['client-inspections', id],
     queryFn: async () => {
       const { data, error } = await supabase.from('inspections').select('*, properties(name)').eq('client_id', id!).order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'inspections',
+    enabled: !!id,
   });
 
-  const { data: notes } = useQuery({
+  const { data: notes = [] } = useQuery({
     queryKey: ['client-notes', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('client_notes')
+      const { data, error } = await supabase.from('client_notes')
         .select('id, note, created_at, created_by, users:created_by(full_name)')
-        .eq('client_id', id!)
-        .order('created_at', { ascending: false });
+        .eq('client_id', id!).order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!id && activeTab === 'notes' && canSeeNotes,
+    enabled: !!id && canSeeNotes,
   });
 
   const addNote = useMutation({
     mutationFn: async (text: string) => {
       if (!user?.id) throw new Error('Not authenticated');
       const { error } = await supabase.from('client_notes').insert({
-        client_id: id!,
-        note: text,
-        created_by: user.id,
+        client_id: id!, note: text, created_by: user.id,
       });
       if (error) throw error;
     },
@@ -97,151 +101,201 @@ const ClientDetail = () => {
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (!client) return <p className="text-center text-muted-foreground py-12">Client not found.</p>;
 
-  return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <button onClick={() => navigate('/clients')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Clients
-      </button>
+  const status = (
+    <StatusPill variant="info">{client.type === 'pm' ? 'Property Manager' : 'Residential'}</StatusPill>
+  );
 
-      {/* Header */}
-      <div className="bg-card border border-border rounded-lg p-5 mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Building2 className="w-5 h-5 text-primary" />
-              <h1 className="text-lg font-bold text-foreground">{client.company_name}</h1>
-              <Badge variant="outline">{client.type === 'pm' ? 'Property Manager' : 'Residential'}</Badge>
-              {(client as any).referred_by && (
-                <Badge variant="outline" className="border-primary/40 text-primary">
-                  Referred by: {(client as any).referred_by}
-                </Badge>
+  const subline = [
+    client.contact_name,
+    `${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`,
+  ].filter(Boolean).join(' · ');
+
+  const primary = canManage ? (
+    <Button size="sm" onClick={() => navigate(`/properties/new?client_id=${id}`)}>
+      <Plus className="w-4 h-4 mr-1" /> Add Property
+    </Button>
+  ) : null;
+
+  const ghost = (
+    <>
+      {client.email && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+          <a href={`mailto:${client.email}`} aria-label="Email"><Mail className="w-4 h-4" /></a>
+        </Button>
+      )}
+      {client.phone && (
+        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+          <a href={`tel:${client.phone}`} aria-label="Call"><Phone className="w-4 h-4" /></a>
+        </Button>
+      )}
+    </>
+  );
+
+  const overflow = canManage ? (
+    <>
+      <DropdownMenuItem onClick={() => setImportOpen(true)}>
+        <Upload className="w-4 h-4 mr-2" /> Import properties (CSV)
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => navigate(`/clients/${id}/edit`)}>
+        <Edit className="w-4 h-4 mr-2" /> Edit
+      </DropdownMenuItem>
+    </>
+  ) : null;
+
+  const tabs: any[] = [
+    {
+      value: 'properties',
+      label: 'Properties',
+      count: properties.length,
+      content: properties.length === 0 ? (
+        <EmptyBlock
+          icon={FolderOpen}
+          title="No properties yet"
+          description="Add a property or import multiple via CSV."
+          action={canManage ? (
+            <Button size="sm" variant="outline" onClick={() => navigate(`/properties/new?client_id=${id}`)}>
+              <Plus className="w-4 h-4 mr-1" /> Add Property
+            </Button>
+          ) : undefined}
+        />
+      ) : (
+        <div className="flex flex-col">
+          {properties.map(p => (
+            <button
+              key={p.id}
+              onClick={() => navigate(`/properties/${p.id}`)}
+              className="w-full text-left py-3 px-1 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
+            >
+              <p className="font-medium text-sm text-foreground truncate">{p.name || p.address}</p>
+              <p className="text-xs text-muted-foreground truncate">{p.address}</p>
+              {p.previous_pm_id && p.pm_changed_at && (
+                <p className="text-[11px] text-primary mt-0.5">Previous PM until {new Date(p.pm_changed_at).toLocaleDateString()}</p>
               )}
-              {(client as any).lead_source && (
-                <Badge variant="secondary" className="capitalize text-[10px]">
-                  {(client as any).lead_source}
-                </Badge>
-              )}
+            </button>
+          ))}
+        </div>
+      ),
+    },
+    {
+      value: 'tickets',
+      label: 'Tickets',
+      count: tickets.length,
+      content: tickets.length === 0 ? (
+        <EmptyBlock icon={Ticket} title="No tickets" description="Work orders for this client will appear here." />
+      ) : (
+        <div className="flex flex-col">
+          {tickets.map(t => (
+            <button
+              key={t.id}
+              onClick={() => navigate(`/tickets/${t.id}`)}
+              className="w-full text-left py-3 px-1 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-sm text-foreground truncate">{t.fs_number || 'Draft'}</span>
+                <Badge variant="outline" className="text-[10px] font-normal">{t.status}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground truncate">{(t as any).properties?.name} · {t.work_type}</p>
+            </button>
+          ))}
+        </div>
+      ),
+    },
+    {
+      value: 'inspections',
+      label: 'Inspections',
+      count: inspections.length,
+      content: inspections.length === 0 ? (
+        <EmptyBlock icon={ClipboardCheck} title="No inspections" />
+      ) : (
+        <div className="flex flex-col">
+          {inspections.map(ins => (
+            <div key={ins.id} className="py-3 px-1 border-b border-border/50 last:border-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-sm text-foreground truncate">{ins.ins_number || 'Draft'}</span>
+                <Badge variant="outline" className="text-[10px] font-normal">{ins.status}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground truncate">{(ins as any).properties?.name}</p>
+              {ins.visit_date && <p className="text-[11px] text-muted-foreground">Visit: {ins.visit_date}</p>}
             </div>
-            <div className="flex flex-col gap-1 text-sm text-muted-foreground ml-7">
-              {client.contact_name && <span>{client.contact_name}</span>}
-              {client.email && <a href={`mailto:${client.email}`} className="flex items-center gap-1 hover:text-primary"><Mail className="w-3 h-3" />{client.email}</a>}
-              {client.phone && <a href={`tel:${client.phone}`} className="flex items-center gap-1 hover:text-primary"><Phone className="w-3 h-3" />{client.phone}</a>}
+          ))}
+        </div>
+      ),
+    },
+  ];
+
+  if (canSeeNotes) {
+    tabs.push({
+      value: 'notes',
+      label: 'Notes',
+      count: notes.length,
+      content: (
+        <div className="space-y-4">
+          <div>
+            <Textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Add an internal note about this client…"
+              rows={3}
+            />
+            <div className="flex justify-end mt-2">
+              <Button
+                size="sm"
+                disabled={!noteText.trim() || addNote.isPending}
+                onClick={() => addNote.mutate(noteText.trim())}
+              >
+                {addNote.isPending ? 'Saving…' : 'Save Note'}
+              </Button>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/clients/${id}/edit`)}>
-            <Edit className="w-4 h-4 mr-1" /> Edit
-          </Button>
+          {notes.length === 0 ? (
+            <EmptyBlock icon={StickyNote} title="No notes yet" description="Internal notes are only visible to admins and supervisors." />
+          ) : (
+            <div className="flex flex-col">
+              {notes.map((n: any) => (
+                <div key={n.id} className="py-3 border-b border-border/50 last:border-0">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{n.note}</p>
+                  <div className="flex items-center justify-between mt-1.5 text-[11px] text-muted-foreground">
+                    <span>{n.users?.full_name || 'Unknown'}</span>
+                    <span>{new Date(n.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      ),
+    });
+  }
+
+  return (
+    <div className="p-4 max-w-3xl mx-auto pb-16">
+      <DetailHeader
+        backTo="/clients"
+        icon={<Building2 className="w-4 h-4" />}
+        name={client.company_name}
+        subline={subline || undefined}
+        status={status}
+        actions={<DetailActions primary={primary} ghost={ghost} overflow={overflow} />}
+      />
+
+      <FieldGroup label="Contact" first>
+        <FieldRow label="Contact" value={client.contact_name} />
+        <FieldRow label="Email" value={client.email ? <a href={`mailto:${client.email}`} className="hover:text-primary break-all">{client.email}</a> : null} />
+        <FieldRow label="Phone" value={client.phone ? <a href={`tel:${client.phone}`} className="hover:text-primary">{client.phone}</a> : null} />
+      </FieldGroup>
+
+      {((client as any).referred_by || (client as any).lead_source) && (
+        <FieldGroup label="Source">
+          <FieldRow label="Referred by" value={(client as any).referred_by} />
+          <FieldRow label="Lead source" value={(client as any).lead_source ? <span className="capitalize">{(client as any).lead_source}</span> : null} />
+        </FieldGroup>
+      )}
+
+      <div className="mt-6">
+        <SectionTabs value={activeTab} onValueChange={setActiveTab} tabs={tabs} />
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-secondary w-full justify-start">
-          <TabsTrigger value="properties">Properties</TabsTrigger>
-          <TabsTrigger value="tickets">Tickets</TabsTrigger>
-          <TabsTrigger value="inspections">Inspections</TabsTrigger>
-          {canSeeNotes && <TabsTrigger value="notes">Internal Notes</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="properties" className="mt-4">
-          <div className="flex gap-2 mb-4 flex-wrap">
-            <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => navigate(`/properties/new?client_id=${id}`)}>
-              Add Property
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
-              Import Properties (CSV)
-            </Button>
-          </div>
-          {id && <ImportPropertiesDialog open={importOpen} onOpenChange={setImportOpen} clientId={id} />}
-          {properties?.length === 0 ? <p className="text-muted-foreground text-sm">No properties.</p> : (
-            <div className="flex flex-col gap-2">
-              {properties?.map(p => (
-                <div key={p.id} onClick={() => navigate(`/properties/${p.id}`)} className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/30 transition-colors">
-                  <span className="font-medium text-foreground">{p.name || p.address}</span>
-                  <p className="text-sm text-muted-foreground">{p.address}</p>
-                  {p.previous_pm_id && p.pm_changed_at && (
-                    <p className="text-xs text-primary mt-1">Previous PM until {new Date(p.pm_changed_at).toLocaleDateString()}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="tickets" className="mt-4">
-          {tickets?.length === 0 ? <p className="text-muted-foreground text-sm">No tickets.</p> : (
-            <div className="flex flex-col gap-2">
-              {tickets?.map(t => (
-                <div key={t.id} onClick={() => navigate(`/tickets/${t.id}`)} className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:border-primary/30 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{t.fs_number || 'Draft'}</span>
-                    <Badge variant="outline" className="text-xs">{t.status}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{(t as any).properties?.name} · {t.work_type}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(t.created_at!).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="inspections" className="mt-4">
-          {inspections?.length === 0 ? <p className="text-muted-foreground text-sm">No inspections.</p> : (
-            <div className="flex flex-col gap-2">
-              {inspections?.map(ins => (
-                <div key={ins.id} className="bg-card border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{ins.ins_number || 'Draft'}</span>
-                    <Badge variant="outline" className="text-xs">{ins.status}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{(ins as any).properties?.name}</p>
-                  {ins.visit_date && <p className="text-xs text-muted-foreground">Visit: {ins.visit_date}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {canSeeNotes && (
-          <TabsContent value="notes" className="mt-4">
-            <div className="bg-card border border-border rounded-lg p-4 mb-4">
-              <Textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Add a note about this client..."
-                rows={4}
-                className="mb-3"
-              />
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={!noteText.trim() || addNote.isPending}
-                  onClick={() => addNote.mutate(noteText.trim())}
-                >
-                  {addNote.isPending ? 'Saving...' : 'Save Note'}
-                </Button>
-              </div>
-            </div>
-
-            {notes?.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No notes yet.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {notes?.map((n: any) => (
-                  <div key={n.id} className="bg-card border border-border rounded-lg p-3">
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{n.note}</p>
-                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                      <span>{n.users?.full_name || 'Unknown'}</span>
-                      <span>{new Date(n.created_at).toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        )}
-      </Tabs>
+      {id && <ImportPropertiesDialog open={importOpen} onOpenChange={setImportOpen} clientId={id} />}
     </div>
   );
 };
