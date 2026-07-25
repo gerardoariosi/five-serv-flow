@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          changes: Json | null
+          created_at: string
+          id: string
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          changes?: Json | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       chat_groups: {
         Row: {
           created_at: string | null
@@ -161,7 +194,9 @@ export type Database = {
           email: string | null
           id: string
           is_deleted: boolean
+          lead_source: string | null
           phone: string | null
+          referred_by: string | null
           status: string | null
           type: string | null
         }
@@ -174,7 +209,9 @@ export type Database = {
           email?: string | null
           id?: string
           is_deleted?: boolean
+          lead_source?: string | null
           phone?: string | null
+          referred_by?: string | null
           status?: string | null
           type?: string | null
         }
@@ -187,7 +224,9 @@ export type Database = {
           email?: string | null
           id?: string
           is_deleted?: boolean
+          lead_source?: string | null
           phone?: string | null
+          referred_by?: string | null
           status?: string | null
           type?: string | null
         }
@@ -839,8 +878,10 @@ export type Database = {
           deleted_at: string | null
           email: string | null
           id: string
+          insurance_expiration_date: string | null
           insurance_info: string | null
           is_deleted: boolean
+          license_expiration_date: string | null
           license_number: string | null
           notes: string | null
           phone: string | null
@@ -855,8 +896,10 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          insurance_expiration_date?: string | null
           insurance_info?: string | null
           is_deleted?: boolean
+          license_expiration_date?: string | null
           license_number?: string | null
           notes?: string | null
           phone?: string | null
@@ -871,8 +914,10 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          insurance_expiration_date?: string | null
           insurance_info?: string | null
           is_deleted?: boolean
+          license_expiration_date?: string | null
           license_number?: string | null
           notes?: string | null
           phone?: string | null
@@ -1369,6 +1414,82 @@ export type Database = {
           roles?: string[] | null
         }
         Relationships: []
+      }
+      vendor_documents: {
+        Row: {
+          doc_type: string
+          file_name: string | null
+          file_path: string
+          id: string
+          uploaded_at: string
+          uploaded_by: string | null
+          vendor_id: string
+        }
+        Insert: {
+          doc_type: string
+          file_name?: string | null
+          file_path: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          vendor_id: string
+        }
+        Update: {
+          doc_type?: string
+          file_name?: string | null
+          file_path?: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_documents_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "technicians_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          payment_date: string
+          vendor_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          payment_date: string
+          vendor_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          payment_date?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_payments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "technicians_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       work_types: {
         Row: {
