@@ -1,0 +1,1 @@
+ALTER TABLE public.vendor_payments ADD COLUMN IF NOT EXISTS proof_url text;

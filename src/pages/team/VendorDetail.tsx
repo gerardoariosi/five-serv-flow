@@ -30,6 +30,8 @@ import {
 } from '@/lib/vendorAlerts';
 import AddVendorPaymentDialog from '@/components/vendors/AddVendorPaymentDialog';
 import MarkPaidDialog from '@/components/vendors/MarkPaidDialog';
+import ProofLink from '@/components/vendors/ProofLink';
+
 
 const DOC_TYPE_LABEL: Record<string, string> = {
   w9: 'W-9',
@@ -329,12 +331,14 @@ const VendorDetail = () => {
                     Wk {p.week_ending_date ?? p.payment_date} · Due {p.due_date ?? '—'}
                     {p.status === 'paid' && p.paid_at && ` · Paid ${p.paid_at}`}
                   </span>
+                  {p.status === 'paid' && p.proof_url && <ProofLink path={p.proof_url} />}
                   {p.note && <span className="flex-1 min-w-[100px] truncate text-muted-foreground">— {p.note}</span>}
                   {p.status === 'pending' && canManagePayments && (
                     <Button size="sm" variant="outline" className="h-6 text-[10px] ml-auto" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
                       Mark Paid
                     </Button>
                   )}
+
                 </div>
               ))}
             </div>
@@ -384,9 +388,11 @@ const VendorDetail = () => {
         open={!!markPaid}
         onOpenChange={(o) => !o && setMarkPaid(null)}
         paymentId={markPaid?.id ?? null}
+        vendorId={id}
         amount={markPaid?.amount}
         onSaved={() => { refetchPay(); setMarkPaid(null); }}
       />
+
     </div>
   );
 };
