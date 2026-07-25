@@ -4,23 +4,40 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot, X, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Check, AlertTriangle, CircleDot, X, Plus, MinusCircle, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { buildAreas } from '@/lib/inspectionAreas';
 import Spinner from '@/components/ui/Spinner';
 import { compressImage } from '@/lib/imageCompression';
+import PhotoMarkerDialog from '@/components/inspections/PhotoMarkerDialog';
 
-type ItemStatus = 'good' | 'needs_repair' | 'urgent';
+type ItemStatus = 'good' | 'needs_repair' | 'urgent' | 'na';
+type ItemPriority = 'low' | 'medium' | 'high' | null;
 
 interface AreaItemState {
   item_name: string;
   area: string;
   status: ItemStatus;
   item_note?: string;
+  priority?: ItemPriority;
   dbId?: string;
 }
+
+interface PhotoRec {
+  id?: string;
+  url: string;
+  displayUrl: string;
+  area: string;
+  item_id?: string | null;
+  marker_x?: number | null;
+  marker_y?: number | null;
+  marker_note?: string | null;
+}
+
+const statusLabelMap: Record<ItemStatus, string> = {
+  good: 'Good', needs_repair: 'Repair', urgent: 'Urgent', na: 'N/A',
+};
 
 const AreaInspection = () => {
   const { user } = useAuthStore();
@@ -30,13 +47,17 @@ const AreaInspection = () => {
   const [loading, setLoading] = useState(true);
   const [currentAreaIndex, setCurrentAreaIndex] = useState(0);
   const [items, setItems] = useState<Record<string, AreaItemState[]>>({});
-  const [photos, setPhotos] = useState<Record<string, any[]>>({});
+  const [photos, setPhotos] = useState<Record<string, PhotoRec[]>>({}); // area-level (item_id null)
+  const [itemPhotos, setItemPhotos] = useState<Record<string, PhotoRec[]>>({}); // key = item dbId
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
+  const [priorItems, setPriorItems] = useState<Record<string, { status: string; item_note: string | null; date: string }>>({});
+  const [expandedPrior, setExpandedPrior] = useState<Record<string, boolean>>({});
+  const [markerPhoto, setMarkerPhoto] = useState<PhotoRec | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -44,10 +65,8 @@ const AreaInspection = () => {
     if (!ins) { setLoading(false); return; }
     setInspection(ins);
 
-    // Load existing items
     const { data: existingItems } = await supabase.from('inspection_items').select('*').eq('inspection_id', id);
 
-    // Build areas from config
     const areas = buildAreas({
       bedrooms: ins.bedrooms ?? 1,
       bathrooms: ins.bathrooms ?? 1,
@@ -57,7 +76,6 @@ const AreaInspection = () => {
       has_exterior: ins.has_exterior ?? false,
     });
 
-    // Initialize items state from existing or defaults
     const itemsMap: Record<string, AreaItemState[]> = {};
     const notesMap: Record<string, string> = {};
     for (const area of areas) {
@@ -68,10 +86,10 @@ const AreaInspection = () => {
           area: area.key,
           status: (existing?.status as ItemStatus) ?? 'good',
           item_note: existing?.item_note ?? '',
+          priority: (existing?.priority as ItemPriority) ?? null,
           dbId: existing?.id,
         };
       });
-      // Also add custom items from DB that aren't in defaults
       const defaultNames = new Set(area.items.map(i => i.name));
       (existingItems ?? [])
         .filter((e: any) => e.area === area.key && !defaultNames.has(e.item_name))
@@ -81,34 +99,63 @@ const AreaInspection = () => {
             area: area.key,
             status: (e.status as ItemStatus) ?? 'good',
             item_note: e.item_note ?? '',
+            priority: (e.priority as ItemPriority) ?? null,
             dbId: e.id,
           });
         });
       itemsMap[area.key] = areaItems;
-      // Load notes from first item's note column (stored per area)
       const firstWithNote = (existingItems ?? []).find((e: any) => e.area === area.key && e.note);
       notesMap[area.key] = firstWithNote?.note ?? '';
     }
     setItems(itemsMap);
     setNotes(notesMap);
 
-    // Load photos grouped by area from dedicated inspection_photos table
     const { data: allPhotos } = await supabase.from('inspection_photos')
       .select('*')
       .eq('inspection_id', id)
       .order('uploaded_at', { ascending: true });
-    const photosMap: Record<string, any[]> = {};
+    const areaPhotoMap: Record<string, PhotoRec[]> = {};
+    const itemPhotoMap: Record<string, PhotoRec[]> = {};
     for (const p of (allPhotos ?? [])) {
       const area = p.area ?? 'other';
-      if (!photosMap[area]) photosMap[area] = [];
+      let displayUrl = '';
       if (p.url) {
         const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(p.url, 3600);
-        photosMap[area].push({ ...p, displayUrl: signedData?.signedUrl || p.url });
+        displayUrl = signedData?.signedUrl || '';
+      }
+      const rec: PhotoRec = { ...p, displayUrl, area };
+      if (p.item_id) {
+        if (!itemPhotoMap[p.item_id]) itemPhotoMap[p.item_id] = [];
+        itemPhotoMap[p.item_id].push(rec);
       } else {
-        photosMap[area].push({ ...p, displayUrl: '' });
+        if (!areaPhotoMap[area]) areaPhotoMap[area] = [];
+        areaPhotoMap[area].push(rec);
       }
     }
-    setPhotos(photosMap);
+    setPhotos(areaPhotoMap);
+    setItemPhotos(itemPhotoMap);
+
+    // Prior inspection reference — most recent completed inspection for same property
+    if (ins.property_id) {
+      const { data: prior } = await supabase.from('inspections')
+        .select('id, created_at')
+        .eq('property_id', ins.property_id)
+        .neq('id', id)
+        .in('status', ['complete', 'converted', 'closed_internally', 'sent', 'pm_responded', 'estimate_approved'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (prior?.id) {
+        const { data: priorItemsData } = await supabase.from('inspection_items')
+          .select('item_name, status, item_note')
+          .eq('inspection_id', prior.id);
+        const map: Record<string, { status: string; item_note: string | null; date: string }> = {};
+        for (const pi of (priorItemsData ?? [])) {
+          map[pi.item_name] = { status: pi.status, item_note: pi.item_note, date: prior.created_at };
+        }
+        setPriorItems(map);
+      }
+    }
 
     setLoading(false);
   }, [id]);
@@ -132,17 +179,26 @@ const AreaInspection = () => {
   const currentPhotos = currentArea ? (photos[currentArea.key] ?? []) : [];
   const currentNote = currentArea ? (notes[currentArea.key] ?? '') : '';
 
-  const hasRepairOrUrgent = currentItems.some(i => i.status !== 'good');
+  const hasRepairOrUrgent = currentItems.some(i => i.status === 'needs_repair' || i.status === 'urgent');
   const minPhotos = hasRepairOrUrgent ? 3 : 1;
   const photosEnough = currentPhotos.length >= minPhotos;
+  const itemPhotoReq = currentItems.every(i =>
+    i.status === 'good' || i.status === 'na' || !i.dbId
+      ? (i.status === 'good' || i.status === 'na')
+      : (itemPhotos[i.dbId!]?.length ?? 0) >= 1
+  );
+  // For items without dbId yet but Repair/Urgent, block Next until saved so they can add a photo.
+  const unsavedRepair = currentItems.some(i => (i.status === 'needs_repair' || i.status === 'urgent') && !i.dbId);
 
   const setItemStatus = (index: number, status: ItemStatus) => {
     if (!currentArea) return;
     const updated = [...currentItems];
-    updated[index] = { ...updated[index], status };
-    // Clear item_note when switching back to good
-    if (status === 'good') {
-      updated[index] = { ...updated[index], status, item_note: '' };
+    const curr = updated[index];
+    if (status === 'good' || status === 'na') {
+      updated[index] = { ...curr, status, item_note: '', priority: null };
+    } else {
+      // default priority medium when first flipping to repair/urgent
+      updated[index] = { ...curr, status, priority: curr.priority ?? 'medium' };
     }
     setItems(prev => ({ ...prev, [currentArea.key]: updated }));
   };
@@ -154,10 +210,18 @@ const AreaInspection = () => {
     setItems(prev => ({ ...prev, [currentArea.key]: updated }));
   };
 
+  const setItemPriority = (index: number, priority: ItemPriority) => {
+    if (!currentArea) return;
+    const updated = [...currentItems];
+    updated[index] = { ...updated[index], priority };
+    setItems(prev => ({ ...prev, [currentArea.key]: updated }));
+  };
+
   const autoSave = useCallback(async () => {
     if (!id || !currentArea) return;
     setSaving(true);
-    for (const item of items[currentArea.key] ?? []) {
+    const list = items[currentArea.key] ?? [];
+    for (const item of list) {
       const payload: any = {
         inspection_id: id,
         area: item.area,
@@ -165,6 +229,7 @@ const AreaInspection = () => {
         status: item.status,
         note: notes[currentArea.key] || null,
         item_note: item.item_note || null,
+        priority: item.priority ?? null,
       };
       if (item.dbId) {
         await supabase.from('inspection_items').update(payload).eq('id', item.dbId);
@@ -173,68 +238,99 @@ const AreaInspection = () => {
         if (data) item.dbId = data.id;
       }
     }
-    // Update inspection status to in_progress
+    setItems(prev => ({ ...prev, [currentArea.key]: [...list] }));
     await supabase.from('inspections').update({ status: 'in_progress' }).eq('id', id);
     setSaving(false);
   }, [id, currentArea, items, notes]);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAreaPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !currentArea || !id) return;
     if (!user?.id) { toast.error('Not authenticated'); return; }
-
     const files = Array.from(e.target.files);
-    const total = files.length;
     setUploading(true);
-    setUploadProgress({ current: 0, total });
-
+    setUploadProgress({ current: 0, total: files.length });
     for (let i = 0; i < files.length; i++) {
-      setUploadProgress({ current: i + 1, total });
+      setUploadProgress({ current: i + 1, total: files.length });
       const file = await compressImage(files[i]);
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `inspections/${id}/${currentArea.key}/${Date.now()}-${safeName}`;
       const { error } = await supabase.storage.from('inspection-photos').upload(path, file, { contentType: file.type || 'image/jpeg' });
       if (error) { toast.error(`Upload failed for ${file.name}`); continue; }
-      const { error: insertError } = await supabase.from('inspection_photos').insert({
-        inspection_id: id,
-        area: currentArea.key,
-        url: path,
-        uploaded_by: user.id,
-      });
-      if (insertError) {
+      const { data: inserted, error: insertError } = await supabase.from('inspection_photos').insert({
+        inspection_id: id, area: currentArea.key, url: path, uploaded_by: user.id,
+      }).select('*').single();
+      if (insertError || !inserted) {
         await supabase.storage.from('inspection-photos').remove([path]);
-        toast.error(`Failed to save record for ${file.name}`);
+        toast.error(`Failed to save record`);
         continue;
       }
       const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(path, 3600);
-      setPhotos(prev => ({
-        ...prev,
-        [currentArea.key]: [...(prev[currentArea.key] ?? []), { url: path, displayUrl: signedData?.signedUrl || '', area: currentArea.key, id: Date.now().toString() + i }],
-      }));
+      const rec: PhotoRec = { ...inserted, area: currentArea.key, displayUrl: signedData?.signedUrl || '' };
+      setPhotos(prev => ({ ...prev, [currentArea.key]: [...(prev[currentArea.key] ?? []), rec] }));
     }
-
-    toast.success(`${total} photo${total > 1 ? 's' : ''} uploaded`);
+    toast.success(`${files.length} photo${files.length > 1 ? 's' : ''} uploaded`);
     setUploading(false);
     setUploadProgress(null);
     e.target.value = '';
   };
 
-  const handleDeletePhoto = async (photo: any) => {
-    if (!currentArea) return;
-    if (photo.url) {
-      await supabase.storage.from('inspection-photos').remove([photo.url]);
+  const handleItemPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, item: AreaItemState) => {
+    if (!e.target.files?.length || !currentArea || !id || !item.dbId) return;
+    if (!user?.id) { toast.error('Not authenticated'); return; }
+    const files = Array.from(e.target.files);
+    setUploading(true);
+    for (const raw of files) {
+      const file = await compressImage(raw);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `inspections/${id}/${currentArea.key}/items/${item.dbId}/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from('inspection-photos').upload(path, file, { contentType: file.type || 'image/jpeg' });
+      if (error) { toast.error(`Upload failed`); continue; }
+      const { data: inserted, error: insertError } = await supabase.from('inspection_photos').insert({
+        inspection_id: id, area: currentArea.key, item_id: item.dbId, url: path, uploaded_by: user.id,
+      }).select('*').single();
+      if (insertError || !inserted) {
+        await supabase.storage.from('inspection-photos').remove([path]);
+        toast.error(`Failed to save record`);
+        continue;
+      }
+      const { data: signedData } = await supabase.storage.from('inspection-photos').createSignedUrl(path, 3600);
+      const rec: PhotoRec = { ...inserted, area: currentArea.key, displayUrl: signedData?.signedUrl || '' };
+      setItemPhotos(prev => ({ ...prev, [item.dbId!]: [...(prev[item.dbId!] ?? []), rec] }));
     }
-    if (photo.id) {
-      await supabase.from('inspection_photos').delete().eq('id', photo.id);
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const handleDeletePhoto = async (photo: PhotoRec, itemId?: string) => {
+    if (photo.url) await supabase.storage.from('inspection-photos').remove([photo.url]);
+    if (photo.id) await supabase.from('inspection_photos').delete().eq('id', photo.id);
+    if (itemId) {
+      setItemPhotos(prev => ({ ...prev, [itemId]: (prev[itemId] ?? []).filter(p => p.id !== photo.id) }));
+    } else if (currentArea) {
+      setPhotos(prev => ({ ...prev, [currentArea.key]: (prev[currentArea.key] ?? []).filter(p => p.id !== photo.id) }));
     }
-    setPhotos(prev => ({
-      ...prev,
-      [currentArea.key]: (prev[currentArea.key] ?? []).filter((p: any) => p.id !== photo.id),
-    }));
     toast.success('Photo deleted');
+  };
+
+  const handleSaveMarker = async (photo: PhotoRec, data: { x: number | null; y: number | null; note: string | null }) => {
+    if (!photo.id) return;
+    await supabase.from('inspection_photos').update({
+      marker_x: data.x, marker_y: data.y, marker_note: data.note,
+    }).eq('id', photo.id);
+    // Update local state
+    if (photo.item_id) {
+      setItemPhotos(prev => ({
+        ...prev,
+        [photo.item_id!]: (prev[photo.item_id!] ?? []).map(p => p.id === photo.id ? { ...p, marker_x: data.x, marker_y: data.y, marker_note: data.note } : p),
+      }));
+    }
+    toast.success('Marker saved');
   };
 
   const goNext = async () => {
     await autoSave();
+    if (unsavedRepair) { toast.error('Saved. Add a photo to each repair/urgent item.'); return; }
+    if (!itemPhotoReq) { toast.error('Each Repair/Urgent item needs at least one photo'); return; }
     if (currentAreaIndex < areas.length - 1) {
       setCurrentAreaIndex(prev => prev + 1);
     } else {
@@ -283,45 +379,134 @@ const AreaInspection = () => {
         ))}
       </div>
 
-      {/* Area header */}
       <h2 className="text-lg font-bold text-foreground">{currentArea.label}</h2>
 
       {/* Items */}
       <div className="space-y-3">
-        {currentItems.map((item, idx) => (
-          <div key={item.item_name + idx} className="bg-card border border-border rounded-lg p-3">
-            <p className="text-sm font-medium text-foreground mb-2">{item.item_name}</p>
-            <div className="flex gap-2">
-              {([
-                { status: 'good' as const, label: 'Good', color: 'bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white', icon: Check },
-                { status: 'needs_repair' as const, label: 'Repair', color: 'bg-[hsl(27,96%,45%)] hover:bg-[hsl(27,96%,40%)] text-white', icon: CircleDot },
-                { status: 'urgent' as const, label: 'Urgent', color: 'bg-destructive hover:bg-destructive/90 text-white', icon: AlertTriangle },
-              ]).map(opt => (
+        {currentItems.map((item, idx) => {
+          const isNA = item.status === 'na';
+          const needsPhoto = item.status === 'needs_repair' || item.status === 'urgent';
+          const imgs = item.dbId ? (itemPhotos[item.dbId] ?? []) : [];
+          const prior = priorItems[item.item_name];
+          const priorExpanded = !!expandedPrior[item.item_name];
+          return (
+            <div key={item.item_name + idx} className={`bg-card border border-border rounded-lg p-3 ${isNA ? 'opacity-60' : ''}`}>
+              <p className="text-sm font-medium text-foreground mb-2">{item.item_name}</p>
+              <div className="flex gap-2">
+                {([
+                  { status: 'good' as const, label: 'Good', color: 'bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white', icon: Check },
+                  { status: 'needs_repair' as const, label: 'Repair', color: 'bg-[hsl(27,96%,45%)] hover:bg-[hsl(27,96%,40%)] text-white', icon: CircleDot },
+                  { status: 'urgent' as const, label: 'Urgent', color: 'bg-destructive hover:bg-destructive/90 text-white', icon: AlertTriangle },
+                  { status: 'na' as const, label: 'N/A', color: 'bg-muted-foreground/70 hover:bg-muted-foreground text-white', icon: MinusCircle },
+                ]).map(opt => (
+                  <button
+                    key={opt.status}
+                    onClick={() => setItemStatus(idx, opt.status)}
+                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-md text-xs font-medium transition-all ${
+                      item.status === opt.status ? opt.color : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                    }`}
+                  >
+                    <opt.icon className="w-3 h-3" />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {needsPhoto && (
+                <>
+                  <Textarea
+                    value={item.item_note ?? ''}
+                    onChange={e => setItemNote(idx, e.target.value)}
+                    rows={2}
+                    placeholder="Describe what needs repair..."
+                    className="mt-2 text-sm"
+                    maxLength={2000}
+                  />
+
+                  {/* Priority */}
+                  <div className="mt-2">
+                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Priority</span>
+                    <div className="flex gap-2 mt-1">
+                      {([
+                        { p: 'low' as const, label: 'Low', color: 'bg-[hsl(142,71%,35%)] text-white' },
+                        { p: 'medium' as const, label: 'Medium', color: 'bg-[hsl(45,93%,47%)] text-black' },
+                        { p: 'high' as const, label: 'High', color: 'bg-destructive text-white' },
+                      ]).map(opt => (
+                        <button
+                          key={opt.p}
+                          onClick={() => setItemPriority(idx, opt.p)}
+                          className={`flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
+                            item.priority === opt.p ? opt.color : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Item photos */}
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Item Photos ({imgs.length})</span>
+                      {imgs.length === 0 && item.dbId && (
+                        <span className="text-[11px] text-destructive">Photo required</span>
+                      )}
+                    </div>
+                    {!item.dbId ? (
+                      <p className="text-[11px] text-muted-foreground">Photo upload available after saving (tap Next/Back once).</p>
+                    ) : (
+                      <>
+                        <label className="flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-primary/40 rounded-md cursor-pointer hover:bg-primary/5 transition-colors">
+                          <Camera className="w-4 h-4 text-primary" />
+                          <span className="text-xs text-primary font-medium">Add photo for this item</span>
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleItemPhotoUpload(e, item)} disabled={uploading} />
+                        </label>
+                        {imgs.length > 0 && (
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            {imgs.map(p => (
+                              <div key={p.id} className="relative rounded-md overflow-hidden border border-border group">
+                                <img src={p.displayUrl || p.url} alt="" className="w-full h-20 object-cover" />
+                                {p.marker_x != null && p.marker_y != null && (
+                                  <div
+                                    className="absolute w-3 h-3 rounded-full bg-primary border-2 border-white shadow -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                                    style={{ left: `${p.marker_x * 100}%`, top: `${p.marker_y * 100}%` }}
+                                  />
+                                )}
+                                <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent">
+                                  <button onClick={() => setMarkerPhoto(p)} className="text-white" title="Mark defect">
+                                    <MapPin className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => handleDeletePhoto(p, item.dbId)} className="text-white" title="Delete">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Prior inspection reference */}
+              {prior && (
                 <button
-                  key={opt.status}
-                  onClick={() => setItemStatus(idx, opt.status)}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-md text-xs font-medium transition-all ${
-                    item.status === opt.status ? opt.color : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
-                  }`}
+                  onClick={() => setExpandedPrior(prev => ({ ...prev, [item.item_name]: !prev[item.item_name] }))}
+                  className="mt-2 w-full flex items-center justify-between text-[11px] text-muted-foreground hover:text-foreground"
                 >
-                  <opt.icon className="w-3 h-3" />
-                  {opt.label}
+                  <span>Last time: {statusLabelMap[prior.status as ItemStatus] ?? prior.status} — {new Date(prior.date).toLocaleDateString()}</span>
+                  {priorExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </button>
-              ))}
+              )}
+              {prior && priorExpanded && prior.item_note && (
+                <p className="mt-1 text-[11px] text-muted-foreground border-l-2 border-border pl-2">{prior.item_note}</p>
+              )}
             </div>
-            {/* Per-item note for repair/urgent */}
-            {(item.status === 'needs_repair' || item.status === 'urgent') && (
-              <Textarea
-                value={item.item_note ?? ''}
-                onChange={e => setItemNote(idx, e.target.value)}
-                rows={2}
-                placeholder="Describe what needs repair..."
-                className="mt-2 text-sm"
-                maxLength={2000}
-              />
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add custom item */}
@@ -336,30 +521,23 @@ const AreaInspection = () => {
                 setItems(prev => ({
                   ...prev,
                   [currentArea.key]: [...(prev[currentArea.key] ?? []), {
-                    item_name: newItemName.trim(),
-                    area: currentArea.key,
-                    status: 'good' as ItemStatus,
+                    item_name: newItemName.trim(), area: currentArea.key, status: 'good' as ItemStatus,
                   }],
                 }));
-                setNewItemName('');
-                setShowAddItem(false);
+                setNewItemName(''); setShowAddItem(false);
               }
             }}
-            autoFocus
-            className="flex-1"
+            autoFocus className="flex-1"
           />
           <Button size="sm" onClick={() => {
             if (!newItemName.trim()) return;
             setItems(prev => ({
               ...prev,
               [currentArea.key]: [...(prev[currentArea.key] ?? []), {
-                item_name: newItemName.trim(),
-                area: currentArea.key,
-                status: 'good' as ItemStatus,
+                item_name: newItemName.trim(), area: currentArea.key, status: 'good' as ItemStatus,
               }],
             }));
-            setNewItemName('');
-            setShowAddItem(false);
+            setNewItemName(''); setShowAddItem(false);
           }}>Add</Button>
           <Button size="sm" variant="ghost" onClick={() => { setShowAddItem(false); setNewItemName(''); }}>
             <X className="w-4 h-4" />
@@ -371,10 +549,11 @@ const AreaInspection = () => {
         </Button>
       )}
 
+      {/* Area-level photos */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">
-            Photos ({currentPhotos.length}/{minPhotos} min)
+            Area Photos ({currentPhotos.length}/{minPhotos} min)
           </span>
           {!photosEnough && (
             <span className="text-xs text-destructive">Need {minPhotos - currentPhotos.length} more</span>
@@ -385,13 +564,13 @@ const AreaInspection = () => {
           <span className="text-sm text-primary font-medium">
             {uploading && uploadProgress
               ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}...`
-              : 'Add Photos'}
+              : 'Add Area Photos'}
           </span>
-          <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+          <input type="file" accept="image/*" multiple className="hidden" onChange={handleAreaPhotoUpload} disabled={uploading} />
         </label>
         {currentPhotos.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
-            {currentPhotos.map((p: any, i: number) => (
+            {currentPhotos.map((p, i) => (
               <div key={p.id ?? i} className="relative rounded-lg overflow-hidden border border-border group">
                 <img src={p.displayUrl || p.url} alt="" className="w-full h-20 object-cover" />
                 <button
@@ -407,7 +586,7 @@ const AreaInspection = () => {
         )}
       </div>
 
-      {/* Notes */}
+      {/* Area Notes */}
       <div>
         <span className="text-sm font-medium text-foreground">Area Notes (optional)</span>
         <Textarea
@@ -429,7 +608,7 @@ const AreaInspection = () => {
         <Button variant="outline" className="flex-1" onClick={goBack} disabled={currentAreaIndex === 0 || saving || uploading}>
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
-        <Button className="flex-1" onClick={goNext} disabled={!photosEnough || saving || uploading}>
+        <Button className="flex-1" onClick={goNext} disabled={!photosEnough || !itemPhotoReq || saving || uploading}>
           {saving ? <Spinner size="sm" /> : currentAreaIndex === areas.length - 1 ? (
             <>Finish <Check className="w-4 h-4 ml-1" /></>
           ) : (
@@ -437,6 +616,18 @@ const AreaInspection = () => {
           )}
         </Button>
       </div>
+
+      {markerPhoto && (
+        <PhotoMarkerDialog
+          open={!!markerPhoto}
+          onOpenChange={(v) => { if (!v) setMarkerPhoto(null); }}
+          imageUrl={markerPhoto.displayUrl || markerPhoto.url}
+          initialX={markerPhoto.marker_x ?? null}
+          initialY={markerPhoto.marker_y ?? null}
+          initialNote={markerPhoto.marker_note ?? null}
+          onSave={async (data) => { await handleSaveMarker(markerPhoto, data); }}
+        />
+      )}
     </div>
   );
 };
