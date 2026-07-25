@@ -209,15 +209,20 @@ const ClientDetail = () => {
       ) : (
         <div className="flex flex-col">
           {inspections.map(ins => (
-            <div key={ins.id} className="py-3 px-1 border-b border-border/50 last:border-0">
+            <button
+              key={ins.id}
+              onClick={() => navigate(`/inspections/${ins.id}`)}
+              className="w-full text-left py-3 px-1 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
+            >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium text-sm text-foreground truncate">{ins.ins_number || 'Draft'}</span>
                 <Badge variant="outline" className="text-[10px] font-normal">{ins.status}</Badge>
               </div>
               <p className="text-xs text-muted-foreground truncate">{(ins as any).properties?.name}</p>
               {ins.visit_date && <p className="text-[11px] text-muted-foreground">Visit: {ins.visit_date}</p>}
-            </div>
+            </button>
           ))}
+
         </div>
       ),
     },
