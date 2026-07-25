@@ -251,6 +251,7 @@ const PMPortal = () => {
           body: `PM submitted inspection ${inspection.ins_number ?? ''} — ${property?.name ?? ''}`.trim(),
           url: `/inspections/${inspection.id}`,
           tag: `inspection-${inspection.id}`,
+          portal_token: token,
         },
       });
     } catch { /* non-blocking */ }

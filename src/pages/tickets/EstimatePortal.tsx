@@ -154,6 +154,7 @@ const EstimatePortal = () => {
           body: `${ticket.fs_number ?? 'Ticket'} — ${opt.option_name} · $${opt.price}`,
           url: `/tickets/${ticket.id}`,
           tag: `estimate-${ticket.id}`,
+          portal_token: token,
         },
       });
     } catch { /* non-blocking */ }
