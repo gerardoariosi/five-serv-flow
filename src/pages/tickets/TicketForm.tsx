@@ -10,9 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Camera, FileText, AlertTriangle, X } from 'lucide-react';
+import { Camera, FileText, AlertTriangle, X } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { compressImage } from '@/lib/imageCompression';
+import FormShell from '@/components/form/FormShell';
+import FormSection from '@/components/form/FormSection';
+import FormField from '@/components/form/FormField';
 
 const TEMPLATES = [
   { label: 'Make-Ready Standard', work_type: 'make-ready', priority: 'normal', description: 'Full make-ready service: paint, clean, minor repairs, appliance check.' },
