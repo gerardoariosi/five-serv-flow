@@ -137,9 +137,9 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
       >
         <div className="flex flex-col h-full">
           {/* Logo + close */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
+          <div className="relative p-4 border-b border-border flex items-center justify-center">
             <FiveServLogo variant="light" size="sm" showTagline={false} />
-            <button onClick={onClose} className="p-1 -mr-1 text-muted-foreground hover:text-foreground active:scale-95">
+            <button onClick={onClose} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground active:scale-95">
               <X className="w-4 h-4" />
             </button>
           </div>
