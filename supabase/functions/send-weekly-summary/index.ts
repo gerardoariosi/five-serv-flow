@@ -197,8 +197,8 @@ Deno.serve(async (req) => {
       dashboard_url: 'https://fiveserv.net/dashboard',
     }
 
-    const subject = substituteVariables(template.subject || '', vars)
-    const html = substituteVariables(template.body || '', vars)
+    const subject = substituteVariables(template.subject || '', vars, false)
+    const html = substituteVariables(template.body || '', vars, true)
     const messageId = crypto.randomUUID()
 
     // Get or create unsubscribe token for recipient
