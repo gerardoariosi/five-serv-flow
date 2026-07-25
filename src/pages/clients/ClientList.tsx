@@ -14,6 +14,7 @@ import Spinner from '@/components/ui/Spinner';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
 import { toast } from 'sonner';
+import { exportClientZip } from '@/lib/clientExport';
 
 type ClientType = 'pm' | 'residential' | null;
 type StatusFilter = 'active' | 'archived';
@@ -71,14 +72,16 @@ const ClientList = () => {
 
   const archiveMutation = useMutation({
     mutationFn: async ({ clientId, action }: { clientId: string; action: 'archive' | 'delete' | 'export_delete' }) => {
+      if (action === 'export_delete') {
+        const { user } = useAuthStore.getState();
+        const result = await exportClientZip(clientId, user?.email);
+        if (!result.ok) throw new Error('Export failed');
+      }
       await supabase.from('tickets').update({ status: 'cancelled' }).eq('client_id', clientId).eq('status', 'draft');
       await supabase.from('inspections').update({ status: 'closed_internally' }).eq('client_id', clientId).eq('status', 'draft');
       if (action === 'archive') {
         await supabase.from('clients').update({ status: 'archived' }).eq('id', clientId);
-      } else if (action === 'export_delete') {
-        // TODO: generate ZIP first, then hard delete
-        await supabase.from('clients').update({ is_deleted: true, deleted_at: new Date().toISOString(), status: 'archived' }).eq('id', clientId);
-      } else if (action === 'delete') {
+      } else {
         await supabase.from('clients').update({ is_deleted: true, deleted_at: new Date().toISOString(), status: 'archived' }).eq('id', clientId);
       }
     },
