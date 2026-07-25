@@ -277,6 +277,14 @@ const AccountingList = () => {
           </Button>
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="vendor-payables" className="mt-4">
+          <VendorPayablesTab />
+        </TabsContent>
+      </Tabs>
+
+
 
       <BulkDeleteDialog
         open={!!singleDelete}
