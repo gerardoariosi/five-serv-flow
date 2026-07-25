@@ -792,6 +792,53 @@ export type Database = {
           },
         ]
       }
+      property_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          kind: string
+          mime_type: string | null
+          note: string | null
+          property_id: string
+          size_bytes: number | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          kind: string
+          mime_type?: string | null
+          note?: string | null
+          property_id: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          note?: string | null
+          property_id?: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       property_notes: {
         Row: {
           id: string
@@ -1481,28 +1528,40 @@ export type Database = {
           amount: number
           created_at: string
           created_by: string | null
+          due_date: string | null
           id: string
           note: string | null
+          paid_at: string | null
           payment_date: string
+          status: string
           vendor_id: string
+          week_ending_date: string | null
         }
         Insert: {
           amount: number
           created_at?: string
           created_by?: string | null
+          due_date?: string | null
           id?: string
           note?: string | null
+          paid_at?: string | null
           payment_date: string
+          status?: string
           vendor_id: string
+          week_ending_date?: string | null
         }
         Update: {
           amount?: number
           created_at?: string
           created_by?: string | null
+          due_date?: string | null
           id?: string
           note?: string | null
+          paid_at?: string | null
           payment_date?: string
+          status?: string
           vendor_id?: string
+          week_ending_date?: string | null
         }
         Relationships: [
           {
