@@ -54,14 +54,81 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Authorization: require service role, an authenticated staff user, or a
+  // valid public-portal token for the small allow-list of portal-triggered
+  // templates.
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Peek body early so we can evaluate portal-token bypass
+  let rawBody: any = {}
+  try {
+    rawBody = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const ANON_ALLOWED_TEMPLATES = new Set(['pm-response-received'])
+  const isServiceRole = token === supabaseServiceKey
+  let isAuthorized = isServiceRole
+
+  if (!isAuthorized) {
+    // Try staff-user auth
+    const authClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') || '', {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    })
+    const { data: userData } = await authClient.auth.getUser()
+    if (userData?.user) {
+      const { data: roles } = await authClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+      if (roles && roles.length > 0) isAuthorized = true
+    }
+  }
+
+  if (!isAuthorized) {
+    // Portal-token bypass: allow only whitelisted templates when the caller
+    // supplies a matching, unexpired portal token for the resource.
+    const tmplName = rawBody?.templateName || rawBody?.template_name
+    const portalToken = rawBody?.portalToken || rawBody?.portal_token
+    if (tmplName && ANON_ALLOWED_TEMPLATES.has(tmplName) && portalToken) {
+      const svc = createClient(supabaseUrl, supabaseServiceKey)
+      const { data: insp } = await svc
+        .from('inspections')
+        .select('id')
+        .eq('pm_link_token', portalToken)
+        .gt('link_expires_at', new Date().toISOString())
+        .maybeSingle()
+      if (insp) isAuthorized = true
+    }
+  }
+
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   // Parse request body
   let templateName: string
   let recipientEmail: string
   let idempotencyKey: string
   let messageId: string
   let templateData: Record<string, any> = {}
-  try {
-    const body = await req.json()
+  {
+    const body = rawBody
     templateName = body.templateName || body.template_name
     recipientEmail = body.recipientEmail || body.recipient_email
     messageId = crypto.randomUUID()
@@ -69,15 +136,8 @@ Deno.serve(async (req) => {
     if (body.templateData && typeof body.templateData === 'object') {
       templateData = body.templateData
     }
-  } catch {
-    return new Response(
-      JSON.stringify({ error: 'Invalid JSON in request body' }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
   }
+
 
   if (!templateName) {
     return new Response(

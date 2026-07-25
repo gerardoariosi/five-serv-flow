@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -127,7 +128,7 @@ const PMPortal = () => {
     setLoading(false);
   }, [token]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (pinEntered) fetchData(); }, [fetchData, pinEntered]);
 
   // Force light mode
   useEffect(() => {
@@ -225,6 +226,7 @@ const PMPortal = () => {
             templateName: 'pm-response-received',
             recipientEmail: adminEmail,
             idempotencyKey: `pm-response-${inspection.id}`,
+            portalToken: token,
             templateData: {
               ins_number: inspection.ins_number ?? '',
               property_name: prop?.name ?? 'N/A',
@@ -249,6 +251,7 @@ const PMPortal = () => {
           body: `PM submitted inspection ${inspection.ins_number ?? ''} — ${property?.name ?? ''}`.trim(),
           url: `/inspections/${inspection.id}`,
           tag: `inspection-${inspection.id}`,
+          portal_token: token,
         },
       });
     } catch { /* non-blocking */ }
@@ -607,7 +610,7 @@ const PMPortal = () => {
         {readOnly && inspection.pm_signature_data && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: inspection.pm_signature_data }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(inspection.pm_signature_data, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
           </div>
         )}
 

@@ -15,17 +15,16 @@ Deno.serve(async (req) => {
     const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!
     const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
     const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@fiveserv.net'
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || ''
 
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
-    // Service-role client — bypasses RLS so anon callers (PM/Estimate portals)
-    // can resolve roles and write notifications.
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    // Service-role client — bypasses RLS to resolve roles and write notifications.
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const {
       user_id,
       user_ids,
@@ -35,7 +34,68 @@ Deno.serve(async (req) => {
       url,
       tag,
       skip_in_app,
+      portal_token,
+      portalToken,
     } = body || {}
+
+    // ---- Authorization ----
+    // Accept: (1) service-role bearer, (2) authenticated staff user (has any
+    // user_roles row), or (3) a valid unexpired portal token (pm_link_token on
+    // inspections or estimate_link_token on tickets) — restricted to notifying
+    // admin/supervisor roles only.
+    const authHeader = req.headers.get('Authorization') || ''
+    const bearer = authHeader.replace(/^Bearer\s+/i, '')
+    let isAuthorized = false
+    let portalMode = false
+
+    if (bearer && bearer === SERVICE_KEY) {
+      isAuthorized = true
+    } else if (bearer) {
+      const authClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${bearer}` } },
+      })
+      const { data: userData } = await authClient.auth.getUser()
+      if (userData?.user) {
+        const { data: rr } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userData.user.id)
+          .limit(1)
+        if (rr && rr.length > 0) isAuthorized = true
+      }
+    }
+
+    if (!isAuthorized) {
+      const pt = portal_token || portalToken
+      if (pt && typeof pt === 'string') {
+        const now = new Date().toISOString()
+        const { data: insp } = await supabase
+          .from('inspections')
+          .select('id')
+          .eq('pm_link_token', pt)
+          .gt('link_expires_at', now)
+          .maybeSingle()
+        const { data: tk } = insp
+          ? { data: null }
+          : await supabase
+              .from('tickets')
+              .select('id')
+              .eq('estimate_link_token', pt)
+              .gt('estimate_expires_at', now)
+              .maybeSingle()
+        if (insp || tk) {
+          isAuthorized = true
+          portalMode = true
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     if (!title) {
       return new Response(JSON.stringify({ error: 'title required' }), {
@@ -49,11 +109,20 @@ Deno.serve(async (req) => {
     if (Array.isArray(user_ids)) targetIds.push(...user_ids)
     if (user_id) targetIds.push(user_id)
 
-    if (Array.isArray(roles) && roles.length > 0) {
+    // Portal-mode callers may only notify admin/supervisor role groups and may
+    // not directly target arbitrary user_ids.
+    let effectiveRoles: string[] | null = Array.isArray(roles) ? roles : null
+    if (portalMode) {
+      targetIds = []
+      effectiveRoles = (effectiveRoles || []).filter((r) => r === 'admin' || r === 'supervisor')
+      if (effectiveRoles.length === 0) effectiveRoles = ['admin', 'supervisor']
+    }
+
+    if (effectiveRoles && effectiveRoles.length > 0) {
       const { data: roleRows, error: roleErr } = await supabase
         .from('user_roles')
         .select('user_id')
-        .in('role', roles)
+        .in('role', effectiveRoles)
       if (roleErr) {
         console.error('Failed to resolve roles', roleErr)
       } else {

@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -91,7 +92,7 @@ const EstimatePortal = () => {
     setLoading(false);
   }, [token]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (pinEntered) fetchData(); }, [fetchData, pinEntered]);
 
   // Force light mode
   useEffect(() => {
@@ -153,6 +154,7 @@ const EstimatePortal = () => {
           body: `${ticket.fs_number ?? 'Ticket'} — ${opt.option_name} · $${opt.price}`,
           url: `/tickets/${ticket.id}`,
           tag: `estimate-${ticket.id}`,
+          portal_token: token,
         },
       });
     } catch { /* non-blocking */ }
@@ -462,7 +464,7 @@ const EstimatePortal = () => {
         {readOnly && ticket.estimate_pm_signature && (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
-            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: ticket.estimate_pm_signature }} />
+            <div className="border border-gray-100 rounded-lg p-2 bg-gray-50" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.estimate_pm_signature, { USE_PROFILES: { svg: true, svgFilters: true } }) }} />
           </div>
         )}
 
