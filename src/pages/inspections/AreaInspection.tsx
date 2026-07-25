@@ -182,13 +182,9 @@ const AreaInspection = () => {
   const hasRepairOrUrgent = currentItems.some(i => i.status === 'needs_repair' || i.status === 'urgent');
   const minPhotos = hasRepairOrUrgent ? 3 : 1;
   const photosEnough = currentPhotos.length >= minPhotos;
-  const itemPhotoReq = currentItems.every(i => {
-    if (i.status === 'good' || i.status === 'na') return true;
-    if (!i.dbId) return false;
-    return (itemPhotos[i.dbId]?.length ?? 0) >= 1;
-  });
-  // For items without dbId yet but Repair/Urgent, block Next until saved so they can add a photo.
-  const unsavedRepair = currentItems.some(i => (i.status === 'needs_repair' || i.status === 'urgent') && !i.dbId);
+  // Per-item photos are optional now.
+  const itemPhotoReq = true;
+  const unsavedRepair = false;
 
   const setItemStatus = (index: number, status: ItemStatus) => {
     if (!currentArea) return;
@@ -197,12 +193,10 @@ const AreaInspection = () => {
     if (status === 'good' || status === 'na') {
       updated[index] = { ...curr, status, item_note: '', priority: null };
     } else {
-      // default priority medium when first flipping to repair/urgent
       updated[index] = { ...curr, status, priority: curr.priority ?? 'medium' };
     }
     setItems(prev => ({ ...prev, [currentArea.key]: updated }));
-    // Auto-save immediately when flipping to repair/urgent so the item gets a dbId
-    // and the user can upload the required per-item photo without being blocked.
+    // Auto-save so the item gets a dbId and the user can optionally add a photo.
     if (status === 'needs_repair' || status === 'urgent') {
       setTimeout(() => { autoSaveRef.current?.(); }, 0);
     }
@@ -456,10 +450,7 @@ const AreaInspection = () => {
                   {/* Item photos */}
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Item Photos ({imgs.length})</span>
-                      {imgs.length === 0 && item.dbId && (
-                        <span className="text-[11px] text-destructive">Photo required</span>
-                      )}
+                      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Item Photos ({imgs.length}) — optional</span>
                     </div>
                     {!item.dbId ? (
                       <p className="text-[11px] text-muted-foreground">Photo upload available after saving (tap Next/Back once).</p>
