@@ -376,28 +376,54 @@ const VendorDetail = () => {
         <section className="border border-border rounded-lg bg-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
+            <div>
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" /> Payments
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Total paid: <span className="text-foreground font-semibold">${totalPaid.toFixed(2)}</span>
-              </p>
             </div>
             {canManagePayments && (
               <Button size="sm" variant="outline" onClick={() => setPayDialog(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Log
+                <Plus className="w-4 h-4 mr-1" /> Add Payment
               </Button>
             )}
           </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Balance
+              </p>
+              <p className="text-lg font-bold text-foreground tabular-nums">${balance.toFixed(2)}</p>
+              {oldestDue && <p className="text-[10px] text-muted-foreground mt-0.5">Oldest due: {oldestDue}</p>}
+            </div>
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Total Paid
+              </p>
+              <p className="text-lg font-bold text-foreground tabular-nums">${totalPaid.toFixed(2)}</p>
+            </div>
+          </div>
+
           {payments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No payments logged.</p>
+            <p className="text-xs text-muted-foreground">No payments yet.</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {payments.map((p: any) => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded border border-border text-xs">
-                  <span className="font-semibold text-foreground">${Number(p.amount).toFixed(2)}</span>
-                  <span className="text-muted-foreground">{p.payment_date}</span>
-                  {p.note && <span className="flex-1 truncate text-muted-foreground">— {p.note}</span>}
+              {(payments as any[]).map((p) => (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded border border-border text-xs flex-wrap">
+                  <Badge variant={p.status === 'paid' ? 'default' : 'outline'} className="text-[10px]">
+                    {p.status === 'paid' ? 'Paid' : 'Pending'}
+                  </Badge>
+                  <span className="font-semibold text-foreground tabular-nums">${Number(p.amount).toFixed(2)}</span>
+                  <span className="text-muted-foreground">
+                    Wk {p.week_ending_date ?? p.payment_date} · Due {p.due_date ?? '—'}
+                    {p.status === 'paid' && p.paid_at && ` · Paid ${p.paid_at}`}
+                  </span>
+                  {p.note && <span className="flex-1 min-w-[100px] truncate text-muted-foreground">— {p.note}</span>}
+                  {p.status === 'pending' && canManagePayments && (
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] ml-auto" onClick={() => setMarkPaid({ id: p.id, amount: Number(p.amount) })}>
+                      Mark Paid
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -435,31 +461,22 @@ const VendorDetail = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Payment dialog */}
-      <Dialog open={payDialog} onOpenChange={setPayDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Log Payment</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Amount ($)</Label>
-              <Input type="number" step="0.01" min="0" value={newPay.amount} onChange={e => setNewPay(p => ({ ...p, amount: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={newPay.payment_date} onChange={e => setNewPay(p => ({ ...p, payment_date: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Note (optional)</Label>
-              <Input value={newPay.note} onChange={e => setNewPay(p => ({ ...p, note: e.target.value }))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleAddPayment} disabled={savingPay}>
-              {savingPay ? 'Saving…' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddVendorPaymentDialog
+        open={payDialog}
+        onOpenChange={setPayDialog}
+        vendorId={id}
+        vendorName={vendor?.company_name}
+        onSaved={() => refetchPay()}
+      />
+
+      <MarkPaidDialog
+        open={!!markPaid}
+        onOpenChange={(o) => !o && setMarkPaid(null)}
+        paymentId={markPaid?.id ?? null}
+        amount={markPaid?.amount}
+        onSaved={() => { refetchPay(); setMarkPaid(null); }}
+      />
+
     </div>
   );
 };
