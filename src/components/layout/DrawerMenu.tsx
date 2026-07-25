@@ -147,9 +147,9 @@ const DrawerMenu = ({ open, onClose }: DrawerMenuProps) => {
           {/* Profile header */}
           <div className="p-4 border-b border-border bg-secondary/30">
             <div className="flex items-center gap-3 min-w-0">
-              <Avatar className="w-10 h-10 border border-border">
-                {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name ?? ''} /> : null}
-                <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">{initials}</AvatarFallback>
+              <Avatar className="w-12 h-12 ring-1 ring-border shrink-0">
+                {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name ?? ''} className="object-cover" /> : null}
+                <AvatarFallback className="text-sm font-bold bg-primary/10 text-primary">{initials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">{user?.full_name}</p>
