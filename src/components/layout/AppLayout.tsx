@@ -48,6 +48,28 @@ const AppLayout = () => {
     if (!isLoading && !user) navigate('/login', { replace: true });
   }, [isLoading, user, navigate]);
 
+  // Server-side 2FA enforcement for admin accounts. We ask the backend if the
+  // current admin has completed 2FA within the trusted window; if not, we sign
+  // them out and force them back through the 2FA flow. This closes the gap
+  // where a client could bypass the local trust flag.
+  useEffect(() => {
+    if (isLoading || !user || activeRole !== 'admin') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('check-2fa-status');
+        if (cancelled || error) return;
+        if (data?.required && !data?.verified) {
+          if (user.email) localStorage.setItem('fiveserv-last-email', user.email);
+          await supabase.auth.signOut();
+          logout();
+          navigate('/login', { replace: true });
+        }
+      } catch { /* fail open on network errors — local trust still applies */ }
+    })();
+    return () => { cancelled = true; };
+  }, [isLoading, user, activeRole, logout, navigate]);
+
   // Global keyboard shortcuts
   useEffect(() => {
     const isTypingTarget = (el: EventTarget | null) => {
