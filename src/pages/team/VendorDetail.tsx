@@ -231,9 +231,17 @@ const VendorDetail = () => {
 
 
 
-  const totalPaid = payments.reduce((sum, p: any) => sum + Number(p.amount ?? 0), 0);
+  const pendingPayments = (payments as any[]).filter(p => p.status === 'pending');
+  const paidPayments = (payments as any[]).filter(p => p.status === 'paid');
+  const balance = pendingPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const totalPaid = paidPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const oldestDue = pendingPayments
+    .map(p => p.due_date)
+    .filter(Boolean)
+    .sort()[0] as string | undefined;
   const licStatus = getExpirationStatus(form.license_expiration_date);
   const insStatus = getExpirationStatus(form.insurance_expiration_date);
+
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-6 pb-16">
