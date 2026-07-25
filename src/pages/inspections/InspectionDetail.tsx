@@ -211,7 +211,10 @@ const InspectionDetail = () => {
 
     const hasUrgent = selected.some(i => i.status === 'urgent');
     const workType = hasUrgent ? 'emergency' : 'repair';
-    const priority = hasUrgent ? 'high' : 'normal';
+    // Inherit highest item priority when present; fall back to prior behavior
+    const rank = (p: string | null | undefined) => p === 'high' ? 3 : p === 'medium' ? 2 : p === 'low' ? 1 : 0;
+    const topItemPriority = selected.reduce<string | null>((acc, i) => rank(i.priority) > rank(acc) ? (i.priority ?? null) : acc, null);
+    const priority = topItemPriority ?? (hasUrgent ? 'high' : 'normal');
 
     const descParts: string[] = [];
     descParts.push(`### Work from Inspection #${inspection.ins_number ?? ''}`.trim());
