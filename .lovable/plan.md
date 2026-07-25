@@ -1,65 +1,129 @@
-# Vendor Payments — Edit & Delete per row
+# Plan: ClientDetail bug fix + TicketDetail/InspectionDetail header & info restyle
 
-Add row-level Edit and Delete actions to every entry in the vendor payments list, without touching the existing Add Payment, Mark Paid, or balance-calculation flows.
+## Part 1 — Bug fix: ClientDetail "Inspections" tab rows aren't clickable
 
-## 1. Role gating (same as today)
+**File:** `src/pages/clients/ClientDetail.tsx` (lines 210–222)
 
-Reuse the existing `canManagePayments` check in `VendorDetail.tsx` (`activeRole === 'admin' || activeRole === 'accounting'`). Edit and Delete controls only render when this is true. Technicians and supervisors see the list read-only, exactly as today.
+The Inspections tab renders each row as a plain `<div>`. Properties (lines 164–174) and Tickets (lines 187–199) already use `<button onClick={() => navigate(...)}>` with:
+`className="w-full text-left py-3 px-1 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"`
 
-RLS on `vendor_payments` already restricts UPDATE/DELETE to admin/accounting, so no policy changes are needed.
+**Change:** Swap the inspection `<div>` for a `<button>` with the same className and `onClick={() => navigate(`/inspections/${ins.id}`)}`. Keep the inner content identical (INS number, status Badge, property name, visit date). No other edits.
 
-## 2. New component — `EditVendorPaymentDialog.tsx`
+---
 
-A single dialog handling both pending and paid entries:
+## Part 2 — Visual restyle for TicketDetail.tsx and InspectionDetail.tsx
 
-- **Always editable**: `week_ending_date`, `due_date` (with the same lock/unlock behavior as Add), `amount`, `note`.
-- **Only when `status === 'paid'`**: also show `paid_at` date and a proof-of-payment file input.
-  - If a `proof_url` already exists, show a "View current proof" link + a "Replace" affordance.
-  - If none exists, show "Attach proof of payment — optional" (same copy as MarkPaidDialog).
-- **Status is never mutated** by this dialog — it's not a field. Pending stays pending, paid stays paid.
-- Upload path for proof reuses the exact convention already in place: `vendor-documents/{vendorId}/proofs/{paymentId}-{ts}.{ext}` in the private `vendor-documents` bucket.
-- On save: `UPDATE vendor_payments SET ... WHERE id = :paymentId`, then invalidate the `vendor_payments` query so Balance / Total Paid recompute from the fresh rows.
+Scope is strictly the **top identity header** + **basic info card**. Everything else stays byte-identical.
 
-To avoid duplication, the shared form fields (week/due/amount/note with lock toggle) will be extracted from `AddVendorPaymentDialog` into a small `VendorPaymentFormFields` component consumed by both Add and Edit dialogs. No behavior change to Add.
+### Shared imports to add to both files
+```ts
+import DetailHeader from '@/components/detail/DetailHeader';
+import DetailActions from '@/components/detail/DetailActions';
+import FieldGroup from '@/components/detail/FieldGroup';
+import FieldRow from '@/components/detail/FieldRow';
+import StatusPill from '@/components/detail/StatusPill';
+```
+Remove the now-unused `ArrowLeft` import (both files); leave `Badge` and `Edit` since they're used elsewhere in the pages.
 
-## 3. Delete flow
+### 2A — TicketDetail.tsx
 
-- On click, show a confirmation (reuse `AlertDialog` from shadcn already used elsewhere in the app): "Delete this payment entry? This cannot be undone."
-- On confirm: if the row has a `proof_url`, remove that object from the `vendor-documents` bucket first (best-effort, don't block on failure), then `DELETE FROM vendor_payments WHERE id = :paymentId`.
-- Invalidate the `vendor_payments` query — Balance and Total Paid recompute automatically since they're derived from the row list.
-- Toast on success/failure.
+**Header replacement (lines 556–578)** — replace the manual back button + fs_number + badges + Edit button block with:
 
-## 4. Row UI
+```tsx
+<DetailHeader
+  name={ticket.fs_number ?? 'No FS#'}
+  status={
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <StatusPill className={colors.badge}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</StatusPill>
+      <StatusPill className={statusColors[ticket.status ?? 'draft']}>{statusLabels[ticket.status ?? 'draft']}</StatusPill>
+      {(ticket.rejection_count ?? 0) > 0 && (
+        <StatusPill variant="danger">{ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}</StatusPill>
+      )}
+    </div>
+  }
+  actions={
+    isAdminOrSupervisor ? (
+      <DetailActions
+        primary={
+          <Button variant="outline" size="sm" onClick={() => navigate(`/tickets/${id}/edit`)}>
+            <Edit className="w-4 h-4 mr-1" /> Edit
+          </Button>
+        }
+      />
+    ) : undefined
+  }
+/>
+```
 
-Follow the app's existing row-actions convention (⋮ dropdown menu, same pattern as TicketList/ClientList):
+Notes:
+- We render the FS number as `name` (mono styling is dropped; matches Client/Vendor/Property pages which use the plain heading style). If you want to preserve monospace, we can wrap it in a `<span className="font-mono">` inside `name` — flag if you want that.
+- The existing status-color Tailwind classes from `colors.badge` and `statusColors[...]` are re-used by passing them via `StatusPill className={...}`; `StatusPill` merges them, so the current work-type and status color pills look the same.
+- `DetailHeader` handles the Back button (defaults to `navigate(-1)`), matching the current behavior.
 
-- Replace the current inline "Mark Paid" button with a compact action cluster on the right side of each row:
-  - Pending row (admin/accounting): `Mark Paid` button + `⋮` menu with **Edit**, **Delete**.
-  - Paid row (admin/accounting): `⋮` menu with **Edit** (which is where proof can now be added after the fact), **Delete**.
-  - Non-privileged roles: no menu, no buttons (unchanged from today).
-- Icons: `Pencil` for Edit, `Trash2` for Delete (destructive styling on the menu item).
+**Info card replacement (lines 598–675)** — replace the `bg-card border border-border rounded-lg p-4 … grid grid-cols-2 gap-x-4 gap-y-4` block with FieldGroup + FieldRow. Empty values disappear (FieldRow shows nothing extra when hidden via conditional), matching the other detail pages.
 
-Layout stays on a single row on desktop and wraps as it does today on mobile — no structural change to the list.
+Structure:
+- `FieldGroup label="Details" first`
+  - `FieldRow label="Client / PM"` — only rendered when `isAdminOrSupervisor` and value present
+  - `FieldRow label="Property"` — value only when set
+  - `FieldRow label="Unit"` — hidden when empty
+  - `FieldRow label="Zone"` — hidden when empty
+  - `FieldRow label="Address"` — value is the same `<a>` Google Maps link with MapPin icon
+  - `FieldRow label="Technician"` — value = user name, or `<span className="text-destructive">Unassigned</span>` if none
+  - `FieldRow label="Appointment"` — hidden when empty
+  - `FieldRow label="Priority"` — capitalized, always shown
+  - `FieldRow label="Work Started"` — hidden when empty
+- `FieldGroup label="Description"` (only if `ticket.description`) — child is a `<p>` (not a FieldRow, since it's freeform text)
+- Internal Note card (lines 665–674) stays byte-identical — it's visually distinct (secondary bg + StickyNote icon) and functionally admin-only. It just moves below the FieldGroups.
 
-## 5. Vendor Payables (Accounting tab)
+Rows that render conditionally (hide entire row when empty) instead of showing "—":
+Client/PM, Property, Unit, Zone, Address, Appointment, Work Started. Technician always renders (shows "Unassigned" in red when null). Priority always renders.
 
-The Vendor Payables tab currently lists **vendors with pending balances**, not individual payment rows, so there is nothing per-row to edit or delete there. No change. Edit/Delete are reached by clicking through to the vendor and using the payments list on `VendorDetail`.
+**Everything else in the file stays untouched** — all modals (Reject, Assign, Reschedule, Delete, PM Report), the Accounting/Billing section (line 677+), Estimate Builder, Evaluation Submitted, Pending Estimate, Estimate Sent, Estimate Approved cards, action button row, Timeline/Photos tabs.
 
-## 6. Files touched
+### 2B — InspectionDetail.tsx
 
-- **New**: `src/components/vendors/EditVendorPaymentDialog.tsx`
-- **New (refactor extract)**: `src/components/vendors/VendorPaymentFormFields.tsx`
-- **Edited**: `src/components/vendors/AddVendorPaymentDialog.tsx` — consume the extracted fields, no behavior change.
-- **Edited**: `src/pages/team/VendorDetail.tsx` — add the ⋮ menu per row, wire Edit dialog + Delete confirm, invalidate queries.
+**Header replacement (lines 534–547):**
 
-No DB migration. No RLS change. No change to `MarkPaidDialog`, Add flow, balance math, or the Payables tab.
+```tsx
+<DetailHeader
+  name={inspection.ins_number ?? 'No INS#'}
+  status={
+    <StatusPill className={inspectionStatusColors[inspection.status ?? 'draft']}>
+      {inspectionStatusLabels[inspection.status ?? 'draft']}
+    </StatusPill>
+  }
+/>
+```
 
-## Risks / flags
+No Edit button existed on the inspection header, so no `actions` prop is needed. Back behavior preserved by DetailHeader default.
 
-1. **Editing a paid entry's amount changes Total Paid retroactively.** Intended per the request, but there is no audit trail on `vendor_payments` beyond the existing global `audit_log` trigger (if attached). Worth confirming you're OK with silent retroactive edits — otherwise we'd add a "reason" field or an edit log, which is out of scope here.
-2. **Deleting a paid entry with a proof file**: storage removal is best-effort. If the bucket delete fails (e.g. transient), the DB row still gets deleted and the file becomes orphaned. Acceptable tradeoff for simplicity; alternative is a two-phase delete that blocks on storage.
-3. **Replacing a proof file**: the old file will be left in storage (new one uploaded to a new timestamped path). Same orphan tradeoff. Can add cleanup if you want it strict.
-4. **Concurrent edits**: no optimistic locking. Last write wins. Same as everywhere else in the app today.
-5. **Refactor of Add dialog**: extracting shared fields is low-risk but does touch the working Add flow. Will keep the extraction mechanical (props-in, values-out) so Add behavior is byte-identical.
+**Info card replacement (lines 557–599):**
 
-Confirm and I'll implement.
+Structure:
+- `FieldGroup label="Details" first`
+  - `FieldRow label="Property"` — hidden when empty
+  - `FieldRow label="Client / PM"` — hidden when empty
+  - `FieldRow label="Visit Date"` — hidden when empty
+  - `FieldRow label="Config"` — value = the same `BR·BA·LR + Garage/Laundry/Exterior` composite string
+- `FieldGroup label="Assignment"` — contains the "Assigned to" row. This row is special: for admin/supervisor it renders the existing `<Select>` reassignment control; for others, it renders the user name (or "Unassigned" muted). We pass the Select (or plain value) as the `value` prop of a `FieldRow label="Technician"`. FieldRow accepts a ReactNode, so this works cleanly.
+
+Rationale for splitting Assignment into its own group: keeps the Select control visually separated (it's an interactive control, not a static field) and matches the "grouped by concern" pattern used on Vendor/Client detail pages.
+
+**Everything else stays untouched** — PM alert banner (lines 549–555), Export & Email card, area-by-area sections, PM portal links, Pricing Review, item lists with PM ✓ badges, Convert modal, Delete modal, Start config dialog, Email modal.
+
+### Confirmations before touching code (please answer)
+1. **Monospace FS/INS numbers**: The current header uses `font-mono` for `fs_number`/`ins_number`. `DetailHeader` `name` is regular sans-serif. Keep sans (matches other pages), or preserve mono by wrapping? **Default: keep sans, matches Client/Property/Vendor.**
+2. **StatusPill color mapping**: Reusing the existing `colors.badge` / `statusColors[...]` / `inspectionStatusColors[...]` tailwind class strings via `StatusPill className={...}` keeps the current per-status/work-type colors. Confirm that's the intended look (vs. mapping to `variant="success|warning|danger|neutral|info"` from the shared StatusPill palette). **Default: keep existing color classes for zero visual regression on status semantics.**
+3. **"Address" row**: keep it as a full-width Google Maps link inside FieldRow (value is JSX with MapPin icon), or move to a dedicated `FieldGroup label="Location"`? **Default: single row inside "Details" group, same as today.**
+
+### Risk flags
+- **Zero business-logic changes** — no state, mutation, effect, or handler is touched. Only JSX for the header block and the info-card block.
+- **Removed imports** — `ArrowLeft` becomes unused; must be removed to keep the lint/build clean.
+- **Countdown banner** on TicketDetail (lines 588–596) and **PM-not-responding banner** on InspectionDetail (lines 549–555) sit between the header and the info card today. They stay in place, unchanged, between `<DetailHeader />` and the first `<FieldGroup />`.
+- **Pending sync warning** (Ticket line 580–586) same treatment — stays between header and info card.
+- **Spacing**: current layouts use parent `space-y-*` from the outer div; FieldGroup uses its own `pt-4 mt-4 border-t` spacing. This may slightly compress the gap between the header block and the first FieldGroup vs. the old card. If it looks too tight, we'll add a `mt-2` wrapper — visual-only tweak after we see the result.
+
+### Verification after edit
+- `tsgo` typecheck (no signature changes expected).
+- Manually confirm on preview: Back button works, Edit button (ticket) still navigates, Select reassign (inspection) still calls `handleReassign`, all workflow cards render for each status, modals still open, Internal Note still shows for admin/supervisor.
