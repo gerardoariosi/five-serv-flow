@@ -6,15 +6,28 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Search, Plus, FileEdit, Clock, CheckSquare, X } from 'lucide-react';
+import { Search, Plus, FileEdit, Clock, CheckSquare, X, ClipboardList } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
+import SkeletonCard from '@/components/ui/SkeletonCard';
+import EmptyState from '@/components/ui/EmptyState';
 import { toast } from 'sonner';
 import { inspectionStatusLabels, inspectionStatusColors } from '@/lib/inspectionColors';
-import Spinner from '@/components/ui/Spinner';
+
+const statusBorder: Record<string, string> = {
+  draft: 'border-l-muted-foreground',
+  scheduled: 'border-l-[hsl(217,91%,45%)]',
+  in_progress: 'border-l-[hsl(217,91%,45%)]',
+  pending_pricing: 'border-l-[hsl(27,96%,45%)]',
+  sent: 'border-l-primary',
+  pm_responded: 'border-l-[hsl(270,60%,55%)]',
+  estimate_approved: 'border-l-[hsl(142,71%,35%)]',
+  converted: 'border-l-[hsl(142,71%,35%)]',
+  closed_internally: 'border-l-muted-foreground',
+  complete: 'border-l-[hsl(142,71%,35%)]',
+};
 
 const InspectionList = () => {
   const navigate = useNavigate();
@@ -33,7 +46,6 @@ const InspectionList = () => {
   const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
     const [iRes, cRes, pRes] = await Promise.all([
       supabase.from('inspections').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
@@ -72,6 +84,14 @@ const InspectionList = () => {
   };
 
   const canDelete = activeRole === 'admin' || activeRole === 'supervisor';
+  const canCreate = activeRole === 'admin' || activeRole === 'supervisor';
+
+  const STATUS_CHIPS = useMemo(() => [
+    { key: 'all', label: 'All' },
+    ...Object.entries(inspectionStatusLabels)
+      .filter(([k]) => k !== 'draft')
+      .map(([key, label]) => ({ key, label })),
+  ], []);
 
   const handleDeleteInspection = async (ins: any) => {
     if (ins.status === 'draft') {
@@ -109,6 +129,7 @@ const InspectionList = () => {
     const isSent = ins.status === 'sent';
     const isPmPending = isSent && !ins.pm_submitted_at;
     const daysPending = isSent ? daysSinceSent(ins.created_at) : 0;
+    const leftBorder = statusBorder[ins.status ?? 'draft'] ?? 'border-l-muted-foreground';
 
     return (
       <div className="flex items-start gap-1 group w-full min-w-0">
@@ -121,12 +142,12 @@ const InspectionList = () => {
         )}
         <button
           onClick={() => navigate(`/inspections/${ins.id}`)}
-          className="flex-1 min-w-0 overflow-hidden text-left p-4 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors"
+          className={`flex-1 min-w-0 overflow-hidden text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-sm font-bold text-foreground">{ins.ins_number ?? 'No INS#'}</span>
+                <span className="font-mono text-sm font-bold text-foreground tracking-tight">{ins.ins_number ?? 'No INS#'}</span>
                 <Badge className={`text-[10px] ${inspectionStatusColors[ins.status ?? 'draft']}`}>
                   {inspectionStatusLabels[ins.status ?? 'draft']}
                 </Badge>
@@ -153,8 +174,6 @@ const InspectionList = () => {
       </div>
     );
   };
-
-  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
 
   return (
     <div className="p-4 space-y-4 pb-28">
@@ -194,14 +213,14 @@ const InspectionList = () => {
       </Dialog>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-foreground">Inspections</h1>
+        <h1 className="fs-page-title">Inspections</h1>
         <div className="flex items-center gap-2">
           {canDelete && (
             <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
               {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
             </Button>
           )}
-          {(activeRole === 'admin' || activeRole === 'supervisor') && (
+          {canCreate && (
             <Button size="sm" onClick={() => navigate('/inspections/new')}>
               <Plus className="w-4 h-4 mr-1" /> New Inspection
             </Button>
@@ -220,32 +239,77 @@ const InspectionList = () => {
         </TabsList>
 
         <TabsContent value="drafts" className="space-y-2 mt-4">
-          {drafts.length === 0 ? (
-            <p className="text-center py-12 text-muted-foreground">No draft inspections</p>
+          {canDelete && selectMode && drafts.length > 0 && (
+            <div className="flex items-center gap-2 pb-1 animate-fade-in">
+              <Checkbox
+                checked={selected.size > 0 && drafts.every(d => selected.has(d.id))}
+                onCheckedChange={() => setSelected(p => {
+                  const allSelected = drafts.every(d => p.has(d.id));
+                  const n = new Set(p);
+                  if (allSelected) drafts.forEach(d => n.delete(d.id));
+                  else drafts.forEach(d => n.add(d.id));
+                  return n;
+                })}
+              />
+              <span className="text-xs text-muted-foreground">Select all ({drafts.length})</span>
+            </div>
+          )}
+          {loading ? (
+            <SkeletonCard count={4} />
+          ) : drafts.length === 0 ? (
+            <EmptyState
+              icon={FileEdit}
+              title="No draft inspections"
+              description="Drafts you start will appear here until they are sent."
+              actionLabel={canCreate ? 'New Inspection' : undefined}
+              onAction={() => navigate('/inspections/new')}
+            />
           ) : (
             drafts.map(ins => <InspectionCard key={ins.id} ins={ins} />)
           )}
         </TabsContent>
 
         <TabsContent value="active" className="space-y-4 mt-4">
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search inspections..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {Object.entries(inspectionStatusLabels).filter(([k]) => k !== 'draft').map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Search inspections..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
           </div>
+
+          <div className="flex gap-2 overflow-x-auto scrollbar-none">
+            {STATUS_CHIPS.map(c => {
+              const active = filterStatus === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setFilterStatus(c.key)}
+                  className={`fs-chip ${active ? 'fs-chip-active' : 'fs-chip-inactive'}`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+
           <div className="space-y-2">
-            {active.length === 0 ? (
-              <p className="text-center py-12 text-muted-foreground">No inspections found</p>
+            {canDelete && selectMode && active.length > 0 && (
+              <div className="flex items-center gap-2 pb-1 animate-fade-in">
+                <Checkbox
+                  checked={selected.size > 0 && active.every(a => selected.has(a.id))}
+                  onCheckedChange={toggleAll}
+                />
+                <span className="text-xs text-muted-foreground">Select all ({active.length})</span>
+              </div>
+            )}
+            {loading ? (
+              <SkeletonCard count={6} />
+            ) : active.length === 0 ? (
+              <EmptyState
+                icon={ClipboardList}
+                title="No inspections found"
+                description="Try clearing filters or create a new inspection."
+                actionLabel={canCreate ? 'New Inspection' : undefined}
+                onAction={() => navigate('/inspections/new')}
+              />
             ) : (
               active.map(ins => <InspectionCard key={ins.id} ins={ins} />)
             )}
