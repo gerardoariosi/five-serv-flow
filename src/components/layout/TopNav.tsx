@@ -58,7 +58,7 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
         style={{ height: 'env(safe-area-inset-top)' }}
       />
       <header
-        className="bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
+        className="relative bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 shrink-0 sticky top-0 z-40 pt-[env(safe-area-inset-top)]"
         style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(4rem + env(safe-area-inset-top))' }}
       >
         <div className="flex items-center">
@@ -71,7 +71,10 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           </button>
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
+        <div
+          className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none"
+          style={{ top: 'calc(env(safe-area-inset-top) + 0.5rem)', bottom: '0.5rem' }}
+        >
           <FiveServLogo variant="light" size="sm" showTagline={false} />
         </div>
 
@@ -96,8 +99,8 @@ const TopNav = ({ onMenuClick }: TopNavProps) => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="focus:outline-none active:scale-95 transition-transform">
-                <Avatar className="w-8 h-8 cursor-pointer border border-border hover:border-primary transition-colors">
-                  {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} /> : null}
+                <Avatar className="w-9 h-9 cursor-pointer ring-1 ring-border hover:ring-primary transition-all">
+                  {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt={user.full_name} className="object-cover" /> : null}
                   <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                     {initials}
                   </AvatarFallback>
