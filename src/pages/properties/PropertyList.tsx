@@ -208,10 +208,23 @@ const PropertyList = () => {
           count={selected.size}
           itemNoun="property"
           deleting={deleting}
-          onDelete={() => setBulkDialog(true)}
+          hideDelete={!canDelete}
+          onDelete={canDelete ? () => setBulkDialog(true) : undefined}
           onClear={exitSelectMode}
+          extraActions={canAssignPM && selected.size > 0 ? (
+            <Button size="sm" variant="secondary" onClick={() => setAssignTarget(Array.from(selected))}>
+              <UserCog className="w-4 h-4 mr-1" /> Assign PM
+            </Button>
+          ) : undefined}
         />
       )}
+
+      <AssignPMDialog
+        open={!!assignTarget}
+        onOpenChange={(o) => !o && setAssignTarget(null)}
+        propertyIds={assignTarget ?? []}
+        onDone={() => { setAssignTarget(null); if (selectMode) exitSelectMode(); }}
+      />
     </div>
   );
 };
