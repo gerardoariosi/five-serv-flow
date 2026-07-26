@@ -30,7 +30,9 @@ const PropertyList = () => {
   const [singleDelete, setSingleDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<string[] | null>(null);
   const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
+  const canAssignPM = activeRole === 'admin' || activeRole === 'supervisor';
 
   const { data: zones } = useQuery({
     queryKey: ['zones-list'],
