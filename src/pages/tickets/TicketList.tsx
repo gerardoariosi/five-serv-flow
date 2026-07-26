@@ -69,7 +69,7 @@ const TicketList = () => {
     const [ticketRes, clientRes, propRes, zoneRes, userRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name, address, current_pm_id'),
+      supabase.from('properties').select('id, name, address, current_pm_id').eq('is_deleted', false),
       supabase.from('zones').select('id, name'),
       supabase.rpc('get_user_directory'),
     ]);

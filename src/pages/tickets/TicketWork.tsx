@@ -113,7 +113,7 @@ const TicketWork = () => {
     const [tRes, phRes, pRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('id', id).single(),
       supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: true }),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('properties').select('id, name, address').eq('is_deleted', false),
     ]);
     setTicket(tRes.data);
     setPhotos(phRes.data ?? []);

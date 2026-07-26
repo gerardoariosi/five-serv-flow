@@ -23,7 +23,7 @@ const TechnicianDashboard = () => {
     const [tRes, iRes, pRes] = await Promise.all([
       supabase.from('tickets').select('*').eq('technician_id', user.id).order('appointment_time', { ascending: true }),
       supabase.from('inspections').select('*').eq('assigned_to', user.id).eq('is_deleted', false).in('status', ['scheduled', 'draft']).order('visit_date', { ascending: true }),
-      supabase.from('properties').select('id, name, address, full_address'),
+      supabase.from('properties').select('id, name, address, full_address').eq('is_deleted', false),
     ]);
     setTickets(tRes.data ?? []);
     setInspections(iRes.data ?? []);

@@ -49,7 +49,7 @@ const InspectionList = () => {
     const [iRes, cRes, pRes] = await Promise.all([
       supabase.from('inspections').select('*').eq('is_deleted', false).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name'),
+      supabase.from('properties').select('id, name').eq('is_deleted', false),
     ]);
     setInspections(iRes.data ?? []);
     const cMap: Record<string, string> = {};

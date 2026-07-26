@@ -85,7 +85,7 @@ const TicketDetail = () => {
       supabase.from('ticket_timeline').select('*').eq('ticket_id', id).order('created_at', { ascending: false }),
       supabase.from('ticket_photos').select('*').eq('ticket_id', id).order('uploaded_at', { ascending: false }),
       supabase.from('clients').select('id, company_name, email'),
-      supabase.from('properties').select('id, name, address'),
+      supabase.from('properties').select('id, name, address').eq('is_deleted', false),
       supabase.from('zones').select('id, name'),
       supabase.from('users').select('id, full_name, email').eq('is_deleted', false).or('is_locked.is.null,is_locked.eq.false'),
       supabase.from('user_roles').select('user_id, role'),

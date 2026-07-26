@@ -33,7 +33,7 @@ const ZoneList = () => {
       if (error) throw error;
 
       const zoneIds = (z ?? []).map(zone => zone.id);
-      const { data: props } = await supabase.from('properties').select('zone_id').in('zone_id', zoneIds);
+      const { data: props } = await supabase.from('properties').select('zone_id').in('zone_id', zoneIds).eq('is_deleted', false);
       const propMap: Record<string, number> = {};
       props?.forEach(p => { propMap[p.zone_id!] = (propMap[p.zone_id!] || 0) + 1; });
 

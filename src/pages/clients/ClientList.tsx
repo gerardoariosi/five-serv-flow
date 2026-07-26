@@ -56,7 +56,7 @@ const ClientList = () => {
 
       const clientIds = (clients ?? []).map(c => c.id);
       const [{ data: propCounts }, { data: ticketCounts }] = await Promise.all([
-        supabase.from('properties').select('current_pm_id').in('current_pm_id', clientIds),
+        supabase.from('properties').select('current_pm_id').in('current_pm_id', clientIds).eq('is_deleted', false),
         supabase.from('tickets').select('client_id, status').in('client_id', clientIds).neq('status', 'closed').neq('status', 'cancelled'),
       ]);
 
