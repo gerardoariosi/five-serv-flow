@@ -311,7 +311,7 @@ const PMPortal = () => {
               maxLength={10}
             />
             {pinError && <p className="text-sm text-red-500 text-center">{pinError}</p>}
-            <Button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handlePin} disabled={pinLoading}>
+            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" onClick={handlePin} disabled={pinLoading}>
               {pinLoading ? <Spinner size="sm" /> : 'Access Report'}
             </Button>
           </div>
@@ -342,7 +342,7 @@ const PMPortal = () => {
           <p className="text-sm font-bold text-gray-900">Total: ${total.toFixed(2)}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirm(false)}>Review Again</Button>
-            <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handleSubmit} disabled={submitting}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" onClick={handleSubmit} disabled={submitting}>
               {submitting ? <Spinner size="sm" /> : 'Submit Response'}
             </Button>
           </DialogFooter>
@@ -357,7 +357,7 @@ const PMPortal = () => {
             <FiveServLogo variant="light" size="sm" showTagline={false} />
             <div className="flex-1 flex justify-end">
               {readOnly && (
-                <Badge className="bg-[hsl(142,71%,45%)]/15 text-[hsl(142,71%,35%)] border border-[hsl(142,71%,45%)]/30 text-[10px] uppercase tracking-wider">Submitted</Badge>
+                <Badge className="bg-success/10 text-success border border-success/30 text-[10px] uppercase tracking-wider">Submitted</Badge>
               )}
             </div>
           </div>
@@ -374,7 +374,7 @@ const PMPortal = () => {
 
       {/* Hero card */}
       <div className="max-w-2xl mx-auto px-4 pt-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-[0.625rem] shadow-[var(--card-shadow)] border border-border p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">Property</p>
@@ -396,11 +396,11 @@ const PMPortal = () => {
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         {submitted && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-            <Check className="w-6 h-6 text-green-600 shrink-0" />
+          <div className="bg-success/10 border border-success/30 rounded-lg p-4 flex items-center gap-3">
+            <Check className="w-6 h-6 text-success shrink-0" />
             <div>
-              <p className="text-sm font-medium text-green-800">Response submitted</p>
-              <p className="text-xs text-green-600">
+              <p className="text-sm font-medium text-success">Response submitted</p>
+              <p className="text-xs text-success">
                 Submitted on {inspection.pm_submitted_at ? new Date(inspection.pm_submitted_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : ''}
               </p>
             </div>
@@ -572,11 +572,11 @@ const PMPortal = () => {
 
         {/* Signature */}
         {!readOnly && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-5">
             <Label className="text-gray-700 mb-3 block font-semibold">Digital Signature</Label>
             <SignaturePad onSave={setSignatureData} disabled={readOnly} />
             {signatureData && (
-              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+              <p className="text-xs text-success mt-2 flex items-center gap-1">
                 <Check className="w-3 h-3" /> Signature captured
               </p>
             )}
@@ -588,7 +588,7 @@ const PMPortal = () => {
 
         {/* Read-only signature display */}
         {readOnly && inspection.pm_signature_data && signatureToDataUri(inspection.pm_signature_data) && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
             <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
               <img src={signatureToDataUri(inspection.pm_signature_data)!} alt="Signature" className="max-w-full h-auto" />
