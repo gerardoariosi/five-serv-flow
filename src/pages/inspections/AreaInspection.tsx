@@ -372,7 +372,7 @@ const AreaInspection = () => {
         {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
           <div key={step} className="flex items-center gap-1">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              i === 1 ? 'bg-primary text-primary-foreground' : i < 1 ? 'bg-[hsl(142,71%,35%)] text-white' : 'bg-secondary text-muted-foreground'
+              i === 1 ? 'bg-primary text-primary-foreground' : i < 1 ? 'bg-success text-success-foreground' : 'bg-secondary text-muted-foreground'
             }`}>
               {i < 1 ? <Check className="w-3 h-3" /> : i + 1}
             </div>
@@ -392,12 +392,12 @@ const AreaInspection = () => {
           const prior = priorItems[item.item_name];
           const priorExpanded = !!expandedPrior[item.item_name];
           return (
-            <div key={item.item_name + idx} className={`bg-card border border-border rounded-lg p-3 ${isNA ? 'opacity-60' : ''}`}>
+            <div key={item.item_name + idx} className={`bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-3 ${isNA ? 'opacity-60' : ''}`}>
               <p className="text-sm font-medium text-foreground mb-2">{item.item_name}</p>
               <div className="flex gap-2">
                 {([
-                  { status: 'good' as const, label: 'Good', color: 'bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white', icon: Check },
-                  { status: 'needs_repair' as const, label: 'Repair', color: 'bg-[hsl(27,96%,45%)] hover:bg-[hsl(27,96%,40%)] text-white', icon: CircleDot },
+                  { status: 'good' as const, label: 'Good', color: 'bg-success hover:bg-success/90 text-success-foreground', icon: Check },
+                  { status: 'needs_repair' as const, label: 'Repair', color: 'bg-warning hover:bg-warning/90 text-warning-foreground', icon: CircleDot },
                   { status: 'urgent' as const, label: 'Urgent', color: 'bg-destructive hover:bg-destructive/90 text-white', icon: AlertTriangle },
                   { status: 'na' as const, label: 'N/A', color: 'bg-muted-foreground/70 hover:bg-muted-foreground text-white', icon: MinusCircle },
                 ]).map(opt => (
@@ -430,8 +430,8 @@ const AreaInspection = () => {
                     <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Priority</span>
                     <div className="flex gap-2 mt-1">
                       {([
-                        { p: 'low' as const, label: 'Low', color: 'bg-[hsl(142,71%,35%)] text-white' },
-                        { p: 'medium' as const, label: 'Medium', color: 'bg-[hsl(45,93%,47%)] text-black' },
+                        { p: 'low' as const, label: 'Low', color: 'bg-success text-success-foreground' },
+                        { p: 'medium' as const, label: 'Medium', color: 'bg-warning text-warning-foreground' },
                         { p: 'high' as const, label: 'High', color: 'bg-destructive text-white' },
                       ]).map(opt => (
                         <button
