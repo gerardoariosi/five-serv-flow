@@ -369,7 +369,7 @@ const TicketWork = () => {
   })();
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-5">
+    <div className="px-4 py-5 max-w-2xl mx-auto space-y-5 pb-24">
       {/* Pause Modal */}
       <Dialog open={showPause} onOpenChange={setShowPause}>
         <DialogContent>
@@ -416,22 +416,32 @@ const TicketWork = () => {
         </DialogContent>
       </Dialog>
 
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
+      </button>
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-lg font-bold text-foreground">{ticket.fs_number}</span>
-            <Badge className={`text-xs ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-            <Badge className={`text-xs ${statusColors[ticket.status ?? 'open']}`}>{statusLabels[ticket.status ?? 'open']}</Badge>
+            <span className="font-mono text-[17px] font-semibold text-foreground tracking-tight">{ticket.fs_number}</span>
+            <Badge className={`text-[10px] ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
+            <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'open']}`}>{statusLabels[ticket.status ?? 'open']}</Badge>
           </div>
+          {ticket.property_id && properties[ticket.property_id]?.name && (
+            <p className="text-[13px] text-muted-foreground leading-snug mt-0.5 truncate">
+              {properties[ticket.property_id].name}{ticket.unit ? ` · Unit ${ticket.unit}` : ''}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0 pt-1">
           {isOnline ? <Wifi className="w-4 h-4 text-success" /> : <WifiOff className="w-4 h-4 text-destructive" />}
         </div>
       </div>
+
 
       {/* Step Indicator */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
