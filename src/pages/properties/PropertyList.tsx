@@ -165,7 +165,7 @@ const PropertyList = () => {
                         <UserCog className="w-4 h-4 mr-2" /> Assign PM
                       </DropdownMenuItem>
                     )}
-                    {(canDelete || canAssignPM) && (
+                    {canDelete && (
                       <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
                         <Trash2 className="w-4 h-4 mr-2" /> Delete
                       </DropdownMenuItem>
