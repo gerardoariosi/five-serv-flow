@@ -81,7 +81,7 @@ const PropertyList = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Properties</h1>
         <div className="flex items-center gap-2">
-          {canDelete && (
+          {(canDelete || canAssignPM) && (
             <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
               {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
             </Button>
@@ -113,7 +113,7 @@ const PropertyList = () => {
         ))}
       </div>
 
-      {canDelete && selectMode && properties && properties.length > 0 && (
+      {(canDelete || canAssignPM) && selectMode && properties && properties.length > 0 && (
         <div className="flex items-center gap-2 mb-2 animate-fade-in">
           <Checkbox checked={selected.size > 0 && selected.size === properties.length} onCheckedChange={toggleAll} />
           <span className="text-xs text-muted-foreground">Select all ({properties.length})</span>
@@ -128,7 +128,7 @@ const PropertyList = () => {
         <div className="flex flex-col gap-3">
           {properties?.map(p => (
             <div key={p.id} className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors group flex gap-3">
-              {canDelete && selectMode && (
+              {(canDelete || canAssignPM) && selectMode && (
                 <Checkbox
                   checked={selected.has(p.id)}
                   onCheckedChange={() => toggleSelect(p.id)}
@@ -165,7 +165,7 @@ const PropertyList = () => {
                         <UserCog className="w-4 h-4 mr-2" /> Assign PM
                       </DropdownMenuItem>
                     )}
-                    {canDelete && (
+                    {(canDelete || canAssignPM) && (
                       <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
                         <Trash2 className="w-4 h-4 mr-2" /> Delete
                       </DropdownMenuItem>
@@ -203,7 +203,7 @@ const PropertyList = () => {
         }}
       />
 
-      {canDelete && selectMode && (
+      {(canDelete || canAssignPM) && selectMode && (
         <BulkActionBar
           count={selected.size}
           itemNoun="property"
