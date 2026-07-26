@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MapPin, Building2, MoreVertical, Trash2, CheckSquare, X } from 'lucide-react';
+import { Plus, Search, MapPin, Building2, MoreVertical, Trash2, CheckSquare, X, UserCog } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import Spinner from '@/components/ui/Spinner';
 import BulkActionBar from '@/components/ui/BulkActionBar';
 import BulkDeleteDialog from '@/components/ui/BulkDeleteDialog';
+import AssignPMDialog from '@/components/properties/AssignPMDialog';
 import { toast } from 'sonner';
 import { formatAddress } from '@/lib/propertyAddress';
 
@@ -29,7 +30,9 @@ const PropertyList = () => {
   const [singleDelete, setSingleDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<string[] | null>(null);
   const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()); };
+  const canAssignPM = activeRole === 'admin' || activeRole === 'supervisor';
 
   const { data: zones } = useQuery({
     queryKey: ['zones-list'],
@@ -78,7 +81,7 @@ const PropertyList = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Properties</h1>
         <div className="flex items-center gap-2">
-          {canDelete && (
+          {(canDelete || canAssignPM) && (
             <Button size="sm" variant="outline" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
               {selectMode ? <><X className="w-4 h-4 mr-1" /> Cancel</> : <><CheckSquare className="w-4 h-4 mr-1" /> Select</>}
             </Button>
@@ -110,7 +113,7 @@ const PropertyList = () => {
         ))}
       </div>
 
-      {canDelete && selectMode && properties && properties.length > 0 && (
+      {(canDelete || canAssignPM) && selectMode && properties && properties.length > 0 && (
         <div className="flex items-center gap-2 mb-2 animate-fade-in">
           <Checkbox checked={selected.size > 0 && selected.size === properties.length} onCheckedChange={toggleAll} />
           <span className="text-xs text-muted-foreground">Select all ({properties.length})</span>
@@ -125,7 +128,7 @@ const PropertyList = () => {
         <div className="flex flex-col gap-3">
           {properties?.map(p => (
             <div key={p.id} className="bg-card border border-border rounded-lg p-4 hover:border-primary/30 transition-colors group flex gap-3">
-              {canDelete && selectMode && (
+              {(canDelete || canAssignPM) && selectMode && (
                 <Checkbox
                   checked={selected.has(p.id)}
                   onCheckedChange={() => toggleSelect(p.id)}
@@ -151,15 +154,22 @@ const PropertyList = () => {
                   <Badge variant="outline" className="text-xs">{p.activeTickets} active tickets</Badge>
                 </div>
               </div>
-              {canDelete && (
+              {(canDelete || canAssignPM) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
-                    </DropdownMenuItem>
+                    {canAssignPM && (
+                      <DropdownMenuItem onClick={() => setAssignTarget([p.id])}>
+                        <UserCog className="w-4 h-4 mr-2" /> Assign PM
+                      </DropdownMenuItem>
+                    )}
+                    {canDelete && (
+                      <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -193,15 +203,28 @@ const PropertyList = () => {
         }}
       />
 
-      {canDelete && selectMode && (
+      {(canDelete || canAssignPM) && selectMode && (
         <BulkActionBar
           count={selected.size}
           itemNoun="property"
           deleting={deleting}
-          onDelete={() => setBulkDialog(true)}
+          hideDelete={!canDelete}
+          onDelete={canDelete ? () => setBulkDialog(true) : undefined}
           onClear={exitSelectMode}
+          extraActions={canAssignPM && selected.size > 0 ? (
+            <Button size="sm" variant="secondary" onClick={() => setAssignTarget(Array.from(selected))}>
+              <UserCog className="w-4 h-4 mr-1" /> Assign PM
+            </Button>
+          ) : undefined}
         />
       )}
+
+      <AssignPMDialog
+        open={!!assignTarget}
+        onOpenChange={(o) => !o && setAssignTarget(null)}
+        propertyIds={assignTarget ?? []}
+        onDone={() => { setAssignTarget(null); if (selectMode) exitSelectMode(); }}
+      />
     </div>
   );
 };
