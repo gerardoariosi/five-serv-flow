@@ -350,38 +350,44 @@ const AreaInspection = () => {
   if (!inspection || !currentArea) return <div className="p-4 text-muted-foreground">Inspection not found</div>;
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-5">
-      {/* Progress */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="text-center">
-          <span className="text-xs text-muted-foreground">Area {currentAreaIndex + 1} of {areas.length}</span>
-          <div className="flex gap-1 mt-1">
-            {areas.map((_, i) => (
-              <div key={i} className={`h-1 flex-1 rounded-full ${i <= currentAreaIndex ? 'bg-primary' : 'bg-border'}`} />
+    <div className="px-4 py-5 max-w-2xl mx-auto space-y-5 pb-24">
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
+      </button>
+
+      <div className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Area {currentAreaIndex + 1} of {areas.length}
+            </p>
+            <h1 className="text-[17px] font-semibold text-foreground leading-tight tracking-tight truncate">
+              {currentArea.label}
+            </h1>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
+              <div key={step} className="flex items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  i === 1 ? 'bg-primary text-primary-foreground' : i < 1 ? 'bg-success text-success-foreground' : 'bg-secondary text-muted-foreground'
+                }`}>
+                  {i < 1 ? <Check className="w-3 h-3" /> : i + 1}
+                </div>
+                {i < 3 && <div className="w-3 h-px bg-border" />}
+              </div>
             ))}
           </div>
         </div>
-        <div className="w-10" />
+        <div className="flex gap-1">
+          {areas.map((_, i) => (
+            <div key={i} className={`h-1 flex-1 rounded-full ${i <= currentAreaIndex ? 'bg-primary' : 'bg-border'}`} />
+          ))}
+        </div>
       </div>
 
-      {/* Step indicator */}
-      <div className="flex items-center justify-center gap-2">
-        {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
-          <div key={step} className="flex items-center gap-1">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              i === 1 ? 'bg-primary text-primary-foreground' : i < 1 ? 'bg-success text-success-foreground' : 'bg-secondary text-muted-foreground'
-            }`}>
-              {i < 1 ? <Check className="w-3 h-3" /> : i + 1}
-            </div>
-            {i < 3 && <div className="w-4 h-px bg-border" />}
-          </div>
-        ))}
-      </div>
-
-      <h2 className="text-lg font-bold text-foreground">{currentArea.label}</h2>
 
       {/* Items */}
       <div className="space-y-3">
