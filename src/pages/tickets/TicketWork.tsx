@@ -452,7 +452,7 @@ const TicketWork = () => {
             <div key={`${step.label}-${i}`} className="flex items-center flex-shrink-0">
               <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
                 active ? 'bg-primary text-primary-foreground border-primary'
-                : done ? 'bg-green-500/15 text-success border-green-500/30'
+                : done ? 'bg-success/10 text-success border-success/30'
                 : 'bg-card text-muted-foreground border-border'
               }`}>
                 {done && !active ? <CheckCircle className="w-3 h-3" /> : <span className="font-bold">{i + 1}</span>}
@@ -589,7 +589,7 @@ const TicketWork = () => {
 
             {/* CapEx: estimate approved, awaiting reschedule */}
             {currentStep === 'reschedule_pending' && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 text-center space-y-2">
+              <div className="bg-success/10 border border-success/30 rounded-lg p-6 text-center space-y-2">
                 <CheckCircle className="w-10 h-10 text-success mx-auto" />
                 <p className="text-foreground font-medium">Estimate Approved</p>
                 <p className="text-sm text-muted-foreground">Waiting to be rescheduled by admin.</p>
