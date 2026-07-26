@@ -191,7 +191,7 @@ const TicketReview = () => {
   });
 
   return (
-    <div className="p-4 max-w-3xl mx-auto space-y-5">
+    <div className="px-4 py-5 max-w-3xl mx-auto space-y-5 pb-24">
       {/* Approve Confirm */}
       <Dialog open={showApprove} onOpenChange={setShowApprove}>
         <DialogContent>
@@ -199,7 +199,7 @@ const TicketReview = () => {
           <p className="text-sm text-muted-foreground">This will close the ticket and record your approval. This action is logged.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApprove(false)}>Cancel</Button>
-            <Button className="bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" onClick={handleApprove} disabled={processing}>Approve</Button>
+            <Button className="bg-success hover:bg-success/90 text-success-foreground" onClick={handleApprove} disabled={processing}>Approve</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -217,34 +217,41 @@ const TicketReview = () => {
         </DialogContent>
       </Dialog>
 
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
+      </button>
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-lg font-bold text-foreground">{ticket.fs_number}</span>
-            <Badge className={`text-xs ${statusColors['ready_for_review']}`}>Ready for Review</Badge>
-            {(ticket.rejection_count ?? 0) > 0 && (
-              <Badge variant="outline" className="text-xs text-destructive border-destructive">
-                {ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}
-              </Badge>
-            )}
-          </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Review</p>
+        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+          <h1 className="font-mono text-[17px] font-semibold text-foreground tracking-tight">{ticket.fs_number}</h1>
+          <Badge className={`text-[10px] ${statusColors['ready_for_review']}`}>Ready for Review</Badge>
+          {(ticket.rejection_count ?? 0) > 0 && (
+            <Badge variant="outline" className="text-[10px] text-destructive border-destructive">
+              {ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
+        {property?.name && (
+          <p className="text-[13px] text-muted-foreground leading-snug mt-1 truncate">{property.name}</p>
+        )}
       </div>
+
 
       {/* Pending Sync Warning */}
       {hasPendingSync && (
-        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30">
-          <AlertTriangle className="w-4 h-4 text-orange-400" />
-          <span className="text-sm text-orange-400 font-medium">Some photos are pending sync — review may be incomplete</span>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/10 border border-warning/30">
+          <AlertTriangle className="w-4 h-4 text-warning" />
+          <span className="text-sm text-warning font-medium">Some photos are pending sync — review may be incomplete</span>
         </div>
       )}
 
       {/* Info */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4">
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-muted-foreground">Technician</span>
@@ -283,7 +290,7 @@ const TicketReview = () => {
                   <div key={photo.id} className="rounded-lg overflow-hidden border border-border relative">
                     <img src={photo.url} alt="" className="w-full h-40 object-cover" />
                     {photo.is_pending_sync && (
-                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[hsl(27,96%,45%)] text-white text-[9px] font-bold rounded">PENDING</div>
+                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-warning text-warning-foreground text-[9px] font-bold rounded">PENDING</div>
                     )}
                     <div className="p-2">
                       <p className="text-[10px] text-muted-foreground">
@@ -301,7 +308,7 @@ const TicketReview = () => {
       {/* Action buttons */}
       {!approved && ticket.status === 'ready_for_review' && (
         <div className="flex gap-3 pt-4">
-          <Button className="flex-1 bg-[hsl(142,71%,35%)] hover:bg-[hsl(142,71%,30%)] text-white" size="lg" onClick={() => setShowApprove(true)} disabled={processing}>
+          <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground" size="lg" onClick={() => setShowApprove(true)} disabled={processing}>
             <Check className="w-5 h-5 mr-2" /> Approve
           </Button>
           <Button className="flex-1" variant="destructive" size="lg" onClick={() => setShowReject(true)} disabled={processing}>
@@ -313,7 +320,7 @@ const TicketReview = () => {
       {/* Post-approval: Send Report */}
       {approved && (
         <div className="text-center space-y-3 py-4">
-          <Check className="w-12 h-12 text-green-500 mx-auto" />
+          <Check className="w-12 h-12 text-success mx-auto" />
           <p className="text-foreground font-medium">Ticket Approved</p>
           <p className="text-xs text-muted-foreground">
             Approved by {ticket.approved_by ? users[ticket.approved_by] : '—'} · {ticket.closed_at ? new Date(ticket.closed_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : ''}

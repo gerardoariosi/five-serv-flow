@@ -369,7 +369,7 @@ const TicketWork = () => {
   })();
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-5">
+    <div className="px-4 py-5 max-w-2xl mx-auto space-y-5 pb-24">
       {/* Pause Modal */}
       <Dialog open={showPause} onOpenChange={setShowPause}>
         <DialogContent>
@@ -416,22 +416,32 @@ const TicketWork = () => {
         </DialogContent>
       </Dialog>
 
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
+      </button>
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-lg font-bold text-foreground">{ticket.fs_number}</span>
-            <Badge className={`text-xs ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
-            <Badge className={`text-xs ${statusColors[ticket.status ?? 'open']}`}>{statusLabels[ticket.status ?? 'open']}</Badge>
+            <span className="font-mono text-[17px] font-semibold text-foreground tracking-tight">{ticket.fs_number}</span>
+            <Badge className={`text-[10px] ${colors.badge}`}>{(ticket.work_type ?? 'repair').replace('-', ' ').toUpperCase()}</Badge>
+            <Badge className={`text-[10px] ${statusColors[ticket.status ?? 'open']}`}>{statusLabels[ticket.status ?? 'open']}</Badge>
           </div>
+          {ticket.property_id && properties[ticket.property_id]?.name && (
+            <p className="text-[13px] text-muted-foreground leading-snug mt-0.5 truncate">
+              {properties[ticket.property_id].name}{ticket.unit ? ` · Unit ${ticket.unit}` : ''}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          {isOnline ? <Wifi className="w-4 h-4 text-green-500" /> : <WifiOff className="w-4 h-4 text-destructive" />}
+        <div className="flex items-center gap-1 shrink-0 pt-1">
+          {isOnline ? <Wifi className="w-4 h-4 text-success" /> : <WifiOff className="w-4 h-4 text-destructive" />}
         </div>
       </div>
+
 
       {/* Step Indicator */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
@@ -442,13 +452,13 @@ const TicketWork = () => {
             <div key={`${step.label}-${i}`} className="flex items-center flex-shrink-0">
               <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
                 active ? 'bg-primary text-primary-foreground border-primary'
-                : done ? 'bg-green-500/15 text-green-500 border-green-500/30'
+                : done ? 'bg-success/10 text-success border-success/30'
                 : 'bg-card text-muted-foreground border-border'
               }`}>
                 {done && !active ? <CheckCircle className="w-3 h-3" /> : <span className="font-bold">{i + 1}</span>}
                 <span>{step.label}</span>
               </div>
-              {i < steps.length - 1 && <div className={`w-3 h-px ${done ? 'bg-green-500/40' : 'bg-border'}`} />}
+              {i < steps.length - 1 && <div className={`w-3 h-px ${done ? 'bg-success/40' : 'bg-border'}`} />}
             </div>
           );
         })}
@@ -456,14 +466,14 @@ const TicketWork = () => {
 
       {/* Pending sync indicator */}
       {pendingSyncPhotos.length > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-orange-500/10 border border-orange-500/30">
-          <AlertTriangle className="w-4 h-4 text-orange-400" />
-          <span className="text-xs text-orange-400">{pendingSyncPhotos.length} photo{pendingSyncPhotos.length > 1 ? 's' : ''} pending sync</span>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-warning/10 border border-warning/30">
+          <AlertTriangle className="w-4 h-4 text-warning" />
+          <span className="text-xs text-warning">{pendingSyncPhotos.length} photo{pendingSyncPhotos.length > 1 ? 's' : ''} pending sync</span>
         </div>
       )}
 
       {/* Property info */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4">
         <p className="text-sm font-medium text-foreground">{ticket.property_id ? properties[ticket.property_id]?.name : '—'}{ticket.unit ? ` · Unit ${ticket.unit}` : ''}</p>
         {address && (
           <a href={`https://maps.google.com/?q=${encodeURIComponent(address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary text-sm hover:underline mt-1">
@@ -481,7 +491,7 @@ const TicketWork = () => {
           </Button>
         ) : currentStep === 'ready_for_review' ? (
           <div className="text-center py-6">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
+            <CheckCircle className="w-12 h-12 text-success mx-auto mb-2" />
             <p className="text-foreground font-medium">Submitted for Review</p>
             <p className="text-sm text-muted-foreground">Waiting for admin approval</p>
           </div>
@@ -515,7 +525,7 @@ const TicketWork = () => {
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('evaluation')} />
                 </label>
 
-                <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4 space-y-2">
                   <Label>What did you find?</Label>
                   <Textarea value={evaluationText} onChange={e => setEvaluationText(e.target.value)} rows={4} placeholder="Describe what you found at the property..." />
                 </div>
@@ -540,7 +550,7 @@ const TicketWork = () => {
                   <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoInput('evaluation')} />
                 </label>
 
-                <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4 space-y-2">
                   <Label>Findings & scope</Label>
                   <Textarea value={evaluationText} onChange={e => setEvaluationText(e.target.value)} rows={4} placeholder="Describe scope and conditions for the estimate..." />
                 </div>
@@ -553,8 +563,8 @@ const TicketWork = () => {
 
             {/* Evaluation pending admin */}
             {currentStep === 'evaluation_pending' && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6 text-center space-y-3">
-                <Clock className="w-10 h-10 text-yellow-500 mx-auto" />
+              <div className="bg-warning/10 border border-warning/30 rounded-lg p-6 text-center space-y-3">
+                <Clock className="w-10 h-10 text-warning mx-auto" />
                 <p className="text-foreground font-medium">Evaluation submitted</p>
                 <p className="text-sm text-muted-foreground">
                   {workType === 'capex' ? 'Waiting for admin to prepare estimate.' : 'Waiting for admin decision.'}
@@ -570,8 +580,8 @@ const TicketWork = () => {
 
             {/* CapEx: estimate pending PM approval */}
             {currentStep === 'estimate_pending' && (
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6 text-center space-y-2">
-                <Clock className="w-10 h-10 text-blue-500 mx-auto" />
+              <div className="bg-info/10 border border-info/30 rounded-lg p-6 text-center space-y-2">
+                <Clock className="w-10 h-10 text-info mx-auto" />
                 <p className="text-foreground font-medium">Waiting for PM Approval</p>
                 <p className="text-sm text-muted-foreground">Estimate sent to the Property Manager. You'll be notified once approved.</p>
               </div>
@@ -579,8 +589,8 @@ const TicketWork = () => {
 
             {/* CapEx: estimate approved, awaiting reschedule */}
             {currentStep === 'reschedule_pending' && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 text-center space-y-2">
-                <CheckCircle className="w-10 h-10 text-green-500 mx-auto" />
+              <div className="bg-success/10 border border-success/30 rounded-lg p-6 text-center space-y-2">
+                <CheckCircle className="w-10 h-10 text-success mx-auto" />
                 <p className="text-foreground font-medium">Estimate Approved</p>
                 <p className="text-sm text-muted-foreground">Waiting to be rescheduled by admin.</p>
               </div>
@@ -596,7 +606,7 @@ const TicketWork = () => {
                   const progress = (ticket.checklist_progress ?? {}) as Record<string, boolean>;
                   const done = items.filter(i => progress[i]).length;
                   return (
-                    <div className="bg-card border border-border rounded-lg p-4">
+                    <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-foreground">Checklist</h3>
                         <span className="text-xs text-muted-foreground">{done} / {items.length}</span>
@@ -614,7 +624,7 @@ const TicketWork = () => {
                 })()}
 
                 {/* Optional Target Completion Date */}
-                <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+                <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4 space-y-2">
                   <Label className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-primary" />
                     Target Completion Date (optional)
@@ -667,7 +677,7 @@ const TicketWork = () => {
               <div key={photo.id} className="rounded-lg overflow-hidden border border-border relative">
                 <img src={photo.url} alt="" className="w-full h-28 object-cover" />
                 {photo.is_pending_sync && (
-                  <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-[hsl(27,96%,45%)] text-white text-[9px] font-bold rounded">PENDING</div>
+                  <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-warning text-warning-foreground text-[9px] font-bold rounded">PENDING</div>
                 )}
                 <div className="p-1.5">
                   <Badge variant="outline" className="text-[9px]">{photo.stage}</Badge>
