@@ -245,7 +245,7 @@ const PricingReview = () => {
   if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" /></div>;
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-5">
+    <div className="px-4 py-5 max-w-2xl mx-auto pb-24 space-y-5">
       {/* Close internally confirm */}
       <Dialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
         <DialogContent>
@@ -258,106 +258,115 @@ const PricingReview = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
+      {/* Header */}
+      <div>
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
-        <h1 className="text-xl font-bold text-foreground">Pricing Review</h1>
-      </div>
-
-      {/* Progress */}
-      <div className="flex items-center justify-center gap-2">
-        {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
-          <div key={step} className="flex items-center gap-1">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-              i === 2 ? 'bg-primary text-primary-foreground' : i < 2 ? 'bg-[hsl(142,71%,35%)] text-white' : 'bg-secondary text-muted-foreground'
-            }`}>
-              {i < 2 ? <Check className="w-3 h-3" /> : i + 1}
-            </div>
-            {i < 3 && <div className="w-4 h-px bg-border" />}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Step 3 of 4</p>
+            <h1 className="text-[17px] font-semibold text-foreground leading-tight tracking-tight">Pricing Review</h1>
           </div>
-        ))}
+          <div className="flex items-center gap-1 shrink-0">
+            {['Config', 'Inspect', 'Pricing', 'Sent'].map((step, i) => (
+              <div key={step} className="flex items-center gap-1">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                  i === 2 ? 'bg-primary text-primary-foreground' : i < 2 ? 'bg-success text-success-foreground' : 'bg-secondary text-muted-foreground'
+                }`}>
+                  {i < 2 ? <Check className="w-2.5 h-2.5" /> : i + 1}
+                </div>
+                {i < 3 && <div className="w-3 h-px bg-border" />}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Area sections (whole_unit excluded — rendered separately below) */}
       {Object.entries(grouped).map(([area, areaItems]) => (
-        <div key={area} className="space-y-2">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+        <section key={area} className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4 sm:p-5">
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] mb-3">
             {area.replace(/_/g, ' ')}
-          </h3>
-          {areaItems.map((item: any) => (
-            <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">{item.item_name}</span>
-                <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-[hsl(27,96%,45%)] text-white'}`}>
-                  {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="text-[10px]">Qty</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    min={1}
-                    value={item.quantity || ''}
-                    onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                    onFocus={e => e.target.select()}
-                    className="h-8 text-sm"
-                  />
+          </h2>
+          <div className="space-y-2">
+            {areaItems.map((item: any) => (
+              <div key={item.id} className="border border-border rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-foreground">{item.item_name}</span>
+                  <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-danger text-danger-foreground' : 'bg-warning text-warning-foreground'}`}>
+                    {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
+                  </Badge>
                 </div>
-                <div>
-                  <Label className="text-[10px]">Unit Price ($)</Label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step={0.01}
-                    value={item.unit_price || ''}
-                    onChange={e => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-                    onFocus={e => e.target.select()}
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[10px]">Subtotal</Label>
-                  <div className="h-8 flex items-center text-sm font-medium text-primary">
-                    ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Qty</Label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      min={1}
+                      value={item.quantity || ''}
+                      onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                      onFocus={e => e.target.select()}
+                      className="h-8 text-sm mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Unit Price ($)</Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.01}
+                      value={item.unit_price || ''}
+                      onChange={e => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                      onFocus={e => e.target.select()}
+                      className="h-8 text-sm mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Subtotal</Label>
+                    <div className="h-8 flex items-center text-sm font-semibold text-foreground tabular-nums mt-1">
+                      ${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       ))}
 
       {/* Whole Unit section — always visible */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{WHOLE_UNIT_LABEL}</h3>
+      <section className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">{WHOLE_UNIT_LABEL}</h2>
           <Button size="sm" variant="outline" onClick={openWholeUnitNew}>
-            <Plus className="w-3 h-3 mr-1" /> Add Whole Unit Item
+            <Plus className="w-3 h-3 mr-1" /> Add Item
           </Button>
         </div>
         {wholeUnitItems.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic px-2 py-3">
+          <p className="text-xs text-muted-foreground italic">
             No whole-unit items. Use this for items that apply to the entire property (e.g. full house painting, full carpet replacement, pest control).
           </p>
         ) : (
           <div className="space-y-2">
             {wholeUnitItems.map((item: any) => (
-              <div key={item.id} className="bg-card border border-border rounded-lg p-3 space-y-2">
+              <div key={item.id} className="border border-border rounded-md p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-foreground">{item.item_name}</span>
-                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-destructive text-destructive-foreground' : 'bg-[hsl(27,96%,45%)] text-white'}`}>
+                      <Badge className={`text-[10px] ${item.status === 'urgent' ? 'bg-danger text-danger-foreground' : 'bg-warning text-warning-foreground'}`}>
                         {item.status === 'urgent' ? 'Urgent' : 'Needs Repair'}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)} = <span className="font-semibold text-primary">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
+                    <p className="text-xs text-muted-foreground mt-1 tabular-nums">
+                      Qty {item.quantity ?? 1} × ${(item.unit_price ?? 0).toFixed(2)} = <span className="font-semibold text-foreground">${((item.quantity ?? 1) * (item.unit_price ?? 0)).toFixed(2)}</span>
                     </p>
                     {item.item_note && (
                       <p className="text-xs text-muted-foreground mt-1 italic">→ {item.item_note}</p>
@@ -376,13 +385,17 @@ const PricingReview = () => {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {noContent ? (
-        <div className="text-center py-8 space-y-4">
-          <Check className="w-16 h-16 text-green-500 mx-auto" />
-          <p className="text-foreground font-medium">All items are in Good condition!</p>
-          <p className="text-sm text-muted-foreground">No repairs needed. You can close this inspection internally, or add a whole-unit item above.</p>
+        <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-8 text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto">
+            <Check className="w-7 h-7" />
+          </div>
+          <div>
+            <p className="text-foreground font-semibold">All items are in Good condition</p>
+            <p className="text-sm text-muted-foreground mt-1">No repairs needed. Close this inspection internally or add a whole-unit item above.</p>
+          </div>
           <Button onClick={() => setShowCloseConfirm(true)}>
             <Lock className="w-4 h-4 mr-1" /> Close Inspection Internally
           </Button>
@@ -390,9 +403,9 @@ const PricingReview = () => {
       ) : (
         <>
           {/* Total */}
-          <div className="bg-card border-l-4 border-primary rounded-lg p-4 flex items-center justify-between">
-            <span className="text-muted-foreground text-sm font-medium">Total</span>
-            <span className="text-foreground text-2xl font-bold">${total.toFixed(2)}</span>
+          <div className="bg-card border border-border border-l-[3px] border-l-primary rounded-[0.625rem] shadow-[var(--card-shadow)] p-4 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em]">Total</span>
+            <span className="text-foreground text-2xl font-semibold tabular-nums">${total.toFixed(2)}</span>
           </div>
 
           <Button
