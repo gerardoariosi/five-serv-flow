@@ -191,7 +191,7 @@ const TicketReview = () => {
   });
 
   return (
-    <div className="p-4 max-w-3xl mx-auto space-y-5">
+    <div className="px-4 py-5 max-w-3xl mx-auto space-y-5 pb-24">
       {/* Approve Confirm */}
       <Dialog open={showApprove} onOpenChange={setShowApprove}>
         <DialogContent>
@@ -217,23 +217,30 @@ const TicketReview = () => {
         </DialogContent>
       </Dialog>
 
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
+      </button>
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-lg font-bold text-foreground">{ticket.fs_number}</span>
-            <Badge className={`text-xs ${statusColors['ready_for_review']}`}>Ready for Review</Badge>
-            {(ticket.rejection_count ?? 0) > 0 && (
-              <Badge variant="outline" className="text-xs text-destructive border-destructive">
-                {ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}
-              </Badge>
-            )}
-          </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Review</p>
+        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+          <h1 className="font-mono text-[17px] font-semibold text-foreground tracking-tight">{ticket.fs_number}</h1>
+          <Badge className={`text-[10px] ${statusColors['ready_for_review']}`}>Ready for Review</Badge>
+          {(ticket.rejection_count ?? 0) > 0 && (
+            <Badge variant="outline" className="text-[10px] text-destructive border-destructive">
+              {ticket.rejection_count} rejection{ticket.rejection_count > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
+        {property?.name && (
+          <p className="text-[13px] text-muted-foreground leading-snug mt-1 truncate">{property.name}</p>
+        )}
       </div>
+
 
       {/* Pending Sync Warning */}
       {hasPendingSync && (
