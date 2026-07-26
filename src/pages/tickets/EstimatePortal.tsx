@@ -235,7 +235,7 @@ const EstimatePortal = () => {
               maxLength={10}
             />
             {pinError && <p className="text-sm text-red-500 text-center">{pinError}</p>}
-            <Button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handlePin} disabled={pinLoading}>
+            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" onClick={handlePin} disabled={pinLoading}>
               {pinLoading ? <Spinner size="sm" /> : 'Access Estimate'}
             </Button>
           </div>
@@ -265,7 +265,7 @@ const EstimatePortal = () => {
           })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirm(false)}>Review Again</Button>
-            <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold" onClick={handleSubmit} disabled={submitting}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" onClick={handleSubmit} disabled={submitting}>
               {submitting ? <Spinner size="sm" /> : 'Approve Estimate'}
             </Button>
           </DialogFooter>
@@ -280,7 +280,7 @@ const EstimatePortal = () => {
             <FiveServLogo variant="light" size="sm" showTagline={false} />
             <div className="flex-1 flex justify-end">
               {readOnly && (
-                <Badge className="bg-[hsl(142,71%,45%)]/15 text-[hsl(142,71%,35%)] border border-[hsl(142,71%,45%)]/30 text-[10px] uppercase tracking-wider">Approved</Badge>
+                <Badge className="bg-success/10 text-success border border-success/30 text-[10px] uppercase tracking-wider">Approved</Badge>
               )}
             </div>
           </div>
@@ -295,7 +295,7 @@ const EstimatePortal = () => {
 
       {/* Hero card */}
       <div className="max-w-2xl mx-auto px-4 pt-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-[0.625rem] shadow-[var(--card-shadow)] border border-border p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Property</p>
@@ -316,11 +316,11 @@ const EstimatePortal = () => {
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         {submitted && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-            <Check className="w-6 h-6 text-green-600 shrink-0" />
+          <div className="bg-success/10 border border-success/30 rounded-lg p-4 flex items-center gap-3">
+            <Check className="w-6 h-6 text-success shrink-0" />
             <div>
-              <p className="text-sm font-medium text-green-800">Estimate approved</p>
-              <p className="text-xs text-green-600">
+              <p className="text-sm font-medium text-success">Estimate approved</p>
+              <p className="text-xs text-success">
                 Approved on {ticket.estimate_submitted_at ? new Date(ticket.estimate_submitted_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : ''}
               </p>
             </div>
@@ -329,7 +329,7 @@ const EstimatePortal = () => {
 
         {/* Problem description */}
         {ticket.estimate_problem_description && (
-          <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
               <div className="w-1 h-5 rounded-sm" style={{ backgroundColor: '#FFD700' }} />
               <h3 className="text-xs font-bold text-gray-800 uppercase tracking-[0.15em]">Problem Description</h3>
@@ -359,7 +359,7 @@ const EstimatePortal = () => {
         )}
 
         {/* Options */}
-        <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3">
             <div className="w-1 h-5 rounded-sm" style={{ backgroundColor: '#FFD700' }} />
             <h3 className="text-xs font-bold text-gray-800 uppercase tracking-[0.15em]">Select an Option</h3>
@@ -423,7 +423,7 @@ const EstimatePortal = () => {
           </div>
         )}
         {readOnly && pmNote && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Your Note</Label>
             <p className="text-sm text-gray-700">{pmNote}</p>
           </div>
@@ -431,11 +431,11 @@ const EstimatePortal = () => {
 
         {/* Signature */}
         {!readOnly && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-5">
             <Label className="text-gray-700 mb-3 block font-semibold">Digital Signature</Label>
             <SignaturePad onSave={setSignatureData} disabled={readOnly} />
             {signatureData && (
-              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+              <p className="text-xs text-success mt-2 flex items-center gap-1">
                 <Check className="w-3 h-3" /> Signature captured
               </p>
             )}
@@ -446,7 +446,7 @@ const EstimatePortal = () => {
         )}
 
         {readOnly && ticket.estimate_pm_signature && signatureToDataUri(ticket.estimate_pm_signature) && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="bg-card border border-border rounded-[0.625rem] shadow-[var(--card-shadow)] p-5">
             <Label className="text-gray-700 mb-2 block font-semibold">Signature</Label>
             <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
               <img src={signatureToDataUri(ticket.estimate_pm_signature)!} alt="Signature" className="max-w-full h-auto" />
