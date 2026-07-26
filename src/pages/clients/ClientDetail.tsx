@@ -43,7 +43,7 @@ const ClientDetail = () => {
   const { data: properties = [] } = useQuery({
     queryKey: ['client-properties', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('properties').select('*').eq('current_pm_id', id!);
+      const { data, error } = await supabase.from('properties').select('*').eq('current_pm_id', id!).eq('is_deleted', false);
       if (error) throw error;
       return data ?? [];
     },

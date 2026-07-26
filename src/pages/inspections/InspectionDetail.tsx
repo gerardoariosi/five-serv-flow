@@ -85,7 +85,7 @@ const InspectionDetail = () => {
       }),
       supabase.from('inspection_tickets').select('*, tickets(*)').eq('inspection_id', id),
       supabase.from('clients').select('id, company_name'),
-      supabase.from('properties').select('id, name, address, full_address, street_address, city, state, zip_code'),
+      supabase.from('properties').select('id, name, address, full_address, street_address, city, state, zip_code').eq('is_deleted', false),
       supabase.rpc('get_user_directory'),
     ]);
     setInspection(insRes.data);

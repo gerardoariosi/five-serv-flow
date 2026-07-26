@@ -66,7 +66,7 @@ const TicketForm = () => {
     const fetchOptions = async () => {
       const [cRes, pRes, zRes, uRes, urRes, iRes, wtRes] = await Promise.all([
         supabase.from('clients').select('id, company_name').eq('status', 'active'),
-        supabase.from('properties').select('id, name, address, zone_id, current_pm_id').eq('status', 'active'),
+        supabase.from('properties').select('id, name, address, zone_id, current_pm_id').eq('status', 'active').eq('is_deleted', false),
         supabase.from('zones').select('id, name').eq('status', 'active'),
         supabase.rpc('get_user_directory'),
         supabase.from('user_roles').select('user_id, role'),
