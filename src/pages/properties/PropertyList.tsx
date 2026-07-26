@@ -154,15 +154,22 @@ const PropertyList = () => {
                   <Badge variant="outline" className="text-xs">{p.activeTickets} active tickets</Badge>
                 </div>
               </div>
-              {canDelete && (
+              {(canDelete || canAssignPM) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreVertical className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
-                    </DropdownMenuItem>
+                    {canAssignPM && (
+                      <DropdownMenuItem onClick={() => setAssignTarget([p.id])}>
+                        <UserCog className="w-4 h-4 mr-2" /> Assign PM
+                      </DropdownMenuItem>
+                    )}
+                    {canDelete && (
+                      <DropdownMenuItem className="text-destructive" onClick={() => setSingleDelete({ id: p.id, name: formatAddress(p as any) || p.name || '' })}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
