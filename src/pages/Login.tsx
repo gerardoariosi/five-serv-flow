@@ -58,8 +58,8 @@ const Login = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#FAF9F6] p-4 md:p-8 font-sans">
-      <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl shadow-[#1A1A1A]/5 flex flex-col md:flex-row overflow-hidden border border-[#E5E5E1]">
-        {/* Left: Branding & Trust */}
+      <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl shadow-[#1A1A1A]/5 flex flex-col md:flex-row-reverse overflow-hidden border border-[#E5E5E1]">
+        {/* Right (visually): Branding & Trust */}
         <div className="hidden md:flex md:w-5/12 bg-[#F3F2EE] p-8 lg:p-14 flex-col justify-between relative overflow-hidden">
           {/* Subtle gold dot pattern */}
           <div
