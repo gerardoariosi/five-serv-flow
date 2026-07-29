@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Edit, Plus, Save, Ticket, History, ClipboardCheck, Navigation, FileDown, Image as ImageIcon, Receipt } from 'lucide-react';
+import { MapPin, Edit, Plus, Save, Ticket, History, ClipboardCheck, Navigation, FileDown } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatAddress } from '@/lib/propertyAddress';
