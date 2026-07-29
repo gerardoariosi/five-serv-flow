@@ -13,11 +13,12 @@ const BUCKET = 'property-documents';
 
 interface Props {
   propertyId: string;
+  section?: 'gallery' | 'estimates';
 }
 
 type Kind = 'gallery' | 'estimate_invoice';
 
-const PropertyDocumentsSections = ({ propertyId }: Props) => {
+const PropertyDocumentsSections = ({ propertyId, section }: Props) => {
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [uploadingKind, setUploadingKind] = useState<Kind | null>(null);
