@@ -843,6 +843,7 @@ export type Database = {
         Row: {
           id: string
           notes: string | null
+          paint_notes: string | null
           property_id: string
           tenant_name: string | null
           tenant_phone: string | null
@@ -852,6 +853,7 @@ export type Database = {
         Insert: {
           id?: string
           notes?: string | null
+          paint_notes?: string | null
           property_id: string
           tenant_name?: string | null
           tenant_phone?: string | null
@@ -861,6 +863,7 @@ export type Database = {
         Update: {
           id?: string
           notes?: string | null
+          paint_notes?: string | null
           property_id?: string
           tenant_name?: string | null
           tenant_phone?: string | null

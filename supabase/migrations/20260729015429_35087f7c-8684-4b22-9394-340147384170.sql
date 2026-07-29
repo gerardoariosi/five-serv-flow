@@ -1,0 +1,1 @@
+ALTER TABLE public.property_notes ADD COLUMN IF NOT EXISTS paint_notes text;
