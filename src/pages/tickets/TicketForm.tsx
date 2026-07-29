@@ -45,6 +45,7 @@ const TicketForm = () => {
   const [showDraftPrompt, setShowDraftPrompt] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<any>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [propertySearch, setPropertySearch] = useState('');
 
   const [form, setForm] = useState({
     client_id: '',
