@@ -59,6 +59,7 @@ const AddVendorPaymentDialog = ({ open, onOpenChange, vendorId, vendorName, onSa
         .select('id, company_name')
         .eq('type', 'vendor')
         .eq('status', 'active')
+        .eq('is_deleted', false)
         .order('company_name');
       setVendorOptions(data ?? []);
     })();

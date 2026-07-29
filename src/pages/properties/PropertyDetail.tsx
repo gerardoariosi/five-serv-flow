@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Edit, Plus, Save, Ticket, History, ClipboardCheck, Navigation } from 'lucide-react';
+import { MapPin, Edit, Plus, Save, Ticket, History, ClipboardCheck, Navigation, FileDown } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatAddress } from '@/lib/propertyAddress';
@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import Spinner from '@/components/ui/Spinner';
 import PropertyDocumentsSections from '@/components/properties/PropertyDocumentsSections';
+import { generatePropertyReportPdf } from '@/lib/propertyReportPdf';
 import DetailHeader from '@/components/detail/DetailHeader';
 import DetailActions from '@/components/detail/DetailActions';
 import FieldGroup from '@/components/detail/FieldGroup';
@@ -32,6 +33,7 @@ const PropertyDetail = () => {
   const [tenantName, setTenantName] = useState('');
   const [tenantPhone, setTenantPhone] = useState('');
   const [generalNotes, setGeneralNotes] = useState('');
+  const [paintNotes, setPaintNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
 
   const { data: property, isLoading } = useQuery({
@@ -82,11 +84,21 @@ const PropertyDetail = () => {
     enabled: !!id && canSeeNotes,
   });
 
+  const { data: propertyDocs = [] } = useQuery({
+    queryKey: ['property-documents', id],
+    queryFn: async () => {
+      const { data } = await supabase.from('property_documents' as any).select('*').eq('property_id', id!).order('created_at', { ascending: false });
+      return (data ?? []) as any[];
+    },
+    enabled: !!id,
+  });
+
   useEffect(() => {
     if (propertyNote) {
       setTenantName(propertyNote.tenant_name ?? '');
       setTenantPhone(propertyNote.tenant_phone ?? '');
       setGeneralNotes(propertyNote.notes ?? '');
+      setPaintNotes(propertyNote.paint_notes ?? '');
     }
   }, [propertyNote]);
 
@@ -98,6 +110,7 @@ const PropertyDetail = () => {
       tenant_name: tenantName || null,
       tenant_phone: tenantPhone || null,
       notes: generalNotes || null,
+      paint_notes: paintNotes || null,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     };
@@ -107,6 +120,45 @@ const PropertyDetail = () => {
     toast.success('Notes saved');
     queryClient.invalidateQueries({ queryKey: ['property-notes', id] });
   };
+
+  const handleDownloadReport = async () => {
+    if (!property) return;
+    try {
+      toast.loading('Generating report…', { id: 'prop-report' });
+      const galleryDocs = propertyDocs.filter((d: any) => d.kind === 'gallery');
+      const estimateDocs = propertyDocs.filter((d: any) => d.kind === 'estimate_invoice');
+      const allTickets = [...activeTickets, ...closedTickets];
+      await generatePropertyReportPdf({
+        property: {
+          address: formatAddress(property as any),
+          zoneName: (property.zones as any)?.name,
+          currentPm: (property.clients as any)?.company_name,
+          previousPm: (property.prev_pm as any)?.company_name,
+          pmChangedAt: property.pm_changed_at,
+        },
+        notes: generalNotes,
+        paintNotes: paintNotes,
+        tickets: allTickets.map((t: any) => ({
+          fs_number: t.fs_number,
+          work_type: t.work_type,
+          status: t.status,
+          date: t.closed_at ?? t.created_at,
+          summary: t.evaluation_description ?? null,
+        })),
+        inspections: inspections.map((ins: any) => ({
+          ins_number: ins.ins_number,
+          visit_date: ins.visit_date,
+          status: ins.status,
+        })),
+        gallery: galleryDocs.map((d: any) => ({ file_name: d.file_name, created_at: d.created_at })),
+        estimates: estimateDocs.map((d: any) => ({ file_name: d.file_name, created_at: d.created_at })),
+      });
+      toast.success('Report downloaded', { id: 'prop-report' });
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to generate report', { id: 'prop-report' });
+    }
+  };
+
 
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (!property) return <p className="text-center text-muted-foreground py-12">Property not found.</p>;
@@ -146,11 +198,18 @@ const PropertyDetail = () => {
     </>
   );
 
-  const overflow = canManage ? (
-    <DropdownMenuItem onClick={() => navigate(`/properties/${id}/edit`)}>
-      <Edit className="w-4 h-4 mr-2" /> Edit
-    </DropdownMenuItem>
-  ) : null;
+  const overflow = (
+    <>
+      <DropdownMenuItem onClick={handleDownloadReport}>
+        <FileDown className="w-4 h-4 mr-2" /> Download Report
+      </DropdownMenuItem>
+      {canManage && (
+        <DropdownMenuItem onClick={() => navigate(`/properties/${id}/edit`)}>
+          <Edit className="w-4 h-4 mr-2" /> Edit
+        </DropdownMenuItem>
+      )}
+    </>
+  );
 
   return (
     <div className="p-4 max-w-3xl mx-auto pb-16">
@@ -198,6 +257,16 @@ const PropertyDetail = () => {
           <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-start">
             <label className="text-xs text-muted-foreground pt-1">Notes</label>
             <Textarea value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} rows={3} className="text-sm" />
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-start">
+            <label className="text-xs text-muted-foreground pt-1">Paint &amp; More</label>
+            <Textarea
+              value={paintNotes}
+              onChange={(e) => setPaintNotes(e.target.value)}
+              rows={3}
+              placeholder="Paint codes/brands, flooring type, or other spec info…"
+              className="text-sm"
+            />
           </div>
           {propertyNote?.updated_at && (
             <p className="text-[11px] text-muted-foreground mt-1">Last updated: {new Date(propertyNote.updated_at).toLocaleString()}</p>
@@ -272,15 +341,21 @@ const PropertyDetail = () => {
                 </div>
               ),
             },
+            {
+              value: 'gallery',
+              label: 'Gallery',
+              count: propertyDocs.filter((d: any) => d.kind === 'gallery').length,
+              content: id ? <PropertyDocumentsSections propertyId={id} section="gallery" /> : null,
+            },
+            {
+              value: 'estimates',
+              label: 'Estimates & Invoices',
+              count: propertyDocs.filter((d: any) => d.kind === 'estimate_invoice').length,
+              content: id ? <PropertyDocumentsSections propertyId={id} section="estimates" /> : null,
+            },
           ]}
         />
       </div>
-
-      {id && (
-        <div className="mt-8">
-          <PropertyDocumentsSections propertyId={id} />
-        </div>
-      )}
     </div>
   );
 };

@@ -13,11 +13,12 @@ const BUCKET = 'property-documents';
 
 interface Props {
   propertyId: string;
+  section?: 'gallery' | 'estimates';
 }
 
 type Kind = 'gallery' | 'estimate_invoice';
 
-const PropertyDocumentsSections = ({ propertyId }: Props) => {
+const PropertyDocumentsSections = ({ propertyId, section }: Props) => {
   const { user } = useAuthStore();
   const qc = useQueryClient();
   const [uploadingKind, setUploadingKind] = useState<Kind | null>(null);
@@ -105,9 +106,12 @@ const PropertyDocumentsSections = ({ propertyId }: Props) => {
     qc.invalidateQueries({ queryKey: ['property-documents', propertyId] });
   };
 
+  const showGallery = !section || section === 'gallery';
+  const showEstimates = !section || section === 'estimates';
+
   return (
     <div className="space-y-4">
-      {/* Gallery */}
+      {showGallery && (
       <section className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -127,8 +131,9 @@ const PropertyDocumentsSections = ({ propertyId }: Props) => {
           </div>
         )}
       </section>
+      )}
 
-      {/* Estimates & Invoices */}
+      {showEstimates && (
       <section className="bg-card border border-border rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -177,6 +182,7 @@ const PropertyDocumentsSections = ({ propertyId }: Props) => {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 };
