@@ -506,8 +506,20 @@ const TicketForm = () => {
           <FormField label="Property">
             <Select value={form.property_id} onValueChange={v => setForm(p => ({ ...p, property_id: v }))}>
               <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-72">
+                <div className="p-2 sticky top-0 bg-popover z-10">
+                  <Input
+                    placeholder="Search property..."
+                    value={propertySearch}
+                    onChange={e => setPropertySearch(e.target.value)}
+                    onKeyDown={e => e.stopPropagation()}
+                    className="h-8"
+                  />
+                </div>
                 {filteredProperties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {filteredProperties.length === 0 && (
+                  <div className="px-2 py-2 text-xs text-muted-foreground">No properties</div>
+                )}
               </SelectContent>
             </Select>
           </FormField>
