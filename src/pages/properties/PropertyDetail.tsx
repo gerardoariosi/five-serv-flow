@@ -341,15 +341,21 @@ const PropertyDetail = () => {
                 </div>
               ),
             },
+            {
+              value: 'gallery',
+              label: 'Gallery',
+              count: propertyDocs.filter((d: any) => d.kind === 'gallery').length,
+              content: id ? <PropertyDocumentsSections propertyId={id} section="gallery" /> : null,
+            },
+            {
+              value: 'estimates',
+              label: 'Estimates & Invoices',
+              count: propertyDocs.filter((d: any) => d.kind === 'estimate_invoice').length,
+              content: id ? <PropertyDocumentsSections propertyId={id} section="estimates" /> : null,
+            },
           ]}
         />
       </div>
-
-      {id && (
-        <div className="mt-8">
-          <PropertyDocumentsSections propertyId={id} />
-        </div>
-      )}
     </div>
   );
 };
