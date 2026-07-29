@@ -198,11 +198,18 @@ const PropertyDetail = () => {
     </>
   );
 
-  const overflow = canManage ? (
-    <DropdownMenuItem onClick={() => navigate(`/properties/${id}/edit`)}>
-      <Edit className="w-4 h-4 mr-2" /> Edit
-    </DropdownMenuItem>
-  ) : null;
+  const overflow = (
+    <>
+      <DropdownMenuItem onClick={handleDownloadReport}>
+        <FileDown className="w-4 h-4 mr-2" /> Download Report
+      </DropdownMenuItem>
+      {canManage && (
+        <DropdownMenuItem onClick={() => navigate(`/properties/${id}/edit`)}>
+          <Edit className="w-4 h-4 mr-2" /> Edit
+        </DropdownMenuItem>
+      )}
+    </>
+  );
 
   return (
     <div className="p-4 max-w-3xl mx-auto pb-16">
@@ -250,6 +257,16 @@ const PropertyDetail = () => {
           <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-start">
             <label className="text-xs text-muted-foreground pt-1">Notes</label>
             <Textarea value={generalNotes} onChange={(e) => setGeneralNotes(e.target.value)} rows={3} className="text-sm" />
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-3 py-1.5 items-start">
+            <label className="text-xs text-muted-foreground pt-1">Paint &amp; More</label>
+            <Textarea
+              value={paintNotes}
+              onChange={(e) => setPaintNotes(e.target.value)}
+              rows={3}
+              placeholder="Paint codes/brands, flooring type, or other spec info…"
+              className="text-sm"
+            />
           </div>
           {propertyNote?.updated_at && (
             <p className="text-[11px] text-muted-foreground mt-1">Last updated: {new Date(propertyNote.updated_at).toLocaleString()}</p>
