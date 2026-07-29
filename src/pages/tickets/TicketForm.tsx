@@ -235,9 +235,20 @@ const TicketForm = () => {
     toast.success(`Template "${template.label}" applied`);
   };
 
-  const filteredProperties = form.zone_id
-    ? properties.filter((p: any) => p.zone_id === form.zone_id)
-    : properties;
+  const filteredProperties = (() => {
+    let list = form.zone_id
+      ? properties.filter((p: any) => p.zone_id === form.zone_id)
+      : properties;
+    const q = propertySearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p: any) =>
+        (p.name ?? '').toLowerCase().includes(q) ||
+        (p.address ?? '').toLowerCase().includes(q) ||
+        (p.full_address ?? '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  })();
 
   const handleSubmit = async (asDraft = false) => {
     // Validate emergency requires technician
