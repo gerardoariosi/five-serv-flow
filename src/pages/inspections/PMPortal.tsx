@@ -174,22 +174,33 @@ const PMPortal = () => {
     if (!signatureData) { toast.error('Signature is required'); return; }
     setSubmitting(true);
 
-    // Update each item with PM selections
-    for (const item of items) {
-      await supabase.from('inspection_items').update({
-        pm_selected: selectedItems.has(item.id),
-        pm_note: itemNotes[item.id] || null,
-      }).eq('id', item.id);
+    // Writes go through the PIN-gated edge function: the portal has no direct
+    // database write access, and the approved total is recomputed server-side.
+    const { data: res, error: submitError } = await supabase.functions.invoke('verify-portal-pin', {
+      body: {
+        token,
+        pin: verifiedPin,
+        portal_type: 'inspection',
+        action: 'submit',
+        payload: {
+          signature: signatureData,
+          general_note: generalNote || null,
+          selections: items.map(item => ({
+            id: item.id,
+            selected: selectedItems.has(item.id),
+            note: itemNotes[item.id] || null,
+          })),
+        },
+      },
+    });
+
+    if (submitError || !res?.valid || (!res?.submitted && !res?.already_submitted)) {
+      toast.error('Could not submit. Please try again.');
+      setSubmitting(false);
+      return;
     }
 
-    // Update inspection
-    await supabase.from('inspections').update({
-      pm_submitted_at: new Date().toISOString(),
-      pm_signature_data: signatureData,
-      pm_total_selected: total,
-      pm_general_note: generalNote || null,
-      status: 'pm_responded',
-    } as any).eq('id', inspection.id);
+
 
     // Notify admin via transactional email
     try {
