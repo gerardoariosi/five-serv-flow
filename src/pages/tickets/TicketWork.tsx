@@ -87,7 +87,13 @@ const TicketWork = () => {
   // Complete modal
   const [showComplete, setShowComplete] = useState(false);
   const [closeNote, setCloseNote] = useState('');
-  const [closePhoto, setClosePhoto] = useState<File | null>(null);
+  const [closePhotos, setClosePhotos] = useState<File[]>([]);
+  const [completing, setCompleting] = useState(false);
+
+  // Step-advance visual feedback
+  const prevStepRef = useRef<number | null>(null);
+  const [stepAdvanced, setStepAdvanced] = useState(false);
+
 
   // Evaluation form
   const [evaluationText, setEvaluationText] = useState('');
