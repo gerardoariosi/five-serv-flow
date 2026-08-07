@@ -505,11 +505,12 @@ const TicketWork = () => {
           const done = i < activeStepIndex || ticket.status === 'closed';
           return (
             <div key={`${step.label}-${i}`} className="flex items-center flex-shrink-0">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-300 ${
                 active ? 'bg-primary text-primary-foreground border-primary'
                 : done ? 'bg-success/10 text-success border-success/30'
                 : 'bg-card text-muted-foreground border-border'
-              }`}>
+              } ${active && stepAdvanced ? 'scale-110 ring-2 ring-success ring-offset-1 ring-offset-background shadow-md' : 'scale-100'}`}>
+
                 {done && !active ? <CheckCircle className="w-3 h-3" /> : <span className="font-bold">{i + 1}</span>}
                 <span>{step.label}</span>
               </div>
