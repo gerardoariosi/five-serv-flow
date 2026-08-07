@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, Camera } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/authStore';
 
 const SPECIALTIES_CATALOG = [
   'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Carpentry',
@@ -24,7 +25,9 @@ const TeamUserForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore(s => s.user);
   const isNew = !id;
+  const isSelf = !isNew && currentUser?.id === id;
 
   const [form, setForm] = useState({
     full_name: '',
@@ -90,6 +93,10 @@ const TeamUserForm = () => {
     if (!form.full_name.trim()) { toast.error('Name is required'); return; }
     if (!form.email.trim()) { toast.error('Email is required'); return; }
     if (form.roles.length === 0) { toast.error('At least one role is required'); return; }
+    if (isSelf && currentUser?.roles?.includes('admin') && !form.roles.includes('admin')) {
+      toast.error("You can't remove your own admin access. Ask another admin to do this.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -119,24 +126,46 @@ const TeamUserForm = () => {
         }).eq('id', id!);
         if (error) throw error;
 
-        // Sync user_roles
-        await supabase.from('user_roles').delete().eq('user_id', id!);
-        const roleInserts = form.roles.map(role => ({ user_id: id!, role: role as any }));
-        await supabase.from('user_roles').insert(roleInserts);
+        // Sync user_roles with a diff (never wipe all roles first)
+        const { data: currentRows, error: rolesFetchError } = await supabase
+          .from('user_roles').select('role').eq('user_id', id!);
+        if (rolesFetchError) throw new Error('Failed to load current roles — no changes were saved');
+
+        const currentRoles = (currentRows ?? []).map(r => r.role as string);
+        const toAdd = form.roles.filter(r => !currentRoles.includes(r));
+        const toRemove = currentRoles.filter(r => !form.roles.includes(r));
+
+        if (toAdd.length > 0) {
+          const { error: insertError } = await supabase.from('user_roles')
+            .insert(toAdd.map(role => ({ user_id: id!, role: role as any })));
+          if (insertError) {
+            throw new Error('Failed to update roles — you may not have permission to change this user\u2019s access');
+          }
+        }
+        if (toRemove.length > 0) {
+          const { error: deleteError } = await supabase.from('user_roles')
+            .delete().eq('user_id', id!).in('role', toRemove as any);
+          if (deleteError) {
+            throw new Error('Failed to update roles — you may not have permission to remove your own admin access');
+          }
+        }
 
         // Sync technicians_vendors record
         if (isTechnician) {
-          const { data: existing } = await supabase.from('technicians_vendors')
+          const { data: existing, error: techFetchError } = await supabase.from('technicians_vendors')
             .select('id').eq('user_id', id!).eq('type', 'technician').maybeSingle();
+          if (techFetchError) throw new Error('Failed to load technician record');
+
           if (existing) {
-            await supabase.from('technicians_vendors').update({
+            const { error: techUpdateError } = await supabase.from('technicians_vendors').update({
               contact_name: form.full_name,
               phone: form.phone,
               specialties: form.specialties,
               status: form.status,
             }).eq('id', existing.id);
+            if (techUpdateError) throw new Error('Failed to update technician details');
           } else {
-            await supabase.from('technicians_vendors').insert({
+            const { error: techInsertError } = await supabase.from('technicians_vendors').insert({
               contact_name: form.full_name,
               email: form.email.toLowerCase(),
               phone: form.phone,
@@ -144,11 +173,13 @@ const TeamUserForm = () => {
               type: 'technician',
               user_id: id!,
             });
+            if (techInsertError) throw new Error('Failed to create technician record');
           }
         }
 
         toast.success('User updated');
       }
+
 
       queryClient.invalidateQueries({ queryKey: ['team-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin_users'] });
