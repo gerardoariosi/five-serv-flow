@@ -120,6 +120,8 @@ const PMPortal = () => {
       if (error) throw error;
       if (data?.valid) {
         setPinEntered(true);
+        setVerifiedPin(pinInput);
+
         if (data.reason === 'expired') { setExpired(true); setLoading(false); return; }
         await applyServerPayload({
           inspection: data.inspection,
