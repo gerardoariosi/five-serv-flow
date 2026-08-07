@@ -337,11 +337,22 @@ const TicketDetail = () => {
   const handleApproveEvaluation = async () => {
     if (!ticket || !user) return;
     setChangingStatus(true);
-    await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: approveError } = await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
+    if (approveError) {
+      toast.error(`Couldn't approve evaluation: ${approveError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: approveTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id, from_status: ticket.status, to_status: 'in_progress',
       changed_by: user.id, note: 'Evaluation approved — proceed with work',
     });
+    if (approveTimelineError) {
+      toast.error(`Couldn't approve evaluation: ${approveTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     // Notify technician
     if (ticket.technician_id) {
       await supabase.from('notifications').insert({
