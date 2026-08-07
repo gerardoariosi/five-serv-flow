@@ -505,14 +505,25 @@ const TicketDetail = () => {
     if (!ticket || !user) return;
     if (!rescheduleTime) { toast.error('Pick an appointment time'); return; }
     setChangingStatus(true);
-    await supabase.from('tickets').update({
+    const { error: reschedError } = await supabase.from('tickets').update({
       status: 'open',
       appointment_time: new Date(rescheduleTime).toISOString(),
     }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    if (reschedError) {
+      toast.error(`Couldn't reschedule ticket: ${reschedError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: reschedTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id, from_status: ticket.status, to_status: 'open',
       changed_by: user.id, note: `Rescheduled to ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
     });
+    if (reschedTimelineError) {
+      toast.error(`Couldn't reschedule ticket: ${reschedTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     if (ticket.technician_id) {
       await supabase.from('notifications').insert({
         user_id: ticket.technician_id, type: 'ticket',
