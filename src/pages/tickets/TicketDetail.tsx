@@ -158,14 +158,25 @@ const TicketDetail = () => {
       updates.approved_by = user.id;
     }
 
-    await supabase.from('tickets').update(updates).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: updateError } = await supabase.from('tickets').update(updates).eq('id', id);
+    if (updateError) {
+      toast.error(`Couldn't update status: ${updateError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: timelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id,
       from_status: ticket.status,
       to_status: newStatus,
       changed_by: user.id,
       note: statusNote || null,
     });
+    if (timelineError) {
+      toast.error(`Couldn't update status: ${timelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
 
     setStatusNote('');
     toast.success(`Status changed to ${statusLabels[newStatus]}`);
@@ -176,17 +187,28 @@ const TicketDetail = () => {
   const handleReject = async () => {
     if (!rejectReason.trim()) { toast.error('Rejection reason is required'); return; }
     setChangingStatus(true);
-    await supabase.from('tickets').update({
+    const { error: rejectError } = await supabase.from('tickets').update({
       status: 'rejected',
       rejection_count: (ticket.rejection_count ?? 0) + 1,
     }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    if (rejectError) {
+      toast.error(`Couldn't reject ticket: ${rejectError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: rejectTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id,
       from_status: ticket.status,
       to_status: 'rejected',
       changed_by: user?.id,
       note: `Rejected: ${rejectReason}`,
     });
+    if (rejectTimelineError) {
+      toast.error(`Couldn't reject ticket: ${rejectTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     setRejectReason('');
     setShowRejectModal(false);
     toast.success('Ticket rejected');
