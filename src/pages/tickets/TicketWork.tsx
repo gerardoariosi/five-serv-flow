@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -87,7 +87,13 @@ const TicketWork = () => {
   // Complete modal
   const [showComplete, setShowComplete] = useState(false);
   const [closeNote, setCloseNote] = useState('');
-  const [closePhoto, setClosePhoto] = useState<File | null>(null);
+  const [closePhotos, setClosePhotos] = useState<File[]>([]);
+  const [completing, setCompleting] = useState(false);
+
+  // Step-advance visual feedback
+  const prevStepRef = useRef<number | null>(null);
+  const [stepAdvanced, setStepAdvanced] = useState(false);
+
 
   // Evaluation form
   const [evaluationText, setEvaluationText] = useState('');
@@ -177,6 +183,29 @@ const TicketWork = () => {
   const currentPhotos = photos.filter((p: any) => p.ticket_id === id);
   const hasEvaluationPhoto = currentPhotos.some((p: any) => p.stage === 'evaluation');
   const pendingSyncPhotos = currentPhotos.filter((p: any) => p.is_pending_sync);
+
+  const steps = stepDefs[workType];
+  // Determine active step index for progress indicator
+  const activeStepIndex = (() => {
+    if (!ticket) return 0;
+    if (ticket.status === 'ready_for_review') return steps.length - 2; // Review
+    if (ticket.status === 'closed') return steps.length - 1;
+    const idx = steps.findIndex(s => s.key === currentStep);
+    return idx === -1 ? 0 : idx;
+  })();
+
+  // Brief success flash on the step indicator when the step advances
+  useEffect(() => {
+    if (prevStepRef.current === null) { prevStepRef.current = activeStepIndex; return; }
+    if (activeStepIndex > prevStepRef.current) {
+      setStepAdvanced(true);
+      const t = setTimeout(() => setStepAdvanced(false), 900);
+      prevStepRef.current = activeStepIndex;
+      return () => clearTimeout(t);
+    }
+    prevStepRef.current = activeStepIndex;
+  }, [activeStepIndex]);
+
 
   const handleUploadPhoto = async (stage: string, file?: File) => {
     const f = file;
@@ -334,17 +363,23 @@ const TicketWork = () => {
   };
 
   const handleMarkComplete = async () => {
-    if (!closePhoto) { toast.error('Closing photo required'); return; }
+    const total = currentPhotos.length + closePhotos.length;
+    if (total < 3) { toast.error(`${total} of 3 photos required`); return; }
     if (!closeNote.trim()) { toast.error('Closing note required'); return; }
-    await handleUploadPhoto('close', closePhoto);
+    setCompleting(true);
+    for (const f of closePhotos) {
+      await handleUploadPhoto('close', f);
+    }
     await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
     await logTimeline(ticket.status, 'ready_for_review', `Completed: ${closeNote}`);
-    setClosePhoto(null); setCloseNote(''); setShowComplete(false);
+    setClosePhotos([]); setCloseNote(''); setShowComplete(false);
+    setCompleting(false);
     toast.success('Submitted for review');
     // notify-ready-for-review handles email + push to admins/supervisors
     try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* */ }
     fetchData();
   };
+
 
   const resumeWork = async () => {
     await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
@@ -358,15 +393,7 @@ const TicketWork = () => {
 
   const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
   const address = ticket.property_id ? properties[ticket.property_id]?.address : null;
-  const steps = stepDefs[workType];
 
-  // Determine active step index for progress indicator
-  const activeStepIndex = (() => {
-    if (ticket.status === 'ready_for_review') return steps.length - 2; // Review
-    if (ticket.status === 'closed') return steps.length - 1;
-    const idx = steps.findIndex(s => s.key === currentStep);
-    return idx === -1 ? 0 : idx;
-  })();
 
   return (
     <div className="px-4 py-5 max-w-2xl mx-auto space-y-5 pb-24">
@@ -396,12 +423,34 @@ const TicketWork = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Complete Work</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {(() => {
+              const total = currentPhotos.length + closePhotos.length;
+              const met = total >= 3;
+              return (
+                <div className={`px-3 py-2 rounded-md border text-xs font-medium ${met ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
+                  {met ? `${total} photos attached — requirement met` : `${total} of 3 photos required`}
+                </div>
+              );
+            })()}
             <div>
-              <Label>Closing Photo (required)</Label>
+              <Label>Closing Photos</Label>
               <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors mt-1">
                 <Camera className="w-5 h-5 text-primary" />
-                <span className="text-sm text-muted-foreground">{closePhoto ? closePhoto.name : 'Select photo'}</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => e.target.files?.[0] && setClosePhoto(e.target.files[0])} />
+                <span className="text-sm text-muted-foreground">
+                  {closePhotos.length > 0 ? `${closePhotos.length} photo${closePhotos.length > 1 ? 's' : ''} selected` : 'Select photo(s)'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length) setClosePhotos(prev => [...prev, ...files]);
+                    e.target.value = '';
+                  }}
+                />
               </label>
             </div>
             <div>
@@ -411,8 +460,14 @@ const TicketWork = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowComplete(false)}>Cancel</Button>
-            <Button onClick={handleMarkComplete}>Submit for Review</Button>
+            <Button
+              onClick={handleMarkComplete}
+              disabled={completing || !closeNote.trim() || currentPhotos.length + closePhotos.length < 3}
+            >
+              Submit for Review
+            </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
@@ -450,11 +505,12 @@ const TicketWork = () => {
           const done = i < activeStepIndex || ticket.status === 'closed';
           return (
             <div key={`${step.label}-${i}`} className="flex items-center flex-shrink-0">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-300 ${
                 active ? 'bg-primary text-primary-foreground border-primary'
                 : done ? 'bg-success/10 text-success border-success/30'
                 : 'bg-card text-muted-foreground border-border'
-              }`}>
+              } ${active && stepAdvanced ? 'scale-110 ring-2 ring-success ring-offset-1 ring-offset-background shadow-md' : 'scale-100'}`}>
+
                 {done && !active ? <CheckCircle className="w-3 h-3" /> : <span className="font-bold">{i + 1}</span>}
                 <span>{step.label}</span>
               </div>

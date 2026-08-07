@@ -283,7 +283,7 @@ const TicketList = () => {
                   />
                 )}
                 <button
-                  onClick={() => navigate(`/tickets/${ticket.id}`)}
+                  onClick={() => navigate(activeRole === 'technician' ? `/tickets/${ticket.id}/work` : `/tickets/${ticket.id}`)}
                   className={`flex-1 min-w-0 overflow-hidden text-left fs-card border-l-[3px] ${leftBorder} py-3 px-4 hover:bg-secondary/30 transition-colors duration-150 space-y-1`}
                 >
                   <div className="flex items-center gap-2 flex-wrap">

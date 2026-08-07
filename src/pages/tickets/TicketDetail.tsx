@@ -26,7 +26,7 @@ import StatusPill from '@/components/detail/StatusPill';
 const statusTransitions: Record<string, { next: string[]; roles: string[] }> = {
   draft: { next: ['open', 'cancelled'], roles: ['admin', 'supervisor'] },
   open: { next: ['in_progress', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
-  in_progress: { next: ['paused', 'ready_for_review', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
+  in_progress: { next: ['paused', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
   paused: { next: ['in_progress', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
   ready_for_review: { next: ['closed', 'rejected'], roles: ['admin', 'supervisor'] },
   rejected: { next: ['in_progress'], roles: ['admin', 'supervisor', 'technician'] },
@@ -55,6 +55,9 @@ const TicketDetail = () => {
   const [assignTechId, setAssignTechId] = useState('');
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdminComplete, setShowAdminComplete] = useState(false);
+  const [adminCloseNote, setAdminCloseNote] = useState('');
+
   const [showPMReport, setShowPMReport] = useState(false);
 
   // Estimate builder
@@ -191,6 +194,30 @@ const TicketDetail = () => {
     setChangingStatus(false);
   };
 
+  // Admin/supervisor: complete a ticket with the same evidence a technician must provide
+  const handleAdminComplete = async () => {
+    if (!ticket || !user) return;
+    if (photos.length < 3) { toast.error(`${photos.length} of 3 photos required`); return; }
+    if (!adminCloseNote.trim()) { toast.error('Closing note required'); return; }
+    setChangingStatus(true);
+    await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
+    await supabase.from('ticket_timeline').insert({
+      ticket_id: id,
+      from_status: ticket.status,
+      to_status: 'ready_for_review',
+      changed_by: user.id,
+      note: `Completed: ${adminCloseNote.trim()}`,
+    });
+    try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* non-blocking */ }
+    setAdminCloseNote('');
+    setShowAdminComplete(false);
+    toast.success('Submitted for review');
+    await fetchTicket();
+    setChangingStatus(false);
+  };
+
+
+
   const handleLogDelayNote = async () => {
     if (!delayNoteText.trim()) return;
     await supabase.from('ticket_timeline').insert({
@@ -254,7 +281,7 @@ const TicketDetail = () => {
           user_id: assignTechId,
           title: 'New Ticket Assigned',
           body: `${ticket.fs_number ?? 'Ticket'} — ${(ticket.work_type ?? 'work').replace('-', ' ')}`,
-          url: `/my-work/${id}`,
+          url: `/tickets/${id}/work`,
           tag: `ticket-${id}`,
         },
       });
@@ -290,7 +317,7 @@ const TicketDetail = () => {
         user_id: ticket.technician_id, type: 'ticket',
         title: 'Evaluation Approved',
         message: `${ticket.fs_number ?? 'Ticket'} — Proceed with work`,
-        link: `/my-work/${id}`,
+        link: `/tickets/${id}/work`,
       });
       const techEmail = users[ticket.technician_id]?.email;
       if (techEmail) {
@@ -434,7 +461,7 @@ const TicketDetail = () => {
         user_id: ticket.technician_id, type: 'ticket',
         title: 'Work Rescheduled',
         message: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
-        link: `/my-work/${id}`,
+        link: `/tickets/${id}/work`,
       });
       // Push to technician
       try {
@@ -443,7 +470,7 @@ const TicketDetail = () => {
             user_ids: [ticket.technician_id],
             title: 'Work Rescheduled',
             body: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
-            url: `/my-work/${id}`,
+            url: `/tickets/${id}/work`,
             tag: `reschedule-${id}`,
             skip_in_app: true, // already inserted above
           },
@@ -907,6 +934,49 @@ const TicketDetail = () => {
             <UserPlus className="w-4 h-4 mr-1" /> Assign Technician
           </Button>
         )}
+
+        {/* Complete & Submit for Review — admin/supervisor, requires same evidence as technician */}
+        {isAdminOrSupervisor && (ticket.status === 'in_progress' || ticket.status === 'paused') && (
+          <Button size="sm" onClick={() => setShowAdminComplete(true)} disabled={changingStatus}>
+            <Check className="w-4 h-4 mr-1" /> Complete &amp; Submit for Review
+          </Button>
+        )}
+
+        <Dialog open={showAdminComplete} onOpenChange={setShowAdminComplete}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Complete &amp; Submit for Review</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className={`px-3 py-2 rounded-md border text-xs font-medium ${photos.length >= 3 ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
+                {photos.length >= 3 ? `${photos.length} photos on this ticket — requirement met` : `${photos.length} of 3 photos required`}
+              </div>
+              {photos.length < 3 && (
+                <p className="text-xs text-muted-foreground">
+                  Add photos to this ticket before submitting it for review.
+                </p>
+              )}
+              <div>
+                <Label>Closing Note (required)</Label>
+                <Textarea
+                  value={adminCloseNote}
+                  onChange={e => setAdminCloseNote(e.target.value)}
+                  rows={3}
+                  placeholder="Describe work completed..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAdminComplete(false)}>Cancel</Button>
+              <Button
+                onClick={handleAdminComplete}
+                disabled={changingStatus || photos.length < 3 || !adminCloseNote.trim()}
+              >
+                Submit for Review
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
 
         {/* Approve / Reject for ready_for_review */}
         {isAdminOrSupervisor && ticket.status === 'ready_for_review' && (
