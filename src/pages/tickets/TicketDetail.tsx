@@ -26,7 +26,7 @@ import StatusPill from '@/components/detail/StatusPill';
 const statusTransitions: Record<string, { next: string[]; roles: string[] }> = {
   draft: { next: ['open', 'cancelled'], roles: ['admin', 'supervisor'] },
   open: { next: ['in_progress', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
-  in_progress: { next: ['paused', 'ready_for_review', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
+  in_progress: { next: ['paused', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
   paused: { next: ['in_progress', 'cancelled'], roles: ['admin', 'supervisor', 'technician'] },
   ready_for_review: { next: ['closed', 'rejected'], roles: ['admin', 'supervisor'] },
   rejected: { next: ['in_progress'], roles: ['admin', 'supervisor', 'technician'] },
