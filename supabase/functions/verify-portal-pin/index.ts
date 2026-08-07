@@ -32,19 +32,31 @@ Deno.serve(async (req) => {
     })
   }
 
-  let body: { token?: string; pin?: string; portal_type?: 'inspection' | 'estimate' }
+  let body: {
+    token?: string
+    pin?: string
+    portal_type?: 'inspection' | 'estimate'
+    action?: 'load' | 'submit'
+    payload?: Record<string, unknown>
+  }
   try { body = await req.json() } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  const { token, pin, portal_type = 'inspection' } = body
+  const { token, pin, portal_type = 'inspection', action = 'load', payload = {} } = body
   if (!token || !pin || typeof token !== 'string' || typeof pin !== 'string') {
     return new Response(JSON.stringify({ error: 'token and pin are required' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
+  if (action !== 'load' && action !== 'submit') {
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -79,12 +91,59 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (action === 'submit') {
+      if (ticket.estimate_submitted_at) {
+        return new Response(JSON.stringify({ valid: true, already_submitted: true }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const optionId = typeof payload.option_id === 'string' ? payload.option_id : null
+      const signature = typeof payload.signature === 'string' ? payload.signature : ''
+      const pmNote = typeof payload.pm_note === 'string' ? payload.pm_note.slice(0, 5000) : null
+      if (!optionId || !signature.trim()) {
+        return new Response(JSON.stringify({ error: 'option_id and signature are required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      // The selected option must belong to THIS ticket — price comes from the DB,
+      // never from the client, so the PM cannot alter the approved amount.
+      const { data: opt } = await supabase
+        .from('ticket_estimate_options')
+        .select('option_name, price')
+        .eq('id', optionId)
+        .eq('ticket_id', ticket.id)
+        .maybeSingle()
+      if (!opt) {
+        return new Response(JSON.stringify({ error: 'Invalid option' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const { error: upErr } = await supabase.from('tickets').update({
+        estimate_submitted_at: new Date().toISOString(),
+        estimate_selected_option: opt.option_name,
+        estimate_selected_price: opt.price,
+        estimate_pm_signature: signature,
+        estimate_pm_note: pmNote,
+        status: 'estimate_approved',
+      }).eq('id', ticket.id)
+      if (upErr) {
+        return new Response(JSON.stringify({ error: 'Could not submit' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(
+        JSON.stringify({ valid: true, submitted: true, fs_number: ticket.fs_number, ticket_id: ticket.id }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     let property: { name: string | null; address: string | null } | null = null
     if (ticket.property_id) {
       const { data: p } = await supabase
         .from('properties').select('name, address').eq('id', ticket.property_id).maybeSingle()
       property = p ?? null
     }
+
     const { data: options } = await supabase
       .from('ticket_estimate_options').select('*').eq('ticket_id', ticket.id).order('sort_order', { ascending: true })
     const { data: photos } = await supabase
@@ -113,6 +172,62 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
+
+  if (action === 'submit') {
+    if (inspection.pm_submitted_at) {
+      return new Response(JSON.stringify({ valid: true, already_submitted: true }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const signature = typeof payload.signature === 'string' ? payload.signature : ''
+    const generalNote = typeof payload.general_note === 'string' ? payload.general_note.slice(0, 5000) : null
+    const rawSelections = Array.isArray(payload.selections) ? payload.selections : []
+    if (!signature.trim()) {
+      return new Response(JSON.stringify({ error: 'signature is required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Only items belonging to THIS inspection may be written, and the total is
+    // recomputed server-side from stored prices — never trusted from the client.
+    const { data: ownItems } = await supabase
+      .from('inspection_items')
+      .select('id, subtotal')
+      .eq('inspection_id', inspection.id)
+    const priceById = new Map((ownItems ?? []).map((i) => [i.id as string, Number(i.subtotal ?? 0)]))
+
+    let total = 0
+    for (const raw of rawSelections) {
+      const sel = raw as { id?: unknown; selected?: unknown; note?: unknown }
+      const itemId = typeof sel.id === 'string' ? sel.id : null
+      if (!itemId || !priceById.has(itemId)) continue
+      const selected = sel.selected === true
+      const note = typeof sel.note === 'string' ? sel.note.slice(0, 2000) : null
+      await supabase.from('inspection_items')
+        .update({ pm_selected: selected, pm_note: note })
+        .eq('id', itemId)
+        .eq('inspection_id', inspection.id)
+      if (selected) total += priceById.get(itemId) ?? 0
+    }
+
+    const { error: upErr } = await supabase.from('inspections').update({
+      pm_submitted_at: new Date().toISOString(),
+      pm_signature_data: signature,
+      pm_total_selected: total,
+      pm_general_note: generalNote,
+      status: 'pm_responded',
+    }).eq('id', inspection.id)
+    if (upErr) {
+      return new Response(JSON.stringify({ error: 'Could not submit' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    return new Response(
+      JSON.stringify({ valid: true, submitted: true, total, ins_number: inspection.ins_number, inspection_id: inspection.id }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
+  }
+
 
   let property: { name: string | null; address: string | null } | null = null
   if (inspection.property_id) {

@@ -29,6 +29,8 @@ const EstimatePortal = () => {
   // Auth
   const [pinEntered, setPinEntered] = useState(false);
   const [pinInput, setPinInput] = useState('');
+  const [verifiedPin, setVerifiedPin] = useState('');
+
   const [pinError, setPinError] = useState('');
   const [pinLoading, setPinLoading] = useState(false);
 
@@ -83,6 +85,8 @@ const EstimatePortal = () => {
       if (error) throw error;
       if (data?.valid) {
         setPinEntered(true);
+        setVerifiedPin(pinInput);
+
         applyServerPayload({
           ticket: data.ticket,
           property: data.property,
@@ -110,20 +114,28 @@ const EstimatePortal = () => {
     const opt = options.find((o: any) => o.id === selectedOptionId);
     if (!opt) { toast.error('Selected option not found'); setSubmitting(false); return; }
 
-    const { error } = await supabase.from('tickets').update({
-      estimate_submitted_at: new Date().toISOString(),
-      estimate_selected_option: opt.option_name,
-      estimate_selected_price: opt.price,
-      estimate_pm_signature: signatureData,
-      estimate_pm_note: pmNote || null,
-      status: 'estimate_approved',
-    } as any).eq('id', ticket.id);
+    // Writes go through the PIN-gated edge function: the portal has no direct
+    // database write access, and the approved price is read server-side.
+    const { data: res, error } = await supabase.functions.invoke('verify-portal-pin', {
+      body: {
+        token,
+        pin: verifiedPin,
+        portal_type: 'estimate',
+        action: 'submit',
+        payload: {
+          option_id: selectedOptionId,
+          signature: signatureData,
+          pm_note: pmNote || null,
+        },
+      },
+    });
 
-    if (error) {
+    if (error || !res?.valid || (!res?.submitted && !res?.already_submitted)) {
       toast.error('Could not submit. Please try again.');
       setSubmitting(false);
       return;
     }
+
 
     setShowConfirm(false);
     setSubmitted(true);

@@ -78,17 +78,29 @@ Deno.serve(async (req) => {
   }
 
   // Only admins and supervisors may send business emails to arbitrary recipients.
-  const { data: roleRows } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-  const roles = (roleRows ?? []).map((r: { role: string }) => r.role)
-  if (!roles.includes('admin') && !roles.includes('supervisor')) {
+  // Admin authority is resolved through has_role(), which additionally requires a
+  // recently completed 2FA verification — so a stolen admin password alone cannot
+  // drive this endpoint by calling the API directly and skipping the client 2FA UI.
+  const { data: isAdmin } = await supabase.rpc('has_role', {
+    _user_id: user.id,
+    _role: 'admin',
+  })
+  let authorized = isAdmin === true
+  if (!authorized) {
+    const { data: roleRows } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'supervisor')
+    authorized = (roleRows ?? []).length > 0
+  }
+  if (!authorized) {
     return new Response(JSON.stringify({ error: 'Forbidden: admin or supervisor role required' }), {
       status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
+
 
   let body: { template_name: string; to_email: string; variables: Record<string, string> }
   try {
