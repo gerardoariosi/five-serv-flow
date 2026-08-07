@@ -83,6 +83,8 @@ const EstimatePortal = () => {
       if (error) throw error;
       if (data?.valid) {
         setPinEntered(true);
+        setVerifiedPin(pinInput);
+
         applyServerPayload({
           ticket: data.ticket,
           property: data.property,
