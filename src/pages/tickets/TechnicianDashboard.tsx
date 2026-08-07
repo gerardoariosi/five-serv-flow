@@ -10,7 +10,7 @@ import { CalendarDays, Clock, History, CheckCircle2, Loader2, FileSearch } from 
 import { startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 
 const TechnicianDashboard = () => {
-  const { user } = useAuthStore();
+  const { user, activeRole } = useAuthStore();
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<any[]>([]);
   const [inspections, setInspections] = useState<any[]>([]);
