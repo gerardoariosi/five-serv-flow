@@ -423,12 +423,34 @@ const TicketWork = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Complete Work</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {(() => {
+              const total = currentPhotos.length + closePhotos.length;
+              const met = total >= 3;
+              return (
+                <div className={`px-3 py-2 rounded-md border text-xs font-medium ${met ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
+                  {met ? `${total} photos attached — requirement met` : `${total} of 3 photos required`}
+                </div>
+              );
+            })()}
             <div>
-              <Label>Closing Photo (required)</Label>
+              <Label>Closing Photos</Label>
               <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors mt-1">
                 <Camera className="w-5 h-5 text-primary" />
-                <span className="text-sm text-muted-foreground">{closePhoto ? closePhoto.name : 'Select photo'}</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => e.target.files?.[0] && setClosePhoto(e.target.files[0])} />
+                <span className="text-sm text-muted-foreground">
+                  {closePhotos.length > 0 ? `${closePhotos.length} photo${closePhotos.length > 1 ? 's' : ''} selected` : 'Select photo(s)'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length) setClosePhotos(prev => [...prev, ...files]);
+                    e.target.value = '';
+                  }}
+                />
               </label>
             </div>
             <div>
@@ -438,8 +460,14 @@ const TicketWork = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowComplete(false)}>Cancel</Button>
-            <Button onClick={handleMarkComplete}>Submit for Review</Button>
+            <Button
+              onClick={handleMarkComplete}
+              disabled={completing || !closeNote.trim() || currentPhotos.length + closePhotos.length < 3}
+            >
+              Submit for Review
+            </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
