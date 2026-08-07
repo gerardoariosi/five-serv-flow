@@ -449,26 +449,30 @@ const TicketDetail = () => {
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
       // Replace existing options
-      await supabase.from('ticket_estimate_options').delete().eq('ticket_id', id);
-      await supabase.from('ticket_estimate_options').insert(
+      const { error: delOptError } = await supabase.from('ticket_estimate_options').delete().eq('ticket_id', id);
+      if (delOptError) throw new Error(`Couldn't send estimate: ${delOptError.message}`);
+      const { error: insOptError } = await supabase.from('ticket_estimate_options').insert(
         validOptions.map((o, idx) => ({
           ticket_id: id, option_name: o.name.trim(), description: o.description.trim() || null,
           price: parseFloat(o.price), sort_order: idx,
         }))
       );
+      if (insOptError) throw new Error(`Couldn't send estimate: ${insOptError.message}`);
 
       // Update ticket
-      await supabase.from('tickets').update({
+      const { error: ticketUpdError } = await supabase.from('tickets').update({
         status: 'estimate_sent',
         estimate_problem_description: estimateProblem.trim(),
         estimate_link_token: token,
         estimate_expires_at: expiresAt,
       }).eq('id', id);
+      if (ticketUpdError) throw new Error(`Couldn't send estimate: ${ticketUpdError.message}`);
 
-      await supabase.from('ticket_timeline').insert({
+      const { error: estTimelineError } = await supabase.from('ticket_timeline').insert({
         ticket_id: id, from_status: ticket.status, to_status: 'estimate_sent',
         changed_by: user.id, note: 'Estimate sent to PM',
       });
+      if (estTimelineError) throw new Error(`Couldn't send estimate: ${estTimelineError.message}`);
 
       // Send email
       const portalUrl = `${window.location.origin}/estimate/${token}`;
