@@ -178,6 +178,29 @@ const TicketWork = () => {
   const hasEvaluationPhoto = currentPhotos.some((p: any) => p.stage === 'evaluation');
   const pendingSyncPhotos = currentPhotos.filter((p: any) => p.is_pending_sync);
 
+  const steps = stepDefs[workType];
+  // Determine active step index for progress indicator
+  const activeStepIndex = (() => {
+    if (!ticket) return 0;
+    if (ticket.status === 'ready_for_review') return steps.length - 2; // Review
+    if (ticket.status === 'closed') return steps.length - 1;
+    const idx = steps.findIndex(s => s.key === currentStep);
+    return idx === -1 ? 0 : idx;
+  })();
+
+  // Brief success flash on the step indicator when the step advances
+  useEffect(() => {
+    if (prevStepRef.current === null) { prevStepRef.current = activeStepIndex; return; }
+    if (activeStepIndex > prevStepRef.current) {
+      setStepAdvanced(true);
+      const t = setTimeout(() => setStepAdvanced(false), 900);
+      prevStepRef.current = activeStepIndex;
+      return () => clearTimeout(t);
+    }
+    prevStepRef.current = activeStepIndex;
+  }, [activeStepIndex]);
+
+
   const handleUploadPhoto = async (stage: string, file?: File) => {
     const f = file;
     if (!f || !user) return;
