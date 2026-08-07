@@ -55,6 +55,9 @@ const TicketDetail = () => {
   const [assignTechId, setAssignTechId] = useState('');
   const [technicians, setTechnicians] = useState<any[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdminComplete, setShowAdminComplete] = useState(false);
+  const [adminCloseNote, setAdminCloseNote] = useState('');
+
   const [showPMReport, setShowPMReport] = useState(false);
 
   // Estimate builder
