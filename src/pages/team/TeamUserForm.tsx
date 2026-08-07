@@ -93,6 +93,10 @@ const TeamUserForm = () => {
     if (!form.full_name.trim()) { toast.error('Name is required'); return; }
     if (!form.email.trim()) { toast.error('Email is required'); return; }
     if (form.roles.length === 0) { toast.error('At least one role is required'); return; }
+    if (isSelf && currentUser?.roles?.includes('admin') && !form.roles.includes('admin')) {
+      toast.error("You can't remove your own admin access. Ask another admin to do this.");
+      return;
+    }
 
     setSaving(true);
     try {
