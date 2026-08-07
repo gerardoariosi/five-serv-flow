@@ -363,17 +363,23 @@ const TicketWork = () => {
   };
 
   const handleMarkComplete = async () => {
-    if (!closePhoto) { toast.error('Closing photo required'); return; }
+    const total = currentPhotos.length + closePhotos.length;
+    if (total < 3) { toast.error(`${total} of 3 photos required`); return; }
     if (!closeNote.trim()) { toast.error('Closing note required'); return; }
-    await handleUploadPhoto('close', closePhoto);
+    setCompleting(true);
+    for (const f of closePhotos) {
+      await handleUploadPhoto('close', f);
+    }
     await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
     await logTimeline(ticket.status, 'ready_for_review', `Completed: ${closeNote}`);
-    setClosePhoto(null); setCloseNote(''); setShowComplete(false);
+    setClosePhotos([]); setCloseNote(''); setShowComplete(false);
+    setCompleting(false);
     toast.success('Submitted for review');
     // notify-ready-for-review handles email + push to admins/supervisors
     try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* */ }
     fetchData();
   };
+
 
   const resumeWork = async () => {
     await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
