@@ -257,14 +257,23 @@ const TicketDetail = () => {
 
   const handleAssignTech = async () => {
     if (!assignTechId) return;
-    await supabase.from('tickets').update({ technician_id: assignTechId }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: assignError } = await supabase.from('tickets').update({ technician_id: assignTechId }).eq('id', id);
+    if (assignError) {
+      toast.error(`Couldn't assign technician: ${assignError.message}`);
+      return;
+    }
+    const { error: assignTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id,
       from_status: ticket.status,
       to_status: ticket.status,
       changed_by: user?.id,
       note: `Technician assigned: ${users[assignTechId]?.name || assignTechId}`,
     });
+    if (assignTimelineError) {
+      toast.error(`Couldn't assign technician: ${assignTimelineError.message}`);
+      fetchTicket();
+      return;
+    }
     // Email technician
     try {
       const techEmail = users[assignTechId]?.email;
