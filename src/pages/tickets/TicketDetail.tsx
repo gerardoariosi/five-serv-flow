@@ -158,14 +158,25 @@ const TicketDetail = () => {
       updates.approved_by = user.id;
     }
 
-    await supabase.from('tickets').update(updates).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: updateError } = await supabase.from('tickets').update(updates).eq('id', id);
+    if (updateError) {
+      toast.error(`Couldn't update status: ${updateError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: timelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id,
       from_status: ticket.status,
       to_status: newStatus,
       changed_by: user.id,
       note: statusNote || null,
     });
+    if (timelineError) {
+      toast.error(`Couldn't update status: ${timelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
 
     setStatusNote('');
     toast.success(`Status changed to ${statusLabels[newStatus]}`);
@@ -176,17 +187,28 @@ const TicketDetail = () => {
   const handleReject = async () => {
     if (!rejectReason.trim()) { toast.error('Rejection reason is required'); return; }
     setChangingStatus(true);
-    await supabase.from('tickets').update({
+    const { error: rejectError } = await supabase.from('tickets').update({
       status: 'rejected',
       rejection_count: (ticket.rejection_count ?? 0) + 1,
     }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    if (rejectError) {
+      toast.error(`Couldn't reject ticket: ${rejectError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: rejectTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id,
       from_status: ticket.status,
       to_status: 'rejected',
       changed_by: user?.id,
       note: `Rejected: ${rejectReason}`,
     });
+    if (rejectTimelineError) {
+      toast.error(`Couldn't reject ticket: ${rejectTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     setRejectReason('');
     setShowRejectModal(false);
     toast.success('Ticket rejected');
@@ -235,14 +257,23 @@ const TicketDetail = () => {
 
   const handleAssignTech = async () => {
     if (!assignTechId) return;
-    await supabase.from('tickets').update({ technician_id: assignTechId }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: assignError } = await supabase.from('tickets').update({ technician_id: assignTechId }).eq('id', id);
+    if (assignError) {
+      toast.error(`Couldn't assign technician: ${assignError.message}`);
+      return;
+    }
+    const { error: assignTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id,
       from_status: ticket.status,
       to_status: ticket.status,
       changed_by: user?.id,
       note: `Technician assigned: ${users[assignTechId]?.name || assignTechId}`,
     });
+    if (assignTimelineError) {
+      toast.error(`Couldn't assign technician: ${assignTimelineError.message}`);
+      fetchTicket();
+      return;
+    }
     // Email technician
     try {
       const techEmail = users[assignTechId]?.email;
@@ -306,11 +337,22 @@ const TicketDetail = () => {
   const handleApproveEvaluation = async () => {
     if (!ticket || !user) return;
     setChangingStatus(true);
-    await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: approveError } = await supabase.from('tickets').update({ status: 'in_progress' }).eq('id', id);
+    if (approveError) {
+      toast.error(`Couldn't approve evaluation: ${approveError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: approveTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id, from_status: ticket.status, to_status: 'in_progress',
       changed_by: user.id, note: 'Evaluation approved — proceed with work',
     });
+    if (approveTimelineError) {
+      toast.error(`Couldn't approve evaluation: ${approveTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     // Notify technician
     if (ticket.technician_id) {
       await supabase.from('notifications').insert({
@@ -357,11 +399,22 @@ const TicketDetail = () => {
   const handleEstimateRequired = async () => {
     if (!ticket || !user) return;
     setChangingStatus(true);
-    await supabase.from('tickets').update({ status: 'pending_estimate' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: estReqError } = await supabase.from('tickets').update({ status: 'pending_estimate' }).eq('id', id);
+    if (estReqError) {
+      toast.error(`Couldn't update status: ${estReqError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: estReqTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id, from_status: ticket.status, to_status: 'pending_estimate',
       changed_by: user.id, note: 'Estimate required',
     });
+    if (estReqTimelineError) {
+      toast.error(`Couldn't update status: ${estReqTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     await fetchTicket();
     setChangingStatus(false);
     openEstimateBuilder();
@@ -396,26 +449,30 @@ const TicketDetail = () => {
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
       // Replace existing options
-      await supabase.from('ticket_estimate_options').delete().eq('ticket_id', id);
-      await supabase.from('ticket_estimate_options').insert(
+      const { error: delOptError } = await supabase.from('ticket_estimate_options').delete().eq('ticket_id', id);
+      if (delOptError) throw new Error(`Couldn't send estimate: ${delOptError.message}`);
+      const { error: insOptError } = await supabase.from('ticket_estimate_options').insert(
         validOptions.map((o, idx) => ({
           ticket_id: id, option_name: o.name.trim(), description: o.description.trim() || null,
           price: parseFloat(o.price), sort_order: idx,
         }))
       );
+      if (insOptError) throw new Error(`Couldn't send estimate: ${insOptError.message}`);
 
       // Update ticket
-      await supabase.from('tickets').update({
+      const { error: ticketUpdError } = await supabase.from('tickets').update({
         status: 'estimate_sent',
         estimate_problem_description: estimateProblem.trim(),
         estimate_link_token: token,
         estimate_expires_at: expiresAt,
       }).eq('id', id);
+      if (ticketUpdError) throw new Error(`Couldn't send estimate: ${ticketUpdError.message}`);
 
-      await supabase.from('ticket_timeline').insert({
+      const { error: estTimelineError } = await supabase.from('ticket_timeline').insert({
         ticket_id: id, from_status: ticket.status, to_status: 'estimate_sent',
         changed_by: user.id, note: 'Estimate sent to PM',
       });
+      if (estTimelineError) throw new Error(`Couldn't send estimate: ${estTimelineError.message}`);
 
       // Send email
       const portalUrl = `${window.location.origin}/estimate/${token}`;
@@ -448,14 +505,25 @@ const TicketDetail = () => {
     if (!ticket || !user) return;
     if (!rescheduleTime) { toast.error('Pick an appointment time'); return; }
     setChangingStatus(true);
-    await supabase.from('tickets').update({
+    const { error: reschedError } = await supabase.from('tickets').update({
       status: 'open',
       appointment_time: new Date(rescheduleTime).toISOString(),
     }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    if (reschedError) {
+      toast.error(`Couldn't reschedule ticket: ${reschedError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: reschedTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id, from_status: ticket.status, to_status: 'open',
       changed_by: user.id, note: `Rescheduled to ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
     });
+    if (reschedTimelineError) {
+      toast.error(`Couldn't reschedule ticket: ${reschedTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     if (ticket.technician_id) {
       await supabase.from('notifications').insert({
         user_id: ticket.technician_id, type: 'ticket',
