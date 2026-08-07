@@ -32,19 +32,31 @@ Deno.serve(async (req) => {
     })
   }
 
-  let body: { token?: string; pin?: string; portal_type?: 'inspection' | 'estimate' }
+  let body: {
+    token?: string
+    pin?: string
+    portal_type?: 'inspection' | 'estimate'
+    action?: 'load' | 'submit'
+    payload?: Record<string, unknown>
+  }
   try { body = await req.json() } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  const { token, pin, portal_type = 'inspection' } = body
+  const { token, pin, portal_type = 'inspection', action = 'load', payload = {} } = body
   if (!token || !pin || typeof token !== 'string' || typeof pin !== 'string') {
     return new Response(JSON.stringify({ error: 'token and pin are required' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
+  if (action !== 'load' && action !== 'submit') {
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
