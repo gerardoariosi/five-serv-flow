@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, Camera } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/authStore';
 
 const SPECIALTIES_CATALOG = [
   'Plumbing', 'Electrical', 'HVAC', 'Painting', 'Carpentry',
@@ -24,7 +25,9 @@ const TeamUserForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore(s => s.user);
   const isNew = !id;
+  const isSelf = !isNew && currentUser?.id === id;
 
   const [form, setForm] = useState({
     full_name: '',
