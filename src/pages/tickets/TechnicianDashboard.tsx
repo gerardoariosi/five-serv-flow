@@ -105,7 +105,7 @@ const TechnicianDashboard = () => {
     const prop = ticket.property_id ? properties[ticket.property_id] : null;
     return (
       <button
-        onClick={() => navigate(`/tickets/${ticket.id}`)}
+        onClick={() => navigate(activeRole === 'technician' ? `/tickets/${ticket.id}/work` : `/tickets/${ticket.id}`)}
         className={`w-full text-left p-4 rounded-lg border ${isEmergency ? 'border-destructive bg-destructive/10' : colors.border + ' ' + colors.bg} transition-colors hover:opacity-90`}
       >
         <div className="flex items-start justify-between gap-2">
