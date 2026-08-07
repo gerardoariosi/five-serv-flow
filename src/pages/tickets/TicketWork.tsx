@@ -381,15 +381,7 @@ const TicketWork = () => {
 
   const colors = workTypeColors[ticket.work_type ?? 'repair'] ?? workTypeColors.repair;
   const address = ticket.property_id ? properties[ticket.property_id]?.address : null;
-  const steps = stepDefs[workType];
 
-  // Determine active step index for progress indicator
-  const activeStepIndex = (() => {
-    if (ticket.status === 'ready_for_review') return steps.length - 2; // Review
-    if (ticket.status === 'closed') return steps.length - 1;
-    const idx = steps.findIndex(s => s.key === currentStep);
-    return idx === -1 ? 0 : idx;
-  })();
 
   return (
     <div className="px-4 py-5 max-w-2xl mx-auto space-y-5 pb-24">
