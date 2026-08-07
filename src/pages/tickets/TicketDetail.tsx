@@ -399,11 +399,22 @@ const TicketDetail = () => {
   const handleEstimateRequired = async () => {
     if (!ticket || !user) return;
     setChangingStatus(true);
-    await supabase.from('tickets').update({ status: 'pending_estimate' }).eq('id', id);
-    await supabase.from('ticket_timeline').insert({
+    const { error: estReqError } = await supabase.from('tickets').update({ status: 'pending_estimate' }).eq('id', id);
+    if (estReqError) {
+      toast.error(`Couldn't update status: ${estReqError.message}`);
+      setChangingStatus(false);
+      return;
+    }
+    const { error: estReqTimelineError } = await supabase.from('ticket_timeline').insert({
       ticket_id: id, from_status: ticket.status, to_status: 'pending_estimate',
       changed_by: user.id, note: 'Estimate required',
     });
+    if (estReqTimelineError) {
+      toast.error(`Couldn't update status: ${estReqTimelineError.message}`);
+      await fetchTicket();
+      setChangingStatus(false);
+      return;
+    }
     await fetchTicket();
     setChangingStatus(false);
     openEstimateBuilder();
