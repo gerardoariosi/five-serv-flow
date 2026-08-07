@@ -254,7 +254,7 @@ const TicketDetail = () => {
           user_id: assignTechId,
           title: 'New Ticket Assigned',
           body: `${ticket.fs_number ?? 'Ticket'} — ${(ticket.work_type ?? 'work').replace('-', ' ')}`,
-          url: `/my-work/${id}`,
+          url: `/tickets/${id}/work`,
           tag: `ticket-${id}`,
         },
       });
@@ -290,7 +290,7 @@ const TicketDetail = () => {
         user_id: ticket.technician_id, type: 'ticket',
         title: 'Evaluation Approved',
         message: `${ticket.fs_number ?? 'Ticket'} — Proceed with work`,
-        link: `/my-work/${id}`,
+        link: `/tickets/${id}/work`,
       });
       const techEmail = users[ticket.technician_id]?.email;
       if (techEmail) {
@@ -434,7 +434,7 @@ const TicketDetail = () => {
         user_id: ticket.technician_id, type: 'ticket',
         title: 'Work Rescheduled',
         message: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
-        link: `/my-work/${id}`,
+        link: `/tickets/${id}/work`,
       });
       // Push to technician
       try {
@@ -443,7 +443,7 @@ const TicketDetail = () => {
             user_ids: [ticket.technician_id],
             title: 'Work Rescheduled',
             body: `${ticket.fs_number ?? 'Ticket'} — New appointment: ${new Date(rescheduleTime).toLocaleString('en-US', { timeZone: 'America/New_York' })}`,
-            url: `/my-work/${id}`,
+            url: `/tickets/${id}/work`,
             tag: `reschedule-${id}`,
             skip_in_app: true, // already inserted above
           },
