@@ -935,6 +935,49 @@ const TicketDetail = () => {
           </Button>
         )}
 
+        {/* Complete & Submit for Review — admin/supervisor, requires same evidence as technician */}
+        {isAdminOrSupervisor && (ticket.status === 'in_progress' || ticket.status === 'paused') && (
+          <Button size="sm" onClick={() => setShowAdminComplete(true)} disabled={changingStatus}>
+            <Check className="w-4 h-4 mr-1" /> Complete &amp; Submit for Review
+          </Button>
+        )}
+
+        <Dialog open={showAdminComplete} onOpenChange={setShowAdminComplete}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Complete &amp; Submit for Review</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className={`px-3 py-2 rounded-md border text-xs font-medium ${photos.length >= 3 ? 'bg-success/10 border-success/30 text-success' : 'bg-warning/10 border-warning/30 text-warning'}`}>
+                {photos.length >= 3 ? `${photos.length} photos on this ticket — requirement met` : `${photos.length} of 3 photos required`}
+              </div>
+              {photos.length < 3 && (
+                <p className="text-xs text-muted-foreground">
+                  Add photos to this ticket before submitting it for review.
+                </p>
+              )}
+              <div>
+                <Label>Closing Note (required)</Label>
+                <Textarea
+                  value={adminCloseNote}
+                  onChange={e => setAdminCloseNote(e.target.value)}
+                  rows={3}
+                  placeholder="Describe work completed..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAdminComplete(false)}>Cancel</Button>
+              <Button
+                onClick={handleAdminComplete}
+                disabled={changingStatus || photos.length < 3 || !adminCloseNote.trim()}
+              >
+                Submit for Review
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+
         {/* Approve / Reject for ready_for_review */}
         {isAdminOrSupervisor && ticket.status === 'ready_for_review' && (
           <>
