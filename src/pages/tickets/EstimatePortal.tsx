@@ -29,6 +29,8 @@ const EstimatePortal = () => {
   // Auth
   const [pinEntered, setPinEntered] = useState(false);
   const [pinInput, setPinInput] = useState('');
+  const [verifiedPin, setVerifiedPin] = useState('');
+
   const [pinError, setPinError] = useState('');
   const [pinLoading, setPinLoading] = useState(false);
 
