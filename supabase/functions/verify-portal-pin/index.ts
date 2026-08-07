@@ -91,12 +91,59 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (action === 'submit') {
+      if (ticket.estimate_submitted_at) {
+        return new Response(JSON.stringify({ valid: true, already_submitted: true }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const optionId = typeof payload.option_id === 'string' ? payload.option_id : null
+      const signature = typeof payload.signature === 'string' ? payload.signature : ''
+      const pmNote = typeof payload.pm_note === 'string' ? payload.pm_note.slice(0, 5000) : null
+      if (!optionId || !signature.trim()) {
+        return new Response(JSON.stringify({ error: 'option_id and signature are required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      // The selected option must belong to THIS ticket — price comes from the DB,
+      // never from the client, so the PM cannot alter the approved amount.
+      const { data: opt } = await supabase
+        .from('ticket_estimate_options')
+        .select('option_name, price')
+        .eq('id', optionId)
+        .eq('ticket_id', ticket.id)
+        .maybeSingle()
+      if (!opt) {
+        return new Response(JSON.stringify({ error: 'Invalid option' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const { error: upErr } = await supabase.from('tickets').update({
+        estimate_submitted_at: new Date().toISOString(),
+        estimate_selected_option: opt.option_name,
+        estimate_selected_price: opt.price,
+        estimate_pm_signature: signature,
+        estimate_pm_note: pmNote,
+        status: 'estimate_approved',
+      }).eq('id', ticket.id)
+      if (upErr) {
+        return new Response(JSON.stringify({ error: 'Could not submit' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(
+        JSON.stringify({ valid: true, submitted: true, fs_number: ticket.fs_number, ticket_id: ticket.id }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     let property: { name: string | null; address: string | null } | null = null
     if (ticket.property_id) {
       const { data: p } = await supabase
         .from('properties').select('name, address').eq('id', ticket.property_id).maybeSingle()
       property = p ?? null
     }
+
     const { data: options } = await supabase
       .from('ticket_estimate_options').select('*').eq('ticket_id', ticket.id).order('sort_order', { ascending: true })
     const { data: photos } = await supabase
