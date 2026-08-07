@@ -194,6 +194,30 @@ const TicketDetail = () => {
     setChangingStatus(false);
   };
 
+  // Admin/supervisor: complete a ticket with the same evidence a technician must provide
+  const handleAdminComplete = async () => {
+    if (!ticket || !user) return;
+    if (photos.length < 3) { toast.error(`${photos.length} of 3 photos required`); return; }
+    if (!adminCloseNote.trim()) { toast.error('Closing note required'); return; }
+    setChangingStatus(true);
+    await supabase.from('tickets').update({ status: 'ready_for_review' }).eq('id', id);
+    await supabase.from('ticket_timeline').insert({
+      ticket_id: id,
+      from_status: ticket.status,
+      to_status: 'ready_for_review',
+      changed_by: user.id,
+      note: `Completed: ${adminCloseNote.trim()}`,
+    });
+    try { await supabase.functions.invoke('notify-ready-for-review', { body: { ticket_id: id } }); } catch { /* non-blocking */ }
+    setAdminCloseNote('');
+    setShowAdminComplete(false);
+    toast.success('Submitted for review');
+    await fetchTicket();
+    setChangingStatus(false);
+  };
+
+
+
   const handleLogDelayNote = async () => {
     if (!delayNoteText.trim()) return;
     await supabase.from('ticket_timeline').insert({
